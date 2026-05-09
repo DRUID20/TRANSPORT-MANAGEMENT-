@@ -23,6 +23,8 @@ import {
   Fuel as FuelIcon,
   Smartphone,
   BookOpen,
+  ListChecks,
+  Scale,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Logo } from "@/components/layout/logo";
@@ -64,6 +66,8 @@ const navGroups: { title: string; items: NavItem[] }[] = [
       { href: "/fuel", label: "Fuel", icon: FuelIcon },
       { href: "/mpesa", label: "M-Pesa", icon: Smartphone },
       { href: "/accounts", label: "Chart of Accounts", icon: BookOpen },
+      { href: "/ledger", label: "General Ledger", icon: ListChecks },
+      { href: "/ledger/trial-balance", label: "Trial Balance", icon: Scale },
       { href: "/finance", label: "Finance", icon: Wallet, badge: "soon" },
       { href: "/reports", label: "Reports", icon: BarChart3, badge: "soon" },
     ],

@@ -56,6 +56,16 @@ import type {
   AccountStatus,
   NormalBalance,
 } from "@/lib/types/accounts";
+import { increasesByDebit } from "@/lib/types/accounts";
+import type {
+  Currency as LedgerCurrency,
+  JournalEntry,
+  JournalEntryDetail,
+  JournalLine,
+  JournalReferenceType,
+  JournalStatus,
+  TrialBalanceRow,
+} from "@/lib/types/ledger";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 
@@ -2472,4 +2482,292 @@ export function accountClassCounts(): Array<{ class: AccountClass; count: number
     map.set(a.class, (map.get(a.class) ?? 0) + 1);
   }
   return [...map.entries()].map(([c, count]) => ({ class: c, count }));
+}
+
+// ============================================================
+// General Ledger (Phase 5B)
+// ============================================================
+const journalEntries = new Map<string, JournalEntry>();
+const journalLines = new Map<string, JournalLine>();
+let journalCounter = 1;
+
+function nextJournalNumber(): string {
+  const year = new Date().getFullYear();
+  const num = String(journalCounter++).padStart(5, "0");
+  return `JE-${year}-${num}`;
+}
+
+interface PostInput {
+  date: string;
+  memo: string;
+  referenceType: JournalReferenceType;
+  referenceId?: string;
+  postedBy: string;
+  lines: Array<{
+    accountId: string;
+    debit: number;
+    credit: number;
+    currency: LedgerCurrency;
+    fxRate: number;
+    description?: string;
+  }>;
+}
+
+export function postJournalEntry(input: PostInput): JournalEntry | { error: string } {
+  // Validate balance in KES
+  const dr = input.lines.reduce((s, l) => s + l.debit * l.fxRate, 0);
+  const cr = input.lines.reduce((s, l) => s + l.credit * l.fxRate, 0);
+  if (Math.abs(dr - cr) > 0.01) {
+    return { error: `Out of balance: Dr KSh ${dr.toFixed(2)} vs Cr KSh ${cr.toFixed(2)}` };
+  }
+  if (input.lines.length < 2) {
+    return { error: "At least two lines required" };
+  }
+
+  // Resolve accounts (denormalise code + name)
+  const resolvedLines = input.lines.map((l) => {
+    const acc = accounts.get(l.accountId);
+    if (!acc) throw new Error(`Account ${l.accountId} not found`);
+    if (l.debit > 0 && l.credit > 0) {
+      throw new Error("Line cannot have both debit and credit");
+    }
+    return {
+      acc,
+      originalDebit: l.debit,
+      originalCredit: l.credit,
+      currency: l.currency,
+      fxRate: l.fxRate,
+      debitKes: Math.round(l.debit * l.fxRate * 100) / 100,
+      creditKes: Math.round(l.credit * l.fxRate * 100) / 100,
+      description: l.description,
+    };
+  });
+
+  const id = randomUUID();
+  const totalDebitKes = resolvedLines.reduce((s, l) => s + l.debitKes, 0);
+  const totalCreditKes = resolvedLines.reduce((s, l) => s + l.creditKes, 0);
+  const entry: JournalEntry = {
+    id,
+    number: nextJournalNumber(),
+    date: input.date,
+    memo: input.memo,
+    referenceType: input.referenceType,
+    referenceId: input.referenceId,
+    status: "posted",
+    postedBy: input.postedBy,
+    postedAt: new Date().toISOString(),
+    totalDebitKes,
+    totalCreditKes,
+  };
+  journalEntries.set(id, entry);
+
+  for (const r of resolvedLines) {
+    const lineId = randomUUID();
+    const line: JournalLine = {
+      id: lineId,
+      journalEntryId: id,
+      accountId: r.acc.id,
+      accountCode: r.acc.code,
+      accountName: r.acc.name,
+      originalDebit: r.originalDebit,
+      originalCredit: r.originalCredit,
+      currency: r.currency,
+      fxRate: r.fxRate,
+      debitKes: r.debitKes,
+      creditKes: r.creditKes,
+      description: r.description,
+    };
+    journalLines.set(lineId, line);
+  }
+  return entry;
+}
+
+export function reverseJournalEntry(input: {
+  entryId: string;
+  postedBy: string;
+}): JournalEntry | { error: string } {
+  const original = journalEntries.get(input.entryId);
+  if (!original) return { error: "Entry not found" };
+  if (original.status !== "posted") return { error: "Only posted entries can be reversed" };
+
+  const origLines = [...journalLines.values()].filter(
+    (l) => l.journalEntryId === input.entryId,
+  );
+
+  const swappedLines = origLines.map((l) => ({
+    accountId: l.accountId,
+    debit: l.originalCredit,
+    credit: l.originalDebit,
+    currency: l.currency,
+    fxRate: l.fxRate,
+    description: `Reversal of ${original.number}`,
+  }));
+
+  const reversal = postJournalEntry({
+    date: new Date().toISOString().slice(0, 10),
+    memo: `Reversal of ${original.number}: ${original.memo}`,
+    referenceType: "reversal",
+    referenceId: original.id,
+    postedBy: input.postedBy,
+    lines: swappedLines,
+  });
+
+  if ("error" in reversal) return reversal;
+
+  // Mark relationships
+  journalEntries.set(original.id, { ...original, status: "reversed", reversedById: reversal.id });
+  journalEntries.set(reversal.id, { ...reversal, reversalOf: original.id });
+  return reversal;
+}
+
+function seedOpeningBalances() {
+  const ob = (code: string, debit: number, credit: number, memo: string) => {
+    const acc = getAccountByCode(code);
+    if (!acc) return null;
+    return {
+      accountId: acc.id,
+      debit,
+      credit,
+      currency: "KES" as const,
+      fxRate: 1,
+      description: memo,
+    };
+  };
+
+  // Demo opening balances at start of year (KES). Entries are illustrative.
+  const openings: Array<{
+    date: string;
+    memo: string;
+    lines: Array<ReturnType<typeof ob>>;
+  }> = [
+    {
+      date: "2026-01-01",
+      memo: "Opening balances 2026 — equity & cash",
+      lines: [
+        ob("121100", 4_500_000, 0, "Cash at Bank — Operations (KES)"),
+        ob("122100", 1_200_000, 0, "Cash at Bank — USD account (KES equivalent)"),
+        ob("120200", 50_000, 0, "Petty Cash"),
+        ob("300100", 0, 5_750_000, "Share Capital"),
+      ],
+    },
+    {
+      date: "2026-01-01",
+      memo: "Opening balances 2026 — fleet PPE",
+      lines: [
+        ob("100300", 38_000_000, 0, "Motor Vehicles at cost"),
+        ob("101300", 0, 9_500_000, "Acc. Dep. — Motor Vehicles"),
+        ob("300400", 0, 28_500_000, "Retained Earnings"),
+      ],
+    },
+  ];
+
+  for (const op of openings) {
+    const validLines = op.lines.filter((x): x is NonNullable<typeof x> => x !== null);
+    if (validLines.length < 2) continue;
+    postJournalEntry({
+      date: op.date,
+      memo: op.memo,
+      referenceType: "opening_balance",
+      postedBy: "Finance",
+      lines: validLines,
+    });
+  }
+}
+seedOpeningBalances();
+
+export function listJournalEntries(filter?: {
+  status?: JournalStatus;
+  referenceType?: JournalReferenceType;
+  fromDate?: string;
+  toDate?: string;
+}): JournalEntry[] {
+  let all = [...journalEntries.values()];
+  if (filter?.status) all = all.filter((e) => e.status === filter.status);
+  if (filter?.referenceType) all = all.filter((e) => e.referenceType === filter.referenceType);
+  if (filter?.fromDate) all = all.filter((e) => e.date >= filter.fromDate!);
+  if (filter?.toDate) all = all.filter((e) => e.date <= filter.toDate!);
+  return all.sort((a, b) => b.date.localeCompare(a.date));
+}
+
+export function getJournalEntry(id: string): JournalEntryDetail | undefined {
+  const entry = journalEntries.get(id);
+  if (!entry) return undefined;
+  const lines = [...journalLines.values()]
+    .filter((l) => l.journalEntryId === id)
+    .sort((a, b) => a.accountCode.localeCompare(b.accountCode));
+  return { ...entry, lines };
+}
+
+/** All lines on a given account, optionally limited by date range. */
+export function ledgerLinesForAccount(
+  accountId: string,
+  range?: { fromDate?: string; toDate?: string },
+): Array<JournalLine & { entry: JournalEntry }> {
+  const lines = [...journalLines.values()].filter((l) => l.accountId === accountId);
+  return lines
+    .map((l) => {
+      const entry = journalEntries.get(l.journalEntryId);
+      return entry && entry.status === "posted" ? { ...l, entry } : null;
+    })
+    .filter((x): x is NonNullable<typeof x> => x !== null)
+    .filter((l) => {
+      if (range?.fromDate && l.entry.date < range.fromDate) return false;
+      if (range?.toDate && l.entry.date > range.toDate) return false;
+      return true;
+    })
+    .sort((a, b) => a.entry.date.localeCompare(b.entry.date));
+}
+
+/** Compute the running balance and totals for a single account. */
+export function accountBalance(
+  accountId: string,
+  range?: { fromDate?: string; toDate?: string },
+): {
+  debitKes: number;
+  creditKes: number;
+  balanceKes: number;
+  balanceSide: "Debit" | "Credit";
+  count: number;
+} {
+  const acc = accounts.get(accountId);
+  const lines = ledgerLinesForAccount(accountId, range);
+  const debitKes = lines.reduce((s, l) => s + l.debitKes, 0);
+  const creditKes = lines.reduce((s, l) => s + l.creditKes, 0);
+  const debitNormal = acc ? increasesByDebit(acc.class) : true;
+  const balanceKes = debitNormal ? debitKes - creditKes : creditKes - debitKes;
+  return {
+    debitKes,
+    creditKes,
+    balanceKes,
+    balanceSide: debitNormal ? "Debit" : "Credit",
+    count: lines.length,
+  };
+}
+
+/** Compute a Trial Balance across all accounts (optionally for a period). */
+export function trialBalance(range?: {
+  fromDate?: string;
+  toDate?: string;
+}): TrialBalanceRow[] {
+  const rows: TrialBalanceRow[] = [];
+  for (const acc of accounts.values()) {
+    const lines = ledgerLinesForAccount(acc.id, range);
+    if (lines.length === 0) continue;
+    const debitKes = lines.reduce((s, l) => s + l.debitKes, 0);
+    const creditKes = lines.reduce((s, l) => s + l.creditKes, 0);
+    if (debitKes === 0 && creditKes === 0) continue;
+    const debitNormal = increasesByDebit(acc.class);
+    const balanceKes = debitNormal ? debitKes - creditKes : creditKes - debitKes;
+    rows.push({
+      accountId: acc.id,
+      code: acc.code,
+      name: acc.name,
+      class: acc.class,
+      debitKes,
+      creditKes,
+      balanceKes,
+      balanceSide: debitNormal ? "Debit" : "Credit",
+    });
+  }
+  return rows.sort((a, b) => a.code.localeCompare(b.code));
 }
