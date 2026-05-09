@@ -3520,6 +3520,194 @@ export function unmatchedGlLinesForAccount(accountCode: string): JournalLine[] {
     });
 }
 
+// ============================================================
+// Reports (Phase 5F): aggregations for P&L, SFP, profit-per-trip
+// ============================================================
+
+export interface PnlSection {
+  label: string;
+  classFilter: AccountClass[];
+  rows: Array<{ accountId: string; code: string; name: string; balanceKes: number }>;
+  total: number;
+}
+
+/** Build the P&L sections for a date range. */
+export function profitAndLoss(range?: { fromDate?: string; toDate?: string }) {
+  const tb = trialBalance(range);
+  const incomeRows = tb
+    .filter((r) => r.class === "Income")
+    .map((r) => ({ accountId: r.accountId, code: r.code, name: r.name, balanceKes: r.balanceKes }));
+  const otherIncomeRows = tb
+    .filter((r) => r.class === "Other Income")
+    .map((r) => ({ accountId: r.accountId, code: r.code, name: r.name, balanceKes: r.balanceKes }));
+  const directCostRows = tb
+    .filter((r) => r.class === "Direct Cost")
+    .map((r) => ({ accountId: r.accountId, code: r.code, name: r.name, balanceKes: r.balanceKes }));
+  const expenseRows = tb
+    .filter((r) => r.class === "Expense")
+    .map((r) => ({ accountId: r.accountId, code: r.code, name: r.name, balanceKes: r.balanceKes }));
+  const otherExpenseRows = tb
+    .filter((r) => r.class === "Other Expense")
+    .map((r) => ({ accountId: r.accountId, code: r.code, name: r.name, balanceKes: r.balanceKes }));
+  const taxRows = tb
+    .filter((r) => r.class === "Tax")
+    .map((r) => ({ accountId: r.accountId, code: r.code, name: r.name, balanceKes: r.balanceKes }));
+
+  const incomeTotal = incomeRows.reduce((s, r) => s + r.balanceKes, 0);
+  const otherIncomeTotal = otherIncomeRows.reduce((s, r) => s + r.balanceKes, 0);
+  const directCostTotal = directCostRows.reduce((s, r) => s + r.balanceKes, 0);
+  const expenseTotal = expenseRows.reduce((s, r) => s + r.balanceKes, 0);
+  const otherExpenseTotal = otherExpenseRows.reduce((s, r) => s + r.balanceKes, 0);
+  const taxTotal = taxRows.reduce((s, r) => s + r.balanceKes, 0);
+
+  const grossProfit = incomeTotal - directCostTotal;
+  const operatingProfit = grossProfit - expenseTotal;
+  const profitBeforeTax = operatingProfit + otherIncomeTotal - otherExpenseTotal;
+  const netProfit = profitBeforeTax - taxTotal;
+
+  return {
+    range,
+    income: { rows: incomeRows, total: incomeTotal },
+    directCost: { rows: directCostRows, total: directCostTotal },
+    grossProfit,
+    expenses: { rows: expenseRows, total: expenseTotal },
+    operatingProfit,
+    otherIncome: { rows: otherIncomeRows, total: otherIncomeTotal },
+    otherExpense: { rows: otherExpenseRows, total: otherExpenseTotal },
+    profitBeforeTax,
+    tax: { rows: taxRows, total: taxTotal },
+    netProfit,
+  };
+}
+
+/** Build the Statement of Financial Position at a given date. */
+export function statementOfFinancialPosition(asOfDate?: string) {
+  const tb = trialBalance(asOfDate ? { toDate: asOfDate } : undefined);
+  const assets = tb
+    .filter((r) => r.class === "Asset")
+    .map((r) => ({ ...r }))
+    .sort((a, b) => a.code.localeCompare(b.code));
+  const liabilities = tb
+    .filter((r) => r.class === "Liability")
+    .map((r) => ({ ...r }))
+    .sort((a, b) => a.code.localeCompare(b.code));
+  const equity = tb
+    .filter((r) => r.class === "Equity")
+    .map((r) => ({ ...r }))
+    .sort((a, b) => a.code.localeCompare(b.code));
+
+  // Compute net profit for retained earnings adjustment
+  const pnl = profitAndLoss(asOfDate ? { toDate: asOfDate } : undefined);
+
+  // Group assets by 'Non-current' vs 'Current'
+  const splitByGroup = (rows: typeof assets) => {
+    const acctById = new Map(accounts.values().toString.length ? [...accounts.values()].map((a) => [a.id, a]) : []);
+    const buckets = new Map<string, typeof rows>();
+    for (const row of rows) {
+      const acc = acctById.get(row.accountId);
+      const group = acc?.group ?? "Other";
+      if (!buckets.has(group)) buckets.set(group, []);
+      buckets.get(group)!.push(row);
+    }
+    return [...buckets.entries()].map(([group, rs]) => ({
+      group,
+      rows: rs,
+      total: rs.reduce((s, r) => s + r.balanceKes, 0),
+    }));
+  };
+
+  const assetGroups = splitByGroup(assets);
+  const liabilityGroups = splitByGroup(liabilities);
+
+  const totalAssets = assets.reduce((s, r) => s + r.balanceKes, 0);
+  const totalLiabilities = liabilities.reduce((s, r) => s + r.balanceKes, 0);
+  const totalEquity = equity.reduce((s, r) => s + r.balanceKes, 0);
+  const totalEquityAndLiabilities = totalEquity + totalLiabilities + pnl.netProfit;
+  const balancingDifference = totalAssets - totalEquityAndLiabilities;
+
+  return {
+    asOfDate,
+    assets: { groups: assetGroups, total: totalAssets },
+    liabilities: { groups: liabilityGroups, total: totalLiabilities },
+    equity: { rows: equity, total: totalEquity },
+    netProfit: pnl.netProfit,
+    totalEquityAndLiabilities,
+    balancingDifference,
+  };
+}
+
+/** Profit per trip — revenue (from invoices) minus direct trip costs. */
+export interface TripProfitRow {
+  tripId: string;
+  number: string;
+  origin: string;
+  destination: string;
+  status: string;
+  revenueKes: number;
+  borderChargesKes: number;
+  driverAdvanceUsedKes: number;
+  expensesKes: number;
+  fuelKes: number;
+  totalCostsKes: number;
+  grossProfitKes: number;
+  marginPct: number | null;
+}
+
+export function tripProfitability(): TripProfitRow[] {
+  const rows: TripProfitRow[] = [];
+  for (const trip of trips.values()) {
+    // Revenue: sum of trip's posted invoices in KES base
+    const revenueKes = [...invoices.values()]
+      .filter((inv) => inv.tripId === trip.id && inv.status !== "draft" && inv.status !== "cancelled")
+      .reduce((s, inv) => s + inv.total * inv.fxRate, 0);
+
+    // Border charges
+    const borderChargesKes = [...borderCrossings.values()]
+      .filter((b) => b.tripId === trip.id)
+      .reduce((s, b) => s + (b.chargesKes ?? 0), 0);
+
+    const driverAdvanceUsedKes = trip.driverAdvanceUsedKes ?? 0;
+
+    // Approved + reimbursed expenses (those NOT paid from advance, to avoid
+    // double-counting the advance)
+    const expensesKes = [...expenses.values()]
+      .filter(
+        (e) =>
+          e.tripId === trip.id &&
+          (e.status === "approved" || e.status === "reimbursed") &&
+          e.paidBy !== "advance",
+      )
+      .reduce((s, e) => s + e.amountKes, 0);
+
+    // Fuel logs
+    const fuelKes = [...fuelLogs.values()]
+      .filter((f) => f.tripId === trip.id)
+      .reduce((s, f) => s + f.costKes, 0);
+
+    const totalCostsKes =
+      borderChargesKes + driverAdvanceUsedKes + expensesKes + fuelKes;
+    const grossProfitKes = revenueKes - totalCostsKes;
+    const marginPct = revenueKes > 0 ? grossProfitKes / revenueKes : null;
+
+    rows.push({
+      tripId: trip.id,
+      number: trip.number,
+      origin: trip.origin,
+      destination: trip.destination,
+      status: trip.status,
+      revenueKes,
+      borderChargesKes,
+      driverAdvanceUsedKes,
+      expensesKes,
+      fuelKes,
+      totalCostsKes,
+      grossProfitKes,
+      marginPct,
+    });
+  }
+  return rows.sort((a, b) => b.grossProfitKes - a.grossProfitKes);
+}
+
 /** Reconciliation summary for a bank account. */
 export function bankReconSummary(accountCode: string) {
   const acc = getAccountByCode(accountCode);
