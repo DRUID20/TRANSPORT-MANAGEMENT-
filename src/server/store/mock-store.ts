@@ -50,6 +50,14 @@ import type {
   MpesaTransactionStatus,
   MpesaTransactionType,
 } from "@/lib/types/mpesa";
+import type {
+  Account,
+  AccountClass,
+  AccountStatus,
+  NormalBalance,
+} from "@/lib/types/accounts";
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 
 // Seed subcontractors
 const subcontractorSeed: Subcontractor[] = [
@@ -2351,4 +2359,117 @@ export function completeMpesaTransaction(input: {
   };
   mpesaTxs.set(tx.id, updated);
   return updated;
+}
+
+// ============================================================
+// Chart of Accounts (Phase 5A)
+// ============================================================
+const accounts = new Map<string, Account>();
+
+/** Minimal CSV parser tolerant of unquoted commas in the Notes column. */
+function parseCoaCsv(raw: string): Account[] {
+  const lines = raw.split(/\r?\n/).filter((l) => l.trim().length > 0);
+  if (lines.length === 0) return [];
+  const out: Account[] = [];
+  // Skip header
+  for (let i = 1; i < lines.length; i++) {
+    const line = lines[i]!;
+    const cols = splitCsvRow(line);
+    if (cols.length < 8) continue;
+    const [code, name, cls, group, type, normalBalance, currency, status, notes] = cols;
+    if (!code || !name) continue;
+    out.push({
+      id: `acc-${code}`,
+      code,
+      name,
+      class: cls as AccountClass,
+      group: group ?? "",
+      type: type ?? "",
+      normalBalance: (normalBalance as NormalBalance) ?? "Debit",
+      currency: currency || "KES",
+      status: ((status as AccountStatus) ?? "Active") as AccountStatus,
+      notes: notes || undefined,
+    });
+  }
+  return out;
+}
+
+/** Splits a CSV row into fields; supports double-quoted strings. */
+function splitCsvRow(line: string): string[] {
+  const out: string[] = [];
+  let cur = "";
+  let inQuotes = false;
+  for (let i = 0; i < line.length; i++) {
+    const ch = line[i];
+    if (inQuotes) {
+      if (ch === '"' && line[i + 1] === '"') {
+        cur += '"';
+        i++;
+      } else if (ch === '"') {
+        inQuotes = false;
+      } else {
+        cur += ch;
+      }
+    } else {
+      if (ch === '"') inQuotes = true;
+      else if (ch === ",") {
+        out.push(cur);
+        cur = "";
+      } else cur += ch;
+    }
+  }
+  out.push(cur);
+  return out.map((f) => f.trim());
+}
+
+function loadAccounts() {
+  try {
+    const path = join(process.cwd(), "docs", "finance", "coa-proposed.csv");
+    const raw = readFileSync(path, "utf8");
+    for (const a of parseCoaCsv(raw)) {
+      accounts.set(a.id, a);
+    }
+  } catch {
+    // CSV not present in some environments; CoA will be empty until seeded.
+  }
+}
+loadAccounts();
+
+export function listAccounts(filter?: {
+  class?: AccountClass;
+  status?: AccountStatus;
+  search?: string;
+}): Account[] {
+  let all = [...accounts.values()];
+  if (filter?.class) all = all.filter((a) => a.class === filter.class);
+  if (filter?.status) all = all.filter((a) => a.status === filter.status);
+  if (filter?.search) {
+    const q = filter.search.toLowerCase();
+    all = all.filter(
+      (a) =>
+        a.code.toLowerCase().includes(q) ||
+        a.name.toLowerCase().includes(q) ||
+        a.type.toLowerCase().includes(q),
+    );
+  }
+  return all.sort((a, b) => a.code.localeCompare(b.code));
+}
+
+export function getAccount(id: string): Account | undefined {
+  return accounts.get(id);
+}
+
+export function getAccountByCode(code: string): Account | undefined {
+  for (const a of accounts.values()) {
+    if (a.code === code) return a;
+  }
+  return undefined;
+}
+
+export function accountClassCounts(): Array<{ class: AccountClass; count: number }> {
+  const map = new Map<AccountClass, number>();
+  for (const a of accounts.values()) {
+    map.set(a.class, (map.get(a.class) ?? 0) + 1);
+  }
+  return [...map.entries()].map(([c, count]) => ({ class: c, count }));
 }
