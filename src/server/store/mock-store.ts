@@ -82,6 +82,7 @@ import type {
   SupplierBill,
   SupplierPayment,
 } from "@/lib/types/ap";
+import type { BankStatementTransaction } from "@/lib/types/bank";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 
@@ -3396,4 +3397,157 @@ export function paySupplierBill(input: {
 
 export function refreshBillStatuses(): void {
   for (const b of bills.values()) recomputeBillStatus(b.id);
+}
+
+// ============================================================
+// Bank reconciliation (Phase 5E)
+// ============================================================
+const bankStatementTxs = new Map<string, BankStatementTransaction>();
+
+/** Returns all CoA accounts that are bank/cash. */
+export function listBankAccounts(): Account[] {
+  return [...accounts.values()]
+    .filter((a) => a.type === "Bank" || a.type === "Cash" || a.type === "Mobile Money")
+    .sort((a, b) => a.code.localeCompare(b.code));
+}
+
+export function listBankStatementTxs(accountCode: string): BankStatementTransaction[] {
+  return [...bankStatementTxs.values()]
+    .filter((t) => t.accountCode === accountCode)
+    .sort((a, b) => b.date.localeCompare(a.date));
+}
+
+export function getBankStatementTx(id: string): BankStatementTransaction | undefined {
+  return bankStatementTxs.get(id);
+}
+
+export function createBankStatementTx(input: {
+  accountCode: string;
+  date: string;
+  description: string;
+  reference?: string;
+  debit: number;
+  credit: number;
+  currency: LedgerCurrency;
+  notes?: string;
+}): BankStatementTransaction | { error: string } {
+  if (!getAccountByCode(input.accountCode)) {
+    return { error: "Account not in CoA" };
+  }
+  const id = randomUUID();
+  const tx: BankStatementTransaction = {
+    id,
+    ...input,
+    status: "unmatched",
+    createdAt: new Date().toISOString(),
+  };
+  bankStatementTxs.set(id, tx);
+  return tx;
+}
+
+export function deleteBankStatementTx(id: string): boolean {
+  return bankStatementTxs.delete(id);
+}
+
+export function matchBankStatementTx(
+  bankTxId: string,
+  journalLineId: string,
+): BankStatementTransaction | { error: string } {
+  const tx = bankStatementTxs.get(bankTxId);
+  if (!tx) return { error: "Bank tx not found" };
+  if (tx.status === "matched") return { error: "Already matched" };
+  const line = journalLines.get(journalLineId);
+  if (!line) return { error: "Journal line not found" };
+  // Sanity check: line belongs to same account
+  const acc = accounts.get(line.accountId);
+  if (!acc || acc.code !== tx.accountCode) {
+    return { error: "Journal line is not on this bank account" };
+  }
+  // Sanity check: amount matches (within 0.01)
+  const txNet = tx.debit - tx.credit;
+  const lineNet = line.originalDebit - line.originalCredit;
+  if (Math.abs(txNet - lineNet) > 0.01) {
+    return { error: `Amounts don't match: bank ${txNet} vs GL ${lineNet}` };
+  }
+  // Make sure that journal line isn't already matched to another bank tx
+  for (const other of bankStatementTxs.values()) {
+    if (other.matchedJournalLineId === journalLineId && other.id !== tx.id) {
+      return { error: "Journal line already matched to another bank tx" };
+    }
+  }
+  bankStatementTxs.set(tx.id, {
+    ...tx,
+    status: "matched",
+    matchedJournalLineId: journalLineId,
+  });
+  return bankStatementTxs.get(tx.id)!;
+}
+
+export function unmatchBankStatementTx(
+  bankTxId: string,
+): BankStatementTransaction | { error: string } {
+  const tx = bankStatementTxs.get(bankTxId);
+  if (!tx) return { error: "Bank tx not found" };
+  bankStatementTxs.set(tx.id, {
+    ...tx,
+    status: "unmatched",
+    matchedJournalLineId: undefined,
+  });
+  return bankStatementTxs.get(tx.id)!;
+}
+
+/** GL lines on a bank account that are not yet matched. */
+export function unmatchedGlLinesForAccount(accountCode: string): JournalLine[] {
+  const acc = getAccountByCode(accountCode);
+  if (!acc) return [];
+  const allLines = [...journalLines.values()].filter((l) => l.accountId === acc.id);
+  const matchedSet = new Set(
+    [...bankStatementTxs.values()]
+      .filter((t) => t.matchedJournalLineId)
+      .map((t) => t.matchedJournalLineId!),
+  );
+  // Only include lines whose entry is posted (not draft / reversed)
+  return allLines
+    .filter((l) => !matchedSet.has(l.id))
+    .filter((l) => {
+      const e = journalEntries.get(l.journalEntryId);
+      return e?.status === "posted";
+    })
+    .sort((a, b) => {
+      const ea = journalEntries.get(a.journalEntryId)?.date ?? "";
+      const eb = journalEntries.get(b.journalEntryId)?.date ?? "";
+      return eb.localeCompare(ea);
+    });
+}
+
+/** Reconciliation summary for a bank account. */
+export function bankReconSummary(accountCode: string) {
+  const acc = getAccountByCode(accountCode);
+  if (!acc) {
+    return null;
+  }
+  const txs = listBankStatementTxs(accountCode);
+  const statementBalance = txs.reduce((s, t) => s + (t.debit - t.credit), 0);
+  // GL balance in native currency: sum of original debits/credits where currency matches
+  const glLines = [...journalLines.values()].filter((l) => l.accountId === acc.id);
+  const glPosted = glLines.filter((l) => {
+    const e = journalEntries.get(l.journalEntryId);
+    return e?.status === "posted";
+  });
+  const glBalance = glPosted.reduce(
+    (s, l) => s + (l.originalDebit - l.originalCredit),
+    0,
+  );
+  const unmatchedStatementCount = txs.filter((t) => t.status === "unmatched").length;
+  const unmatchedGlCount = unmatchedGlLinesForAccount(accountCode).length;
+  return {
+    accountCode,
+    accountName: acc.name,
+    currency: acc.currency as LedgerCurrency,
+    statementBalance,
+    glBalance,
+    difference: statementBalance - glBalance,
+    unmatchedStatementCount,
+    unmatchedGlCount,
+  };
 }

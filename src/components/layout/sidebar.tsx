@@ -28,6 +28,7 @@ import {
   ScrollText,
   Hourglass,
   FileText,
+  Banknote,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Logo } from "@/components/layout/logo";
@@ -75,6 +76,7 @@ const navGroups: { title: string; items: NavItem[] }[] = [
       { href: "/invoices/aged", label: "Aged AR", icon: Hourglass },
       { href: "/bills", label: "Bills (AP)", icon: FileText },
       { href: "/bills/aged", label: "Aged AP", icon: Hourglass },
+      { href: "/bank", label: "Bank Reconciliation", icon: Banknote },
       { href: "/finance", label: "Finance", icon: Wallet, badge: "soon" },
       { href: "/reports", label: "Reports", icon: BarChart3, badge: "soon" },
     ],
