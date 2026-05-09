@@ -1,0 +1,140 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ============================================================
+   TX System — Design Tokens
+   Apple × SpaceX × Nile Valley
+   See docs/design/color-tokens.md
+   ============================================================ */
+
+@layer base {
+  :root {
+    /* Light mode (Apple-grade) */
+    --bg-base: 255 255 255;
+    --bg-surface: 245 245 247;
+    --bg-elevated: 250 250 250;
+    --bg-elevated-2: 255 255 255;
+    --border: 229 229 234;
+    --border-strong: 209 209 214;
+    --text-primary: 29 29 31;
+    --text-secondary: 110 110 115;
+    --text-tertiary: 134 134 139;
+    --text-disabled: 199 199 204;
+
+    /* Brand (Nile Valley) */
+    --brand-navy: 20 38 107;
+    --brand-blue: 30 91 184;
+    --brand-blue-hover: 26 79 160;
+
+    /* Status (Apple semantic — light) */
+    --status-success: 52 199 89;
+    --status-warning: 255 149 0;
+    --status-danger: 255 59 48;
+    --status-info: 30 91 184;
+    --status-neutral: 142 142 147;
+
+    color-scheme: light;
+  }
+
+  .dark {
+    /* Dark mode (SpaceX-grade) */
+    --bg-base: 0 0 0;
+    --bg-surface: 10 10 10;
+    --bg-elevated: 22 22 22;
+    --bg-elevated-2: 31 31 34;
+    --border: 31 31 34;
+    --border-strong: 42 42 45;
+    --text-primary: 255 255 255;
+    --text-secondary: 161 161 170;
+    --text-tertiary: 107 114 128;
+    --text-disabled: 63 63 70;
+
+    /* Brand lifted for legibility on pure black */
+    --brand-navy: 42 72 168;
+    --brand-blue: 74 143 224;
+    --brand-blue-hover: 92 157 236;
+
+    /* Status (Apple semantic — dark) */
+    --status-success: 48 209 88;
+    --status-warning: 255 159 10;
+    --status-danger: 255 69 58;
+    --status-info: 74 143 224;
+    --status-neutral: 152 152 157;
+
+    color-scheme: dark;
+  }
+
+  * {
+    @apply border-border;
+  }
+
+  html,
+  body {
+    @apply bg-bg-base text-fg-primary;
+    font-family: var(--font-sans), system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+
+  /* Tabular figures for money / KPIs */
+  .tnum {
+    font-variant-numeric: tabular-nums;
+    font-feature-settings: "tnum";
+  }
+
+  /* Selection */
+  ::selection {
+    background: rgb(var(--brand-blue) / 0.2);
+    color: rgb(var(--text-primary));
+  }
+
+  /* Focus ring — Apple-style halo */
+  :focus-visible {
+    outline: 2px solid rgb(var(--brand-blue));
+    outline-offset: 2px;
+    border-radius: 4px;
+  }
+
+  /* Scrollbars */
+  ::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: rgb(var(--border-strong));
+    border-radius: 9999px;
+    border: 2px solid rgb(var(--bg-base));
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: rgb(var(--text-tertiary));
+  }
+}
+
+@layer components {
+  /* Glass surface — Apple frosted overlay */
+  .glass {
+    background: rgb(var(--bg-elevated) / 0.7);
+    backdrop-filter: blur(24px) saturate(180%);
+    -webkit-backdrop-filter: blur(24px) saturate(180%);
+    border: 1px solid rgb(var(--border));
+  }
+
+  /* Hairline divider */
+  .hairline {
+    border-color: rgb(var(--border));
+  }
+
+  /* KPI number — large, tabular, mono */
+  .kpi-number {
+    @apply font-mono tnum text-3xl font-medium tracking-tight;
+  }
+
+  /* Status pill base */
+  .pill {
+    @apply inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-medium;
+  }
+}
