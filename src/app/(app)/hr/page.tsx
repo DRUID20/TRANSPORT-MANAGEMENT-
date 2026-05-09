@@ -60,9 +60,8 @@ export default async function HrIndexPage() {
       href: "/hr/leave",
       label: "Leave & Attendance",
       icon: CalendarRange,
-      desc: "Annual / sick / compassionate leave + attendance.",
+      desc: "Annual / sick / compassionate leave + attendance grid.",
       count: undefined,
-      soon: true,
     },
     {
       href: "/hr/payroll",

@@ -94,6 +94,15 @@ import type {
   ComplianceKind,
   ComplianceRecord,
 } from "@/lib/types/hr-compliance";
+import type {
+  AttendanceRecord,
+  AttendanceStatus,
+  LeaveBalance,
+  LeaveRequest,
+  LeaveStatus,
+  LeaveType,
+} from "@/lib/types/leave";
+import { KENYA_STATUTORY_LEAVE, workingDaysBetween } from "@/lib/types/leave";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 
@@ -4465,4 +4474,319 @@ export function createComplianceRecord(
 
 export function deleteComplianceRecord(id: string): boolean {
   return complianceRecords.delete(id);
+}
+
+// ============================================================
+// Leave & Attendance (Phase 6C)
+// ============================================================
+const leaveRequests = new Map<string, LeaveRequest>();
+const attendanceRecords = new Map<string, AttendanceRecord>();
+let leaveCounter = 1;
+
+function nextLeaveNumber(): string {
+  const year = new Date().getFullYear();
+  const num = String(leaveCounter++).padStart(5, "0");
+  return `REQ-${year}-${num}`;
+}
+
+const dayMs = 24 * 60 * 60 * 1000;
+const today = new Date();
+const isoDay = (offsetDays: number) => {
+  const d = new Date(today.getTime() + offsetDays * dayMs);
+  return d.toISOString().slice(0, 10);
+};
+
+function seedLeaveRequests() {
+  // Mix of pending / approved / past requests for several employees.
+  const seeds: Array<{
+    employeeId: string;
+    leaveType: LeaveType;
+    startOff: number;
+    endOff: number;
+    reason: string;
+    status: LeaveStatus;
+    approvedById?: string;
+  }> = [
+    {
+      employeeId: "emp-006",
+      leaveType: "annual",
+      startOff: 14,
+      endOff: 20,
+      reason: "Family holiday — Diani.",
+      status: "pending",
+    },
+    {
+      employeeId: "emp-007",
+      leaveType: "sick",
+      startOff: -3,
+      endOff: -1,
+      reason: "Flu — clinic note attached.",
+      status: "approved",
+      approvedById: "emp-005",
+    },
+    {
+      employeeId: "emp-100",
+      leaveType: "annual",
+      startOff: -30,
+      endOff: -22,
+      reason: "Annual leave between long-haul rotations.",
+      status: "taken",
+      approvedById: "emp-003",
+    },
+    {
+      employeeId: "emp-101",
+      leaveType: "compassionate",
+      startOff: 7,
+      endOff: 11,
+      reason: "Family bereavement.",
+      status: "pending",
+    },
+    {
+      employeeId: "emp-103",
+      leaveType: "annual",
+      startOff: 35,
+      endOff: 49,
+      reason: "Two-week break — wedding preparations.",
+      status: "approved",
+      approvedById: "emp-003",
+    },
+    {
+      employeeId: "emp-105",
+      leaveType: "paternity",
+      startOff: -14,
+      endOff: -1,
+      reason: "Paternity leave (statutory 14 days).",
+      status: "taken",
+      approvedById: "emp-003",
+    },
+    {
+      employeeId: "emp-002",
+      leaveType: "annual",
+      startOff: 60,
+      endOff: 74,
+      reason: "Annual leave — December break.",
+      status: "approved",
+      approvedById: "emp-001",
+    },
+  ];
+  for (const s of seeds) {
+    const id = `lr-${randomUUID().slice(0, 8)}`;
+    const startDate = isoDay(s.startOff);
+    const endDate = isoDay(s.endOff);
+    leaveRequests.set(id, {
+      id,
+      number: nextLeaveNumber(),
+      employeeId: s.employeeId,
+      leaveType: s.leaveType,
+      startDate,
+      endDate,
+      days: workingDaysBetween(startDate, endDate),
+      reason: s.reason,
+      status: s.status,
+      approvedById: s.approvedById,
+      approvedAt:
+        s.status === "approved" || s.status === "taken"
+          ? new Date(today.getTime() - 86400_000).toISOString()
+          : undefined,
+      createdAt: new Date(today.getTime() - 7 * 86400_000).toISOString(),
+    });
+  }
+}
+seedLeaveRequests();
+
+function seedAttendance() {
+  // Last 7 working days for office staff (emp-001..007). Drivers are tracked
+  // through trip status, not daily attendance.
+  const officeIds = ["emp-001", "emp-002", "emp-003", "emp-004", "emp-005", "emp-006", "emp-007"];
+  for (let i = -7; i <= 0; i++) {
+    const d = new Date(today.getTime() + i * dayMs);
+    const dow = d.getDay();
+    const date = d.toISOString().slice(0, 10);
+    for (const eid of officeIds) {
+      const id = `att-${eid}-${date}`;
+      let status: AttendanceStatus = "present";
+      let clockIn: string | undefined = "08:05";
+      let clockOut: string | undefined = "17:35";
+      let hours: number | undefined = 9.5;
+      if (dow === 0 || dow === 6) {
+        status = "weekend";
+        clockIn = clockOut = undefined;
+        hours = undefined;
+      } else if (eid === "emp-006" && i === -2) {
+        // Half day for the dispatcher
+        status = "half_day";
+        clockOut = "12:30";
+        hours = 4.5;
+      } else if (eid === "emp-007" && i >= -3 && i <= -1) {
+        // Sick days for the mechanic
+        status = "sick";
+        clockIn = clockOut = undefined;
+        hours = 0;
+      }
+      attendanceRecords.set(id, {
+        id,
+        employeeId: eid,
+        date,
+        status,
+        clockInTime: clockIn,
+        clockOutTime: clockOut,
+        hours,
+        createdAt: new Date().toISOString(),
+      });
+    }
+  }
+}
+seedAttendance();
+
+// ----- Leave -----
+export function listLeaveRequests(filter?: {
+  employeeId?: string;
+  status?: LeaveStatus;
+  leaveType?: LeaveType;
+}): LeaveRequest[] {
+  let all = [...leaveRequests.values()];
+  if (filter?.employeeId) all = all.filter((r) => r.employeeId === filter.employeeId);
+  if (filter?.status) all = all.filter((r) => r.status === filter.status);
+  if (filter?.leaveType) all = all.filter((r) => r.leaveType === filter.leaveType);
+  return all.sort((a, b) => b.startDate.localeCompare(a.startDate));
+}
+
+export function getLeaveRequest(id: string): LeaveRequest | undefined {
+  return leaveRequests.get(id);
+}
+
+export function createLeaveRequest(input: {
+  employeeId: string;
+  leaveType: LeaveType;
+  startDate: string;
+  endDate: string;
+  reason: string;
+}): LeaveRequest | { error: string } {
+  if (!employees.has(input.employeeId)) return { error: "Employee not found" };
+  const days = workingDaysBetween(input.startDate, input.endDate);
+  if (days <= 0) return { error: "Date range must include at least 1 working day" };
+
+  const id = `lr-${randomUUID().slice(0, 8)}`;
+  const r: LeaveRequest = {
+    id,
+    number: nextLeaveNumber(),
+    employeeId: input.employeeId,
+    leaveType: input.leaveType,
+    startDate: input.startDate,
+    endDate: input.endDate,
+    days,
+    reason: input.reason,
+    status: "pending",
+    createdAt: new Date().toISOString(),
+  };
+  leaveRequests.set(id, r);
+  return r;
+}
+
+export function approveLeaveRequest(
+  id: string,
+  approvedById: string,
+): LeaveRequest | { error: string } {
+  const r = leaveRequests.get(id);
+  if (!r) return { error: "Not found" };
+  if (r.status !== "pending") return { error: `Already ${r.status}` };
+  const updated: LeaveRequest = {
+    ...r,
+    status: "approved",
+    approvedById,
+    approvedAt: new Date().toISOString(),
+  };
+  leaveRequests.set(id, updated);
+  return updated;
+}
+
+export function rejectLeaveRequest(
+  id: string,
+  reason: string,
+  approvedById: string,
+): LeaveRequest | { error: string } {
+  const r = leaveRequests.get(id);
+  if (!r) return { error: "Not found" };
+  if (r.status !== "pending") return { error: `Already ${r.status}` };
+  const updated: LeaveRequest = {
+    ...r,
+    status: "rejected",
+    rejectedReason: reason,
+    approvedById,
+    approvedAt: new Date().toISOString(),
+  };
+  leaveRequests.set(id, updated);
+  return updated;
+}
+
+export function cancelLeaveRequest(id: string): LeaveRequest | { error: string } {
+  const r = leaveRequests.get(id);
+  if (!r) return { error: "Not found" };
+  if (r.status === "taken") return { error: "Already taken — cannot cancel" };
+  const updated: LeaveRequest = { ...r, status: "cancelled" };
+  leaveRequests.set(id, updated);
+  return updated;
+}
+
+/** Compute live leave balance per type for an employee. */
+export function leaveBalances(employeeId: string): LeaveBalance[] {
+  const types: LeaveType[] = [
+    "annual",
+    "sick",
+    "compassionate",
+    "maternity",
+    "paternity",
+    "study",
+  ];
+  const out: LeaveBalance[] = [];
+  for (const t of types) {
+    const entitled =
+      (KENYA_STATUTORY_LEAVE[t as keyof typeof KENYA_STATUTORY_LEAVE] as number | undefined) ?? 0;
+    const used = [...leaveRequests.values()]
+      .filter(
+        (r) => r.employeeId === employeeId && r.leaveType === t && (r.status === "approved" || r.status === "taken"),
+      )
+      .reduce((s, r) => s + r.days, 0);
+    const pending = [...leaveRequests.values()]
+      .filter((r) => r.employeeId === employeeId && r.leaveType === t && r.status === "pending")
+      .reduce((s, r) => s + r.days, 0);
+    out.push({
+      employeeId,
+      leaveType: t,
+      entitled,
+      used,
+      pending,
+      remaining: Math.max(0, entitled - used - pending),
+    });
+  }
+  return out;
+}
+
+// ----- Attendance -----
+export function listAttendance(filter?: {
+  employeeId?: string;
+  fromDate?: string;
+  toDate?: string;
+}): AttendanceRecord[] {
+  let all = [...attendanceRecords.values()];
+  if (filter?.employeeId) all = all.filter((r) => r.employeeId === filter.employeeId);
+  if (filter?.fromDate) all = all.filter((r) => r.date >= filter.fromDate!);
+  if (filter?.toDate) all = all.filter((r) => r.date <= filter.toDate!);
+  return all.sort((a, b) => b.date.localeCompare(a.date));
+}
+
+export function logAttendance(input: {
+  employeeId: string;
+  date: string;
+  status: AttendanceStatus;
+  clockInTime?: string;
+  clockOutTime?: string;
+  hours?: number;
+  notes?: string;
+}): AttendanceRecord {
+  // One record per employee per day — replace if exists.
+  const id = `att-${input.employeeId}-${input.date}`;
+  const r: AttendanceRecord = { ...input, id, createdAt: new Date().toISOString() };
+  attendanceRecords.set(id, r);
+  return r;
 }

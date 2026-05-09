@@ -28,6 +28,8 @@ import {
   Hourglass,
   FileText,
   Banknote,
+  CalendarRange,
+  CalendarDays,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Logo } from "@/components/layout/logo";
@@ -69,6 +71,8 @@ const navGroups: { title: string; items: NavItem[] }[] = [
       { href: "/hr/employees", label: "Employees", icon: IdCard },
       { href: "/hr/departments", label: "Departments", icon: Building2 },
       { href: "/hr/compliance", label: "HR Compliance", icon: ShieldCheck },
+      { href: "/hr/leave", label: "Leave", icon: CalendarRange },
+      { href: "/hr/attendance", label: "Attendance", icon: CalendarDays },
     ],
   },
   {
