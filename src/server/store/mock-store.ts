@@ -44,6 +44,7 @@ import type {
   ExpenseStatus,
   PaymentMethod,
 } from "@/lib/types/expenses";
+import type { FuelLog } from "@/lib/types/fuel";
 
 // Seed subcontractors
 const subcontractorSeed: Subcontractor[] = [
@@ -2042,4 +2043,226 @@ export function tripExpenseTotal(tripId: string): number {
         (e.status === "approved" || e.status === "reimbursed"),
     )
     .reduce((sum, e) => sum + e.amountKes, 0);
+}
+
+// ============================================================
+// Fuel logs (Phase 4C)
+// ============================================================
+const fuelLogs = new Map<string, FuelLog>();
+let fuelCounter = 1;
+function nextFuelNumber(): string {
+  const year = new Date().getFullYear();
+  const num = String(fuelCounter++).padStart(4, "0");
+  return `FUEL-${year}-${num}`;
+}
+
+function seedFuelLogs() {
+  const tripList = [...trips.values()];
+  if (tripList.length === 0) return;
+  const t1 = tripList[0]!;
+  const t2 = tripList[1];
+
+  const seeds: Array<Omit<FuelLog, "id" | "number" | "createdAt" | "pricePerLitreKes">> = [
+    {
+      tripId: t1.id,
+      truckId: t1.truckId,
+      driverId: t1.driverId,
+      datetime: new Date(Date.now() - 5 * 86400000).toISOString(),
+      station: "Total Mariakani",
+      countryCode: "KE",
+      litres: 165,
+      costKes: 24_500,
+      odometerKm: 412_500,
+      submittedBy: "Joseph Mwangi",
+    },
+    {
+      tripId: t1.id,
+      truckId: t1.truckId,
+      driverId: t1.driverId,
+      datetime: new Date(Date.now() - 3 * 86400000).toISOString(),
+      station: "Shell Eldoret",
+      countryCode: "KE",
+      litres: 220,
+      costKes: 33_000,
+      odometerKm: 412_980,
+      submittedBy: "Joseph Mwangi",
+    },
+    {
+      tripId: t1.id,
+      truckId: t1.truckId,
+      driverId: t1.driverId,
+      datetime: new Date(Date.now() - 2 * 86400000).toISOString(),
+      station: "Total Malaba",
+      countryCode: "UG",
+      litres: 120,
+      costKes: 19_200,
+      odometerKm: 413_360,
+      submittedBy: "Joseph Mwangi",
+    },
+    ...(t2
+      ? [
+          {
+            tripId: t2.id,
+            truckId: t2.truckId,
+            driverId: t2.driverId,
+            datetime: new Date(Date.now() - 1 * 86400000).toISOString(),
+            station: "Shell Naivasha",
+            countryCode: "KE",
+            litres: 210,
+            costKes: 32_000,
+            odometerKm: 281_220,
+            submittedBy: "Ali Hassan",
+          },
+        ]
+      : []),
+  ];
+
+  seeds.forEach((s, i) => {
+    const id = `fuel-${String(i + 1).padStart(3, "0")}`;
+    const log: FuelLog = {
+      ...s,
+      id,
+      number: `FUEL-2026-${String(i + 1).padStart(4, "0")}`,
+      pricePerLitreKes: Math.round((s.costKes / s.litres) * 100) / 100,
+      createdAt: s.datetime,
+    };
+    fuelLogs.set(id, log);
+  });
+  fuelCounter = seeds.length + 1;
+}
+seedFuelLogs();
+
+export function listFuelLogs(filter?: { tripId?: string; truckId?: string }): FuelLog[] {
+  let all = [...fuelLogs.values()];
+  if (filter?.tripId) all = all.filter((f) => f.tripId === filter.tripId);
+  if (filter?.truckId) all = all.filter((f) => f.truckId === filter.truckId);
+  return all.sort((a, b) => new Date(b.datetime).getTime() - new Date(a.datetime).getTime());
+}
+
+export function getFuelLog(id: string): FuelLog | undefined {
+  return fuelLogs.get(id);
+}
+
+export function fuelLogsForTrip(tripId: string): FuelLog[] {
+  return listFuelLogs({ tripId });
+}
+
+export function fuelLogsForTruck(truckId: string): FuelLog[] {
+  return listFuelLogs({ truckId });
+}
+
+export function createFuelLog(input: Omit<FuelLog, "id" | "number" | "createdAt" | "pricePerLitreKes">): FuelLog {
+  const id = randomUUID();
+  const log: FuelLog = {
+    ...input,
+    id,
+    number: nextFuelNumber(),
+    pricePerLitreKes: input.litres > 0 ? Math.round((input.costKes / input.litres) * 100) / 100 : 0,
+    createdAt: new Date().toISOString(),
+  };
+  fuelLogs.set(id, log);
+  return log;
+}
+
+export function deleteFuelLog(id: string): boolean {
+  return fuelLogs.delete(id);
+}
+
+/** Sum litres + cost for a trip. */
+export function tripFuelTotals(tripId: string): {
+  litres: number;
+  costKes: number;
+  count: number;
+} {
+  const logs = fuelLogsForTrip(tripId);
+  return {
+    litres: logs.reduce((s, l) => s + l.litres, 0),
+    costKes: logs.reduce((s, l) => s + l.costKes, 0),
+    count: logs.length,
+  };
+}
+
+/**
+ * Compute km/L over the period for a truck. Uses the spread between
+ * the lowest and highest odometer reading divided by total litres
+ * pumped between them.
+ */
+export function truckFuelEfficiency(truckId: string): {
+  kmPerLitre: number | null;
+  litresTotal: number;
+  costKesTotal: number;
+  kmCovered: number;
+  count: number;
+} {
+  const logs = fuelLogsForTruck(truckId);
+  if (logs.length < 2) {
+    return {
+      kmPerLitre: null,
+      litresTotal: logs.reduce((s, l) => s + l.litres, 0),
+      costKesTotal: logs.reduce((s, l) => s + l.costKes, 0),
+      kmCovered: 0,
+      count: logs.length,
+    };
+  }
+  const sorted = [...logs].sort((a, b) => a.odometerKm - b.odometerKm);
+  const minOdo = sorted[0]!.odometerKm;
+  const maxOdo = sorted[sorted.length - 1]!.odometerKm;
+  const kmCovered = maxOdo - minOdo;
+  // The first fuelling fills the tank — km covered uses litres from
+  // subsequent fills.
+  const subsequentLitres = sorted.slice(1).reduce((s, l) => s + l.litres, 0);
+  const kmPerLitre =
+    subsequentLitres > 0 && kmCovered > 0
+      ? Math.round((kmCovered / subsequentLitres) * 100) / 100
+      : null;
+  return {
+    kmPerLitre,
+    litresTotal: logs.reduce((s, l) => s + l.litres, 0),
+    costKesTotal: logs.reduce((s, l) => s + l.costKes, 0),
+    kmCovered,
+    count: logs.length,
+  };
+}
+
+/** Fleet-wide fuel snapshot for the dashboard. */
+export function fleetFuelSnapshot(): {
+  totalLitres: number;
+  totalCostKes: number;
+  fleetKmPerLitre: number | null;
+  byCountry: Array<{ code: string; litres: number; pct: number }>;
+} {
+  const all = [...fuelLogs.values()];
+  const totalLitres = all.reduce((s, l) => s + l.litres, 0);
+  const totalCostKes = all.reduce((s, l) => s + l.costKes, 0);
+
+  // Per-truck efficiency, weighted average
+  const truckIds = new Set(all.map((l) => l.truckId));
+  let weightedKm = 0;
+  let weightedLitres = 0;
+  for (const truckId of truckIds) {
+    const eff = truckFuelEfficiency(truckId);
+    if (eff.kmPerLitre !== null) {
+      weightedKm += eff.kmCovered;
+      // Use litres after the first fill
+      const truckLogs = fuelLogsForTruck(truckId).sort((a, b) => a.odometerKm - b.odometerKm);
+      const lit = truckLogs.slice(1).reduce((s, l) => s + l.litres, 0);
+      weightedLitres += lit;
+    }
+  }
+  const fleetKmPerLitre =
+    weightedLitres > 0 ? Math.round((weightedKm / weightedLitres) * 100) / 100 : null;
+
+  // Country split
+  const countryMap = new Map<string, number>();
+  for (const l of all) {
+    countryMap.set(l.countryCode, (countryMap.get(l.countryCode) ?? 0) + l.litres);
+  }
+  const byCountry = [...countryMap.entries()].map(([code, litres]) => ({
+    code,
+    litres,
+    pct: totalLitres > 0 ? litres / totalLitres : 0,
+  }));
+  byCountry.sort((a, b) => b.litres - a.litres);
+
+  return { totalLitres, totalCostKes, fleetKmPerLitre, byCountry };
 }

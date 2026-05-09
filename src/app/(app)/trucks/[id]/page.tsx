@@ -9,6 +9,7 @@ import {
 } from "@/server/store/mock-store";
 import { jobCardsForTruck } from "@/server/actions/job-cards";
 import { JobCardStatusPill } from "@/components/workshop/job-card-status-pill";
+import { TruckFuelCard } from "@/components/fleet/truck-fuel-card";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { PageHeader } from "@/components/layout/page-header";
@@ -211,6 +212,9 @@ export default async function TruckDetailPage({ params }: { params: Promise<{ id
           </CardContent>
         </Card>
       )}
+
+      {/* Fuel & efficiency */}
+      <TruckFuelCard truckId={truck.id} />
 
       {/* Service & Job Cards */}
       <Card>

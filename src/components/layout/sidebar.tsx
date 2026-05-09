@@ -20,6 +20,7 @@ import {
   ShieldCheck,
   ClipboardList,
   Tag,
+  Fuel as FuelIcon,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Logo } from "@/components/layout/logo";
@@ -58,6 +59,7 @@ const navGroups: { title: string; items: NavItem[] }[] = [
     title: "Finance",
     items: [
       { href: "/expenses", label: "Expenses", icon: Receipt },
+      { href: "/fuel", label: "Fuel", icon: FuelIcon },
       { href: "/finance", label: "Finance", icon: Wallet, badge: "soon" },
       { href: "/reports", label: "Reports", icon: BarChart3, badge: "soon" },
     ],
