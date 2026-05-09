@@ -42,13 +42,18 @@ Together: an aerospace-grade command centre that's nonetheless soft and pleasant
 | `--text-tertiary` | `#86868B` | Captions |
 | `--text-disabled` | `#C7C7CC` | Disabled states |
 
-## 4. Accents (both modes)
+## 4. Accents — Nile Valley brand blues
+
+The brand blues replace Apple Blue as the primary accent (Nile Valley owns the brand; Apple Blue would dilute it). Apple's semantic status colours (green/orange/red) stay because they carry universal meaning.
 
 | Token | Light hex | Dark hex | Use |
 |---|---|---|---|
-| `--accent-primary` | `#007AFF` | `#0A84FF` | Primary buttons, active links, focus ring (Apple Blue) |
-| `--accent-primary-hover` | `#0066D6` | `#1A8FFF` | Hover state |
-| `--accent-secondary` | `#5856D6` | `#5E5CE6` | Secondary actions, complementary accents (Apple Indigo) |
+| `--brand-navy` | `#14266B` | `#2A48A8` | Brand headlines, login screen, exports, customer portal header. Lifted in dark mode for visibility on pure black. |
+| `--brand-blue` (primary accent) | `#1E5BB8` | `#4A8FE0` | Primary buttons, active links, focus rings, KPI sparklines, status pills. Lifted in dark mode. |
+| `--brand-blue-hover` | `#1A4FA0` | `#5C9DEC` | Hover state |
+| `--accent-secondary` (Apple Indigo) | `#5856D6` | `#5E5CE6` | Reserved for secondary actions where brand-blue would over-dominate (e.g., tags, secondary chart series). |
+
+> **Note**: `#14266B` and `#1E5BB8` are eyeballed from the logo PNG. Will be re-sampled precisely when Nile Valley sends the SVG / source file.
 
 ## 5. Status semantics (Apple)
 
@@ -83,12 +88,14 @@ Numerals use **tabular figures** (`font-feature-settings: 'tnum'`) so columns of
 ## 8. Where each colour shows up
 
 - **Black backgrounds + JetBrains Mono numerals** — dispatch board, trip list, journey log, fuel log, GPS map (later)
-- **Apple Blue CTAs** — Save, Approve, Send, Submit
-- **Apple Green tags** — "Delivered", "Paid", "Active"
-- **Apple Orange tags** — "At border", "Expiring in 14 days"
-- **Apple Red tags** — "Overdue", "Breakdown", "Failed"
+- **Nile Valley Brand Blue CTAs** — Save, Approve, Send, Submit, Post Journal, Close Trip
+- **Nile Valley Deep Navy accents** — login screen background, app top bar, customer portal header, export PDF letterhead, sidebar logo lockup
+- **Apple Green tags** — "Delivered", "Paid", "Active", "On time"
+- **Apple Orange tags** — "At border", "Expiring in 14 days", "Idle"
+- **Apple Red tags** — "Overdue", "Breakdown", "Failed", "Expired"
 - **Glass overlays** — confirmation modals, command palette (Cmd-K), driver POD-scan preview
 
 ## 9. Decisions log
 
 - 2026-05-09: Apple × SpaceX fusion locked. No further palette options to be proposed; logo just needs to be sent so we can verify the accent doesn't clash, and so we can derive the favicon.
+- 2026-05-09: **Nile Valley Logistics logo received** (PNG inline in chat). Two-blue identity confirmed: deep navy `#14266B` (NVL letters + wordmark) + bright accent blue `#1E5BB8` (swoosh + "V" + "LOGISTICS"). Forward-motion swoosh + arrow underneath = transit. Brand blues **REPLACE Apple Blue** as primary accent (Nile Valley owns the brand identity). Apple semantic green/orange/red **kept** for status (universal meaning). SpaceX surface scale **kept**. Awaiting SVG / high-res file to verify exact hex values and to generate favicons.
