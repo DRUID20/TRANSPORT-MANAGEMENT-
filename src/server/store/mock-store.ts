@@ -37,6 +37,7 @@ import type {
   TripDocumentKind,
   TripDocumentStatus,
 } from "@/lib/types/documents";
+import type { BorderCrossing, BorderStatus } from "@/lib/types/borders";
 
 // Seed subcontractors
 const subcontractorSeed: Subcontractor[] = [
@@ -1676,4 +1677,109 @@ export function reviewTripDocument(input: {
 
 export function deleteTripDocument(id: string): boolean {
   return tripDocuments.delete(id);
+}
+
+// ============================================================
+// Border crossings (Phase 2D)
+// ============================================================
+const borderCrossings = new Map<string, BorderCrossing>();
+
+function seedBorderCrossings() {
+  const tripList = [...trips.values()];
+  if (tripList.length === 0) return;
+  // First trip: a cleared Malaba crossing (Mombasa → Kampala)
+  const first = tripList[0]!;
+  const baseAt = new Date(first.createdAt).getTime();
+  const id1 = "bc-001";
+  borderCrossings.set(id1, {
+    id: id1,
+    tripId: first.id,
+    postName: "Malaba (KE → UG)",
+    countryFrom: "KE",
+    countryTo: "UG",
+    status: "cleared",
+    arrivedAt: new Date(baseAt + 36 * 3600_000).toISOString(),
+    clearedAt: new Date(baseAt + 41 * 3600_000).toISOString(),
+    axleLoadKg: 28_400,
+    transitPermitNumber: "UG-TRP-2026-009912",
+    chargesKes: 4_800,
+    notes: "Cleared without incident; 5h queue",
+    createdAt: new Date(baseAt + 36 * 3600_000).toISOString(),
+  });
+}
+seedBorderCrossings();
+
+export function listBorderCrossings(tripId: string): BorderCrossing[] {
+  return [...borderCrossings.values()]
+    .filter((b) => b.tripId === tripId)
+    .sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
+}
+
+export function listAllActiveBorderCrossings(): BorderCrossing[] {
+  return [...borderCrossings.values()].filter(
+    (b) => b.status === "approaching" || b.status === "queued",
+  );
+}
+
+export function getBorderCrossing(id: string): BorderCrossing | undefined {
+  return borderCrossings.get(id);
+}
+
+export function createBorderCrossing(input: {
+  tripId: string;
+  postName: string;
+  countryFrom: string;
+  countryTo: string;
+  status?: BorderStatus;
+  arrivedAt?: string;
+  axleLoadKg?: number;
+  transitPermitNumber?: string;
+  chargesKes?: number;
+  notes?: string;
+}): BorderCrossing | undefined {
+  if (!trips.has(input.tripId)) return undefined;
+  const id = randomUUID();
+  const now = new Date().toISOString();
+  const crossing: BorderCrossing = {
+    id,
+    tripId: input.tripId,
+    postName: input.postName,
+    countryFrom: input.countryFrom.toUpperCase(),
+    countryTo: input.countryTo.toUpperCase(),
+    status: input.status ?? "queued",
+    arrivedAt: input.arrivedAt ?? now,
+    axleLoadKg: input.axleLoadKg,
+    transitPermitNumber: input.transitPermitNumber,
+    chargesKes: input.chargesKes,
+    notes: input.notes,
+    createdAt: now,
+  };
+  borderCrossings.set(id, crossing);
+  return crossing;
+}
+
+export function clearBorderCrossing(input: {
+  borderId: string;
+  axleLoadKg?: number;
+  transitPermitNumber?: string;
+  chargesKes?: number;
+  notes?: string;
+}): BorderCrossing | undefined {
+  const existing = borderCrossings.get(input.borderId);
+  if (!existing) return undefined;
+  const updated: BorderCrossing = {
+    ...existing,
+    status: "cleared",
+    clearedAt: new Date().toISOString(),
+    axleLoadKg: input.axleLoadKg ?? existing.axleLoadKg,
+    transitPermitNumber: input.transitPermitNumber ?? existing.transitPermitNumber,
+    chargesKes: input.chargesKes ?? existing.chargesKes,
+    notes: input.notes ?? existing.notes,
+  };
+  borderCrossings.set(existing.id, updated);
+  return updated;
+}
+
+export function deleteBorderCrossing(id: string): boolean {
+  return borderCrossings.delete(id);
 }

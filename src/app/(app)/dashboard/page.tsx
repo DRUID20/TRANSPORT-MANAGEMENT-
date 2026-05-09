@@ -23,6 +23,7 @@ import { FleetDistribution } from "@/components/dashboard/fleet-distribution";
 import { NeedsAttention, type AttentionItem } from "@/components/dashboard/needs-attention";
 import { TopPerformer } from "@/components/dashboard/top-performer";
 import { FuelPanel } from "@/components/dashboard/fuel-panel";
+import { CrossBorderSnapshot } from "@/components/dashboard/cross-border-snapshot";
 import { RouteVisual } from "@/components/dashboard/route-visual";
 import { StatusTabs, type StatusTab } from "@/components/dashboard/status-tabs";
 import {
@@ -200,42 +201,7 @@ export default function DashboardPage() {
       <div className="grid gap-4 lg:grid-cols-3">
         <FleetDistribution />
         <FuelPanel />
-        <Card>
-          <CardHeader>
-            <CardTitle>Cross-border status</CardTitle>
-            <CardDescription>Live border-crossing snapshot</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <ul className="flex flex-col divide-y divide-border">
-              {[
-                { route: "Malaba (KE → UG)",  units: 12, status: "warning" },
-                { route: "Busia (KE → UG)",   units: 6,  status: "info" },
-                { route: "Namanga (KE → TZ)", units: 4,  status: "info" },
-                { route: "Nadapal (KE → SS)", units: 2,  status: "danger" },
-                { route: "Mutukula (UG → TZ)", units: 1, status: "info" },
-              ].map((b) => (
-                <li key={b.route} className="flex items-center justify-between py-3">
-                  <div>
-                    <div className="text-sm font-medium text-fg-primary">{b.route}</div>
-                    <div className="font-mono text-xs text-fg-tertiary">
-                      {b.units} unit{b.units === 1 ? "" : "s"}
-                    </div>
-                  </div>
-                  <span
-                    className={
-                      "inline-flex size-2.5 rounded-full ring-2 " +
-                      (b.status === "danger"
-                        ? "bg-status-danger ring-status-danger/20"
-                        : b.status === "warning"
-                          ? "bg-status-warning ring-status-warning/20"
-                          : "bg-status-info ring-status-info/20")
-                    }
-                  />
-                </li>
-              ))}
-            </ul>
-          </CardContent>
-        </Card>
+        <CrossBorderSnapshot />
       </div>
 
       {/* Trips table with status tabs */}
