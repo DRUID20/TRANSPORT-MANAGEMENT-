@@ -12,6 +12,7 @@ import {
   Building2,
   BarChart3,
   Settings,
+  Wallet,
   Handshake,
   Container,
   IdCard,
@@ -73,6 +74,8 @@ const navGroups: { title: string; items: NavItem[] }[] = [
       { href: "/hr/compliance", label: "HR Compliance", icon: ShieldCheck },
       { href: "/hr/leave", label: "Leave", icon: CalendarRange },
       { href: "/hr/attendance", label: "Attendance", icon: CalendarDays },
+      { href: "/hr/payroll", label: "Payroll", icon: Wallet },
+      { href: "/hr/loans", label: "Loans", icon: Wallet },
     ],
   },
   {

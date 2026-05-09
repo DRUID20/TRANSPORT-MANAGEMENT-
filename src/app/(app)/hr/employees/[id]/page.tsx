@@ -20,6 +20,7 @@ import { PageHeader } from "@/components/layout/page-header";
 import { EmployeeStatusPill } from "@/components/hr/employee-status-pill";
 import { EmployeeComplianceCard } from "@/components/hr/employee-compliance-card";
 import { EmployeeLeaveCard } from "@/components/hr/employee-leave-card";
+import { EmployeePayrollCard } from "@/components/hr/employee-payroll-card";
 
 export default async function EmployeeDetailPage({
   params,
@@ -268,7 +269,10 @@ export default async function EmployeeDetailPage({
       {/* Leave (Phase 6C) */}
       <EmployeeLeaveCard employeeId={e.id} />
 
-      {/* Phase 6D–F placeholders */}
+      {/* Payroll & Loans (Phase 6D) */}
+      <EmployeePayrollCard employeeId={e.id} />
+
+      {/* Phase 6E–F placeholders */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
@@ -276,8 +280,8 @@ export default async function EmployeeDetailPage({
             Coming in this phase
           </CardTitle>
           <CardDescription>
-            Payroll inputs, loans, appraisal ratings, and JD permissions will be wired
-            in as Phases 6D–6F ship.
+            Appraisal ratings and JD-based permissions will be wired in as
+            Phases 6E–6F ship.
           </CardDescription>
         </CardHeader>
       </Card>

@@ -67,9 +67,15 @@ export default async function HrIndexPage() {
       href: "/hr/payroll",
       label: "Payroll Inputs",
       icon: Wallet,
-      desc: "Per-period payroll inputs + salaries & loans + statutory.",
+      desc: "Per-period payroll inputs + statutory deductions + CSV export to external provider.",
       count: undefined,
-      soon: true,
+    },
+    {
+      href: "/hr/loans",
+      label: "Salaries & Loans",
+      icon: Wallet,
+      desc: "Staff loans + auto-recovery on each Paid payroll period.",
+      count: undefined,
     },
     {
       href: "/hr/appraisals",

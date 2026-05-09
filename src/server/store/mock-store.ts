@@ -103,6 +103,21 @@ import type {
   LeaveType,
 } from "@/lib/types/leave";
 import { KENYA_STATUTORY_LEAVE, workingDaysBetween } from "@/lib/types/leave";
+import type {
+  Loan,
+  LoanStatus,
+  PayrollAllowance,
+  PayrollInput,
+  PayrollPeriod,
+  PayrollPeriodStatus,
+} from "@/lib/types/payroll";
+import {
+  NITA_EMPLOYER,
+  computeAhl,
+  computeNssfEmployee,
+  computePaye,
+  computeSha,
+} from "@/lib/types/payroll";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 
@@ -4789,4 +4804,401 @@ export function logAttendance(input: {
   const r: AttendanceRecord = { ...input, id, createdAt: new Date().toISOString() };
   attendanceRecords.set(id, r);
   return r;
+}
+
+// ============================================================
+// Payroll & Loans (Phase 6D)
+// ============================================================
+const payrollPeriods = new Map<string, PayrollPeriod>();
+const payrollInputs = new Map<string, PayrollInput>();
+const loans = new Map<string, Loan>();
+let loanCounter = 1;
+
+function nextLoanNumber(): string {
+  const year = new Date().getFullYear();
+  const num = String(loanCounter++).padStart(5, "0");
+  return `LN-${year}-${num}`;
+}
+
+function ymToDates(yearMonth: string): { startDate: string; endDate: string } {
+  const [y, m] = yearMonth.split("-").map(Number);
+  const startDate = `${yearMonth}-01`;
+  const lastDay = new Date(y!, m!, 0).getDate(); // m! is 1-indexed
+  const endDate = `${yearMonth}-${String(lastDay).padStart(2, "0")}`;
+  return { startDate, endDate };
+}
+
+function recomputePayrollLine(input: PayrollInput): PayrollInput {
+  const allowancesTaxable = input.allowances
+    .filter((a) => a.taxable)
+    .reduce((s, a) => s + a.amount, 0);
+  const allowancesNonTaxable = input.allowances
+    .filter((a) => !a.taxable)
+    .reduce((s, a) => s + a.amount, 0);
+  const overtime = input.overtimeHours * input.overtimeRate;
+  const grossPay = input.basicSalary + allowancesTaxable + allowancesNonTaxable + overtime + input.bonus;
+  // Taxable gross excludes non-taxable allowances
+  const taxable = input.basicSalary + allowancesTaxable + overtime + input.bonus;
+
+  // Statutory deductions (computed in KES — for non-KES contracts these are
+  // illustrative only; payroll provider does the final calc).
+  const nssfEmployee = computeNssfEmployee(grossPay);
+  const nssfEmployer = nssfEmployee;
+  const shaEmployee = computeSha(grossPay);
+  const ahlEmployee = computeAhl(grossPay);
+  const ahlEmployer = ahlEmployee;
+  const paye = computePaye(taxable - nssfEmployee - shaEmployee - ahlEmployee);
+
+  const totalDeductions =
+    paye + nssfEmployee + shaEmployee + ahlEmployee + input.otherDeductions + input.loanRecovery;
+  const netPay = grossPay - totalDeductions;
+  const employerCost = grossPay + nssfEmployer + ahlEmployer + NITA_EMPLOYER;
+
+  return {
+    ...input,
+    paye: Math.round(paye),
+    nssfEmployee,
+    nssfEmployer,
+    shaEmployee,
+    nitaEmployer: NITA_EMPLOYER,
+    ahlEmployee,
+    ahlEmployer,
+    grossPay: Math.round(grossPay),
+    totalDeductions: Math.round(totalDeductions),
+    netPay: Math.round(netPay),
+    employerCost: Math.round(employerCost),
+  };
+}
+
+function buildPayrollInputForEmployee(periodId: string, employeeId: string): PayrollInput | null {
+  const contract = activeContractFor(employeeId);
+  if (!contract) return null;
+  const id = `pi-${periodId}-${employeeId}`;
+  const allowances: PayrollAllowance[] = contract.allowances.map((a) => ({ ...a }));
+
+  // Carry across any active loan recovery
+  const empLoans = [...loans.values()].filter(
+    (l) => l.employeeId === employeeId && l.status === "active",
+  );
+  const loanRecovery = empLoans.reduce(
+    (s, l) => s + Math.min(l.monthlyRecovery, l.balance),
+    0,
+  );
+
+  const base: PayrollInput = {
+    id,
+    periodId,
+    employeeId,
+    basicSalary: contract.basicSalary,
+    currency: contract.currency,
+    allowances,
+    overtimeHours: 0,
+    overtimeRate: 0,
+    bonus: 0,
+    otherDeductions: 0,
+    loanRecovery,
+    paye: 0,
+    nssfEmployee: 0,
+    nssfEmployer: 0,
+    shaEmployee: 0,
+    nitaEmployer: 0,
+    ahlEmployee: 0,
+    ahlEmployer: 0,
+    grossPay: 0,
+    totalDeductions: 0,
+    netPay: 0,
+    employerCost: 0,
+    createdAt: new Date().toISOString(),
+  };
+  return recomputePayrollLine(base);
+}
+
+function seedPayroll() {
+  // Current month period in 'processing' state with all active employees
+  // pre-populated from their contracts.
+  const now = new Date();
+  const ym = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+  const { startDate, endDate } = ymToDates(ym);
+  const periodId = `pp-${ym}`;
+  const period: PayrollPeriod = {
+    id: periodId,
+    yearMonth: ym,
+    startDate,
+    endDate,
+    status: "processing",
+    createdAt: new Date().toISOString(),
+  };
+  payrollPeriods.set(periodId, period);
+
+  for (const e of employees.values()) {
+    if (e.status === "terminated") continue;
+    const line = buildPayrollInputForEmployee(periodId, e.id);
+    if (line) payrollInputs.set(line.id, line);
+  }
+
+  // A previous month, marked paid, for history
+  const prev = new Date(now);
+  prev.setMonth(prev.getMonth() - 1);
+  const prevYm = `${prev.getFullYear()}-${String(prev.getMonth() + 1).padStart(2, "0")}`;
+  const { startDate: pStart, endDate: pEnd } = ymToDates(prevYm);
+  const prevId = `pp-${prevYm}`;
+  payrollPeriods.set(prevId, {
+    id: prevId,
+    yearMonth: prevYm,
+    startDate: pStart,
+    endDate: pEnd,
+    status: "paid",
+    processedAt: new Date(prev.getTime() - 86400_000 * 3).toISOString(),
+    paidAt: new Date(prev.getTime() - 86400_000).toISOString(),
+    createdAt: new Date(prev.getTime() - 86400_000 * 5).toISOString(),
+  });
+  for (const e of employees.values()) {
+    if (e.status === "terminated") continue;
+    const line = buildPayrollInputForEmployee(prevId, e.id);
+    if (line) payrollInputs.set(line.id, line);
+  }
+}
+
+function seedLoans() {
+  const seed: Array<{
+    employeeId: string;
+    principal: number;
+    monthly: number;
+    term: number;
+    reason: string;
+    months_in: number;
+  }> = [
+    { employeeId: "emp-005", principal: 250_000, monthly: 22_000, term: 12, reason: "Personal — school fees Q1", months_in: 4 },
+    { employeeId: "emp-100", principal: 80_000, monthly: 8_500, term: 10, reason: "Vehicle deposit", months_in: 3 },
+    { employeeId: "emp-006", principal: 30_000, monthly: 5_500, term: 6, reason: "Salary advance", months_in: 1 },
+  ];
+  for (const s of seed) {
+    const id = `ln-${randomUUID().slice(0, 8)}`;
+    const recovered = s.monthly * s.months_in;
+    const balance = Math.max(0, s.principal - recovered);
+    loans.set(id, {
+      id,
+      number: nextLoanNumber(),
+      employeeId: s.employeeId,
+      principal: s.principal,
+      currency: "KES",
+      disbursedDate: new Date(Date.now() - s.months_in * 30 * 86400_000).toISOString().slice(0, 10),
+      monthlyRecovery: s.monthly,
+      termMonths: s.term,
+      interestRate: 0,
+      recovered,
+      balance,
+      status: balance > 0 ? "active" : "paid_off",
+      reason: s.reason,
+      createdAt: new Date(Date.now() - s.months_in * 30 * 86400_000).toISOString(),
+    });
+  }
+}
+seedLoans();
+seedPayroll();
+
+// ----- Periods & inputs -----
+export function listPayrollPeriods(): PayrollPeriod[] {
+  return [...payrollPeriods.values()].sort((a, b) => b.yearMonth.localeCompare(a.yearMonth));
+}
+export function getPayrollPeriod(id: string): PayrollPeriod | undefined {
+  return payrollPeriods.get(id);
+}
+export function createPayrollPeriod(input: { yearMonth: string; notes?: string }):
+  | PayrollPeriod
+  | { error: string } {
+  if (!/^\d{4}-\d{2}$/.test(input.yearMonth)) return { error: "yearMonth must be YYYY-MM" };
+  const id = `pp-${input.yearMonth}`;
+  if (payrollPeriods.has(id)) return { error: "Period already exists" };
+  const { startDate, endDate } = ymToDates(input.yearMonth);
+  const period: PayrollPeriod = {
+    id,
+    yearMonth: input.yearMonth,
+    startDate,
+    endDate,
+    status: "draft",
+    notes: input.notes,
+    createdAt: new Date().toISOString(),
+  };
+  payrollPeriods.set(id, period);
+  for (const e of employees.values()) {
+    if (e.status === "terminated") continue;
+    const line = buildPayrollInputForEmployee(id, e.id);
+    if (line) payrollInputs.set(line.id, line);
+  }
+  return period;
+}
+
+export function setPayrollPeriodStatus(
+  id: string,
+  status: PayrollPeriodStatus,
+): PayrollPeriod | undefined {
+  const p = payrollPeriods.get(id);
+  if (!p) return undefined;
+  const updated: PayrollPeriod = {
+    ...p,
+    status,
+    processedAt: status === "processing" || status === "paid" ? new Date().toISOString() : p.processedAt,
+    paidAt: status === "paid" ? new Date().toISOString() : p.paidAt,
+  };
+  payrollPeriods.set(id, updated);
+
+  // When marking paid, also recover loan balances
+  if (status === "paid") {
+    const inputs = listPayrollInputs(id);
+    for (const inp of inputs) {
+      if (inp.loanRecovery <= 0) continue;
+      // Apply the recovered amount across the employee's active loans
+      let remaining = inp.loanRecovery;
+      const empLoans = [...loans.values()].filter(
+        (l) => l.employeeId === inp.employeeId && l.status === "active",
+      );
+      for (const l of empLoans) {
+        if (remaining <= 0) break;
+        const apply = Math.min(remaining, l.balance);
+        const updatedLoan: Loan = {
+          ...l,
+          recovered: l.recovered + apply,
+          balance: l.balance - apply,
+          status: l.balance - apply <= 0 ? "paid_off" : "active",
+        };
+        loans.set(l.id, updatedLoan);
+        remaining -= apply;
+      }
+    }
+  }
+  return updated;
+}
+
+export function listPayrollInputs(periodId: string): PayrollInput[] {
+  return [...payrollInputs.values()]
+    .filter((p) => p.periodId === periodId)
+    .sort((a, b) => {
+      const ea = employees.get(a.employeeId);
+      const eb = employees.get(b.employeeId);
+      return (ea?.employeeNumber ?? "").localeCompare(eb?.employeeNumber ?? "");
+    });
+}
+export function getPayrollInput(periodId: string, employeeId: string): PayrollInput | undefined {
+  return payrollInputs.get(`pi-${periodId}-${employeeId}`);
+}
+
+export function updatePayrollInput(input: {
+  periodId: string;
+  employeeId: string;
+  basicSalary: number;
+  overtimeHours: number;
+  overtimeRate: number;
+  bonus: number;
+  otherDeductions: number;
+  loanRecovery: number;
+  notes?: string;
+}): PayrollInput | { error: string } {
+  const id = `pi-${input.periodId}-${input.employeeId}`;
+  const existing = payrollInputs.get(id);
+  if (!existing) return { error: "Payroll input not found" };
+  const period = payrollPeriods.get(input.periodId);
+  if (period?.status === "paid" || period?.status === "closed") {
+    return { error: `Period is ${period.status} — locked` };
+  }
+  const updated = recomputePayrollLine({
+    ...existing,
+    basicSalary: input.basicSalary,
+    overtimeHours: input.overtimeHours,
+    overtimeRate: input.overtimeRate,
+    bonus: input.bonus,
+    otherDeductions: input.otherDeductions,
+    loanRecovery: input.loanRecovery,
+    notes: input.notes,
+  });
+  payrollInputs.set(id, updated);
+  return updated;
+}
+
+/** Aggregate totals for a period across all inputs (in KES — non-KES lines
+ *  are summed naively as illustrative). */
+export function payrollTotals(periodId: string): {
+  count: number;
+  grossPay: number;
+  paye: number;
+  nssfEmployee: number;
+  shaEmployee: number;
+  ahlEmployee: number;
+  loanRecovery: number;
+  totalDeductions: number;
+  netPay: number;
+  employerCost: number;
+} {
+  const lines = listPayrollInputs(periodId);
+  return lines.reduce(
+    (acc, l) => {
+      acc.count++;
+      acc.grossPay += l.grossPay;
+      acc.paye += l.paye;
+      acc.nssfEmployee += l.nssfEmployee;
+      acc.shaEmployee += l.shaEmployee;
+      acc.ahlEmployee += l.ahlEmployee;
+      acc.loanRecovery += l.loanRecovery;
+      acc.totalDeductions += l.totalDeductions;
+      acc.netPay += l.netPay;
+      acc.employerCost += l.employerCost;
+      return acc;
+    },
+    {
+      count: 0, grossPay: 0, paye: 0, nssfEmployee: 0, shaEmployee: 0,
+      ahlEmployee: 0, loanRecovery: 0, totalDeductions: 0, netPay: 0, employerCost: 0,
+    },
+  );
+}
+
+// ----- Loans -----
+export function listLoans(filter?: { employeeId?: string; status?: LoanStatus }): Loan[] {
+  let all = [...loans.values()];
+  if (filter?.employeeId) all = all.filter((l) => l.employeeId === filter.employeeId);
+  if (filter?.status) all = all.filter((l) => l.status === filter.status);
+  return all.sort((a, b) => b.disbursedDate.localeCompare(a.disbursedDate));
+}
+export function getLoan(id: string): Loan | undefined {
+  return loans.get(id);
+}
+export function createLoan(input: {
+  employeeId: string;
+  principal: number;
+  currency: LedgerCurrency;
+  disbursedDate: string;
+  termMonths: number;
+  monthlyRecovery: number;
+  interestRate: number;
+  reason?: string;
+  notes?: string;
+}): Loan | { error: string } {
+  if (!employees.has(input.employeeId)) return { error: "Employee not found" };
+  const id = `ln-${randomUUID().slice(0, 8)}`;
+  const loan: Loan = {
+    id,
+    number: nextLoanNumber(),
+    employeeId: input.employeeId,
+    principal: input.principal,
+    currency: input.currency,
+    disbursedDate: input.disbursedDate,
+    termMonths: input.termMonths,
+    monthlyRecovery: input.monthlyRecovery,
+    interestRate: input.interestRate,
+    recovered: 0,
+    balance: input.principal,
+    status: "active",
+    reason: input.reason,
+    notes: input.notes,
+    createdAt: new Date().toISOString(),
+  };
+  loans.set(id, loan);
+  return loan;
+}
+export function cancelLoan(id: string): Loan | { error: string } {
+  const l = loans.get(id);
+  if (!l) return { error: "Not found" };
+  if (l.status === "paid_off") return { error: "Already paid off" };
+  const updated: Loan = { ...l, status: "cancelled" };
+  loans.set(id, updated);
+  return updated;
 }
