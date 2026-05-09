@@ -74,6 +74,14 @@ import type {
   InvoiceWithLines,
   PaymentMethod as ARPaymentMethod,
 } from "@/lib/types/ar";
+import type {
+  APPaymentMethod,
+  BillLineItem,
+  BillStatus,
+  BillWithLines,
+  SupplierBill,
+  SupplierPayment,
+} from "@/lib/types/ap";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 
@@ -3093,4 +3101,299 @@ export function recordCustomerPayment(input: {
 /** Force a refresh of overdue/paid statuses across all invoices. */
 export function refreshInvoiceStatuses(): void {
   for (const inv of invoices.values()) recomputeInvoiceStatus(inv.id);
+}
+
+// ============================================================
+// Accounts Payable (Phase 5D)
+// ============================================================
+const bills = new Map<string, SupplierBill>();
+const billLines = new Map<string, BillLineItem>();
+const supplierPayments = new Map<string, SupplierPayment>();
+let billCounter = 1;
+let billPaymentCounter = 1;
+
+function nextBillNumber(): string {
+  const year = new Date().getFullYear();
+  const num = String(billCounter++).padStart(5, "0");
+  return `BIL-${year}-${num}`;
+}
+function nextBillPaymentNumber(): string {
+  const year = new Date().getFullYear();
+  const num = String(billPaymentCounter++).padStart(5, "0");
+  return `PAY-${year}-${num}`;
+}
+
+export function listBills(filter?: {
+  status?: BillStatus;
+  supplierId?: string;
+}): SupplierBill[] {
+  let all = [...bills.values()];
+  if (filter?.status) all = all.filter((b) => b.status === filter.status);
+  if (filter?.supplierId) all = all.filter((b) => b.supplierId === filter.supplierId);
+  return all.sort((a, b) => b.issueDate.localeCompare(a.issueDate));
+}
+
+export function getBill(id: string): BillWithLines | undefined {
+  const b = bills.get(id);
+  if (!b) return undefined;
+  const lines = [...billLines.values()].filter((l) => l.billId === id);
+  const payments = [...supplierPayments.values()]
+    .filter((p) => p.billId === id)
+    .sort((a, b) => a.date.localeCompare(b.date));
+  return { ...b, lines, payments };
+}
+
+function recomputeBillStatus(billId: string): void {
+  const b = bills.get(billId);
+  if (!b) return;
+  const paid = [...supplierPayments.values()]
+    .filter((p) => p.billId === billId)
+    .reduce((s, p) => s + p.amount, 0);
+  const balance = Math.max(0, b.total - paid);
+  let status: BillStatus = b.status;
+  if (status === "cancelled" || status === "draft") {
+    // Don't auto-flip from draft / cancelled.
+  } else if (balance < 0.01) {
+    status = "paid";
+  } else if (paid > 0) {
+    status = "partially_paid";
+  } else {
+    const overdue = new Date(b.dueDate).getTime() < Date.now();
+    status = overdue ? "overdue" : "sent";
+  }
+  bills.set(billId, { ...b, paidAmount: paid, balance, status });
+}
+
+export function createBill(input: {
+  supplierId: string;
+  supplierRef?: string;
+  issueDate: string;
+  dueDate: string;
+  currency: LedgerCurrency;
+  fxRate: number;
+  taxRate: number;
+  notes?: string;
+  lines: Array<{
+    description: string;
+    quantity: number;
+    unit?: string;
+    unitPrice: number;
+    expenseAccountCode: string;
+  }>;
+}): SupplierBill | { error: string } {
+  if (!suppliers.has(input.supplierId)) return { error: "Supplier not found" };
+  if (input.lines.length === 0) return { error: "At least one line required" };
+
+  const id = randomUUID();
+  const subtotal = input.lines.reduce((s, l) => s + l.quantity * l.unitPrice, 0);
+  const taxAmount = subtotal * input.taxRate;
+  const total = subtotal + taxAmount;
+
+  const bill: SupplierBill = {
+    id,
+    number: nextBillNumber(),
+    supplierId: input.supplierId,
+    supplierRef: input.supplierRef,
+    issueDate: input.issueDate,
+    dueDate: input.dueDate,
+    currency: input.currency,
+    fxRate: input.fxRate,
+    subtotal,
+    taxRate: input.taxRate,
+    taxAmount,
+    total,
+    paidAmount: 0,
+    balance: total,
+    status: "draft",
+    notes: input.notes,
+    createdAt: new Date().toISOString(),
+  };
+  bills.set(id, bill);
+
+  for (const line of input.lines) {
+    const lineId = randomUUID();
+    const lineTotal = line.quantity * line.unitPrice;
+    billLines.set(lineId, {
+      id: lineId,
+      billId: id,
+      description: line.description,
+      quantity: line.quantity,
+      unit: line.unit,
+      unitPrice: line.unitPrice,
+      lineTotal,
+      expenseAccountCode: line.expenseAccountCode,
+    });
+  }
+  return bill;
+}
+
+export function postBill(billId: string): SupplierBill | { error: string } {
+  const bill = bills.get(billId);
+  if (!bill) return { error: "Bill not found" };
+  if (bill.status !== "draft") return { error: `Already ${bill.status}` };
+
+  const supplier = suppliers.get(bill.supplierId);
+  const apCode = bill.currency === "USD" ? "210200" : "210100";
+  const apAcc = getAccountByCode(apCode);
+  if (!apAcc) return { error: "AP account not found in CoA" };
+
+  const lines = [...billLines.values()].filter((l) => l.billId === bill.id);
+  const journalLinesIn: Array<{
+    accountId: string;
+    debit: number;
+    credit: number;
+    currency: LedgerCurrency;
+    fxRate: number;
+    description?: string;
+  }> = [];
+
+  // Dr each expense line
+  for (const line of lines) {
+    const acc = getAccountByCode(line.expenseAccountCode);
+    if (!acc) return { error: `Expense account ${line.expenseAccountCode} not found` };
+    journalLinesIn.push({
+      accountId: acc.id,
+      debit: line.lineTotal,
+      credit: 0,
+      currency: bill.currency,
+      fxRate: bill.fxRate,
+      description: `${bill.number} — ${line.description}`,
+    });
+  }
+
+  // Dr Input VAT (if any)
+  if (bill.taxAmount > 0) {
+    const vatAcc = getAccountByCode("113100"); // VAT Recoverable / Input
+    if (vatAcc) {
+      journalLinesIn.push({
+        accountId: vatAcc.id,
+        debit: bill.taxAmount,
+        credit: 0,
+        currency: bill.currency,
+        fxRate: bill.fxRate,
+        description: `${bill.number} — input VAT`,
+      });
+    }
+  }
+
+  // Cr AP
+  journalLinesIn.push({
+    accountId: apAcc.id,
+    debit: 0,
+    credit: bill.total,
+    currency: bill.currency,
+    fxRate: bill.fxRate,
+    description: `${bill.number} — ${supplier?.name ?? "Supplier"}`,
+  });
+
+  const result = postJournalEntry({
+    date: bill.issueDate,
+    memo: `Bill ${bill.number} — ${supplier?.name ?? "Supplier"}`,
+    referenceType: "bill",
+    referenceId: bill.id,
+    postedBy: "Finance",
+    lines: journalLinesIn,
+  });
+  if ("error" in result) return result;
+
+  bills.set(bill.id, { ...bill, status: "sent", journalEntryId: result.id });
+  return bills.get(bill.id)!;
+}
+
+export function cancelBill(billId: string): SupplierBill | { error: string } {
+  const b = bills.get(billId);
+  if (!b) return { error: "Bill not found" };
+  if (b.status === "paid") return { error: "Cannot cancel a paid bill" };
+  if (b.journalEntryId) {
+    reverseJournalEntry({ entryId: b.journalEntryId, postedBy: "Finance" });
+  }
+  const updated: SupplierBill = { ...b, status: "cancelled" };
+  bills.set(b.id, updated);
+  return updated;
+}
+
+export function paySupplierBill(input: {
+  billId: string;
+  date: string;
+  amount: number;
+  currency: LedgerCurrency;
+  fxRate: number;
+  paymentMethod: APPaymentMethod;
+  reference?: string;
+  notes?: string;
+}): SupplierPayment | { error: string } {
+  const bill = bills.get(input.billId);
+  if (!bill) return { error: "Bill not found" };
+  if (bill.status === "draft") return { error: "Post the bill first" };
+  if (bill.status === "cancelled") return { error: "Bill is cancelled" };
+  if (bill.status === "paid") return { error: "Bill already fully paid" };
+
+  const id = randomUUID();
+  const payment: SupplierPayment = {
+    id,
+    number: nextBillPaymentNumber(),
+    billId: bill.id,
+    supplierId: bill.supplierId,
+    date: input.date,
+    amount: input.amount,
+    currency: input.currency,
+    fxRate: input.fxRate,
+    paymentMethod: input.paymentMethod,
+    reference: input.reference,
+    notes: input.notes,
+    createdAt: new Date().toISOString(),
+  };
+  supplierPayments.set(id, payment);
+
+  const supplier = suppliers.get(bill.supplierId);
+  const apCode = bill.currency === "USD" ? "210200" : "210100";
+  const apAcc = getAccountByCode(apCode);
+  let bankCode: string;
+  if (input.paymentMethod === "mpesa") bankCode = "129100";
+  else if (input.paymentMethod === "cash") bankCode = "120100";
+  else if (input.currency === "USD") bankCode = "122100";
+  else bankCode = "121100";
+  const bankAcc = getAccountByCode(bankCode);
+
+  if (!apAcc || !bankAcc) {
+    supplierPayments.delete(id);
+    return { error: "Required accounts (AP / Bank) not found" };
+  }
+
+  const result = postJournalEntry({
+    date: input.date,
+    memo: `Payment ${payment.number} — ${supplier?.name ?? "Supplier"} for ${bill.number}`,
+    referenceType: "payment",
+    referenceId: payment.id,
+    postedBy: "Finance",
+    lines: [
+      {
+        accountId: apAcc.id,
+        debit: input.amount,
+        credit: 0,
+        currency: input.currency,
+        fxRate: input.fxRate,
+        description: `${payment.number} — applies to ${bill.number}`,
+      },
+      {
+        accountId: bankAcc.id,
+        debit: 0,
+        credit: input.amount,
+        currency: input.currency,
+        fxRate: input.fxRate,
+        description: `${payment.number} — supplier paid`,
+      },
+    ],
+  });
+  if ("error" in result) {
+    supplierPayments.delete(id);
+    return result;
+  }
+  supplierPayments.set(id, { ...payment, journalEntryId: result.id });
+  recomputeBillStatus(bill.id);
+  return supplierPayments.get(id)!;
+}
+
+export function refreshBillStatuses(): void {
+  for (const b of bills.values()) recomputeBillStatus(b.id);
 }
