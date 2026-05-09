@@ -149,7 +149,15 @@ export default async function ExpenseDetailPage({
 
       {/* Review actions */}
       {(exp.status === "pending" || exp.status === "approved") && (
-        <ExpenseReviewActions expenseId={exp.id} status={exp.status} />
+        <ExpenseReviewActions
+          expenseId={exp.id}
+          status={exp.status}
+          amountKes={exp.amountKes}
+          driverId={driver?.id}
+          driverPhone={driver?.phone}
+          driverName={driver?.fullName}
+          tripId={exp.tripId}
+        />
       )}
 
       {exp.notes && (

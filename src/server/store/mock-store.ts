@@ -45,6 +45,11 @@ import type {
   PaymentMethod,
 } from "@/lib/types/expenses";
 import type { FuelLog } from "@/lib/types/fuel";
+import type {
+  MpesaTransaction,
+  MpesaTransactionStatus,
+  MpesaTransactionType,
+} from "@/lib/types/mpesa";
 
 // Seed subcontractors
 const subcontractorSeed: Subcontractor[] = [
@@ -2265,4 +2270,85 @@ export function fleetFuelSnapshot(): {
   byCountry.sort((a, b) => b.litres - a.litres);
 
   return { totalLitres, totalCostKes, fleetKmPerLitre, byCountry };
+}
+
+// ============================================================
+// M-Pesa transactions (Phase 4D)
+// ============================================================
+const mpesaTxs = new Map<string, MpesaTransaction>();
+let mpesaCounter = 1;
+function nextMpesaNumber(): string {
+  const year = new Date().getFullYear();
+  const num = String(mpesaCounter++).padStart(4, "0");
+  return `MP-${year}-${num}`;
+}
+
+export function listMpesaTransactions(filter?: {
+  type?: MpesaTransactionType;
+  tripId?: string;
+  expenseId?: string;
+  driverId?: string;
+}): MpesaTransaction[] {
+  let all = [...mpesaTxs.values()];
+  if (filter?.type) all = all.filter((t) => t.type === filter.type);
+  if (filter?.tripId) all = all.filter((t) => t.tripId === filter.tripId);
+  if (filter?.expenseId) all = all.filter((t) => t.expenseId === filter.expenseId);
+  if (filter?.driverId) all = all.filter((t) => t.driverId === filter.driverId);
+  return all.sort(
+    (a, b) => new Date(b.initiatedAt).getTime() - new Date(a.initiatedAt).getTime(),
+  );
+}
+
+export function getMpesaTransaction(id: string): MpesaTransaction | undefined {
+  return mpesaTxs.get(id);
+}
+
+export function createMpesaTransaction(input: {
+  type: MpesaTransactionType;
+  recipient: string;
+  recipientName?: string;
+  amountKes: number;
+  tripId?: string;
+  expenseId?: string;
+  driverId?: string;
+  supplierId?: string;
+  initiatedBy: string;
+  notes?: string;
+}): MpesaTransaction {
+  const id = randomUUID();
+  const tx: MpesaTransaction = {
+    id,
+    number: nextMpesaNumber(),
+    ...input,
+    status: "pending",
+    initiatedAt: new Date().toISOString(),
+    source: "mock",
+  };
+  mpesaTxs.set(id, tx);
+  return tx;
+}
+
+export function completeMpesaTransaction(input: {
+  id: string;
+  status: MpesaTransactionStatus;
+  source: MpesaTransaction["source"];
+  checkoutRequestId?: string;
+  merchantRequestId?: string;
+  mpesaReceiptNumber?: string;
+  errorMessage?: string;
+}): MpesaTransaction | undefined {
+  const tx = mpesaTxs.get(input.id);
+  if (!tx) return undefined;
+  const updated: MpesaTransaction = {
+    ...tx,
+    status: input.status,
+    source: input.source,
+    checkoutRequestId: input.checkoutRequestId ?? tx.checkoutRequestId,
+    merchantRequestId: input.merchantRequestId ?? tx.merchantRequestId,
+    mpesaReceiptNumber: input.mpesaReceiptNumber ?? tx.mpesaReceiptNumber,
+    errorMessage: input.errorMessage,
+    completedAt: new Date().toISOString(),
+  };
+  mpesaTxs.set(tx.id, updated);
+  return updated;
 }
