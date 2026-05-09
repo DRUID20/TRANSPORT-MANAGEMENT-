@@ -32,6 +32,7 @@ Last updated: 2026-05-09
 | Hosting | **Vercel** (frontend) + **Supabase** (DB/storage) | Both have generous free tiers; deploy on `git push`. |
 | AI | **Claude (Anthropic API)** | OCR/extraction, anomaly detection, NL report Q&A, weekly summaries. |
 | Mobile money | **M-Pesa Daraja** | Driver advances, expense reimbursements. |
+| FX rates | **Central Bank of Kenya (CBK) — primary**, **Frankfurter.app — fallback** | CBK = official Kenyan rate (KRA-aligned, audit-acceptable). Frankfurter (ECB-sourced, free, REST) covers gaps + weekends. See [`docs/finance/fx-rate-strategy.md`](./docs/finance/fx-rate-strategy.md). |
 | Notifications | **Africa's Talking** (WhatsApp + SMS) + transactional email | Regional coverage for Kenya/EAC. |
 | Error monitoring | **Sentry** | Catches production bugs as they happen. |
 | Testing | **Vitest** (unit) + **Playwright** (E2E) | Targets the "no critical bugs" bar. |
@@ -211,3 +212,4 @@ Total ≈ **16–20 weeks** to full MVP, but Phase 1 is usable in production aro
   - Budget framework, cost-centre dimension, FAR + auto-depreciation, inventory (spares/tyres) added to Phase 5
   - Phase 9 = Monthly Management Pack
 - 2026-05-09: Open questions raised by management-pack study captured in `management-pack-reference.md` §5 (affiliates? budget already exists? cost centres? subcontractor share? stock-take frequency? close cut-off & sign-off path?).
+- 2026-05-09: FX rate provider chosen — **CBK primary (user confirmed), Frankfurter.app fallback, manual override with audit trail.** Strategy documented in `docs/finance/fx-rate-strategy.md`. Daily Vercel Cron at 17:30 EAT. Pluggable `FxRateProvider` interface so the source can be swapped without touching business logic.
