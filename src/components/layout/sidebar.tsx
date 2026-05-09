@@ -37,7 +37,7 @@ const navGroups: { title: string; items: NavItem[] }[] = [
       { href: "/trucks", label: "Trucks", icon: Truck },
       { href: "/trailers", label: "Trailers", icon: Container },
       { href: "/drivers", label: "Drivers", icon: IdCard },
-      { href: "/workshop", label: "Workshop", icon: Wrench, badge: "soon" },
+      { href: "/workshop", label: "Workshop", icon: Wrench },
     ],
   },
   {

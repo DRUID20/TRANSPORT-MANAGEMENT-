@@ -15,6 +15,13 @@ import type {
   Trailer,
   Truck,
 } from "@/lib/types/fleet";
+import type {
+  JobCard,
+  JobCardDetail,
+  JobCardService,
+  JobCardSpare,
+  JobCardStatus,
+} from "@/lib/types/workshop";
 
 // Seed subcontractors
 const subcontractorSeed: Subcontractor[] = [
@@ -595,5 +602,395 @@ export function updateSupplier(id: string, patch: Partial<Supplier>): Supplier |
   if (!existing) return undefined;
   const updated = { ...existing, ...patch, id: existing.id };
   suppliers.set(id, updated);
+  return updated;
+}
+
+// ============================================================
+// Job Cards (Workshop)
+// ============================================================
+const jobCards = new Map<string, JobCard>();
+const jobCardServices = new Map<string, JobCardService>();
+const jobCardSpares = new Map<string, JobCardSpare>();
+let jobCardCounter = 1;
+
+function nextJobCardNumber(): string {
+  const year = new Date().getFullYear();
+  const num = String(jobCardCounter++).padStart(3, "0");
+  return `JC-${year}-${num}`;
+}
+
+function recomputeTotals(jobCardId: string) {
+  const jc = jobCards.get(jobCardId);
+  if (!jc) return;
+  const labor = [...jobCardServices.values()]
+    .filter((s) => s.jobCardId === jobCardId)
+    .reduce((sum, s) => sum + s.costKes, 0);
+  const sparesTotal = [...jobCardSpares.values()]
+    .filter((s) => s.jobCardId === jobCardId)
+    .reduce((sum, s) => sum + s.totalCostKes, 0);
+  jobCards.set(jobCardId, {
+    ...jc,
+    laborTotalKes: labor,
+    sparesTotalKes: sparesTotal,
+    totalKes: labor + sparesTotal,
+  });
+}
+
+// Seed: one open job card on KBW 882P (which is in_workshop), one completed on KCT 559M
+function seedJobCards() {
+  const jc1Id = "jc-001";
+  const jc1: JobCard = {
+    id: jc1Id,
+    number: "JC-2026-001",
+    truckId: "trk-003", // KBW 882P
+    status: "in_progress",
+    mechanicName: "Joseph Kamau",
+    openingOdometer: 412_880,
+    mechanicAnalysis:
+      "Complete engine overhaul. Cylinder head removed; pistons + rings replaced. Awaiting injectors from Bandari Motors.",
+    openedAt: "2026-04-12T08:00:00Z",
+    laborTotalKes: 0,
+    sparesTotalKes: 0,
+    totalKes: 0,
+  };
+  jobCards.set(jc1Id, jc1);
+
+  // Services on jc1
+  [
+    {
+      description: "Engine teardown and inspection",
+      hours: 8,
+      costKes: 12_000,
+      performedAt: "2026-04-12T16:00:00Z",
+    },
+    {
+      description: "Cylinder head reconditioning",
+      hours: 6,
+      costKes: 18_000,
+      performedAt: "2026-04-15T17:00:00Z",
+    },
+    {
+      description: "Piston + ring replacement",
+      hours: 5,
+      costKes: 10_000,
+      performedAt: "2026-04-18T15:00:00Z",
+    },
+  ].forEach((s) => {
+    const id = `jcs-${randomUUID().slice(0, 8)}`;
+    jobCardServices.set(id, { id, jobCardId: jc1Id, ...s });
+  });
+
+  // Spares on jc1
+  [
+    {
+      description: "Piston rings — set",
+      quantity: 6,
+      unitCostKes: 4500,
+      supplierId: "sup-001",
+      consumedAt: "2026-04-15T10:00:00Z",
+    },
+    {
+      description: "Head gasket — Mercedes Actros",
+      quantity: 1,
+      unitCostKes: 22_000,
+      supplierId: "sup-001",
+      consumedAt: "2026-04-15T12:00:00Z",
+    },
+    {
+      description: "Engine oil — 15W-40, 20L drum",
+      quantity: 2,
+      unitCostKes: 9800,
+      supplierId: "sup-005",
+      consumedAt: "2026-04-18T09:00:00Z",
+    },
+  ].forEach((s) => {
+    const id = `jcp-${randomUUID().slice(0, 8)}`;
+    jobCardSpares.set(id, {
+      id,
+      jobCardId: jc1Id,
+      ...s,
+      totalCostKes: s.quantity * s.unitCostKes,
+      posted: true,
+      postedAt: s.consumedAt,
+    });
+  });
+  recomputeTotals(jc1Id);
+
+  // Completed job card
+  const jc2Id = "jc-002";
+  const jc2: JobCard = {
+    id: jc2Id,
+    number: "JC-2026-002",
+    truckId: "trk-004", // KCT 559M
+    status: "completed",
+    mechanicName: "Stanley Mutua",
+    openingOdometer: 281_440,
+    closingOdometer: 281_452,
+    mechanicAnalysis:
+      "Routine 30,000km service: oil + filters, brake pad inspection.",
+    notes: "All within manufacturer tolerances. Next service at 311,000km.",
+    openedAt: "2026-04-22T08:00:00Z",
+    closedAt: "2026-04-22T17:00:00Z",
+    laborTotalKes: 0,
+    sparesTotalKes: 0,
+    totalKes: 0,
+  };
+  jobCards.set(jc2Id, jc2);
+
+  [
+    {
+      description: "Routine service inspection",
+      hours: 3,
+      costKes: 6000,
+      performedAt: "2026-04-22T13:00:00Z",
+    },
+    {
+      description: "Oil & filter change",
+      hours: 1.5,
+      costKes: 3000,
+      performedAt: "2026-04-22T15:00:00Z",
+    },
+  ].forEach((s) => {
+    const id = `jcs-${randomUUID().slice(0, 8)}`;
+    jobCardServices.set(id, { id, jobCardId: jc2Id, ...s });
+  });
+
+  [
+    {
+      description: "Engine oil — 15W-40, 20L",
+      quantity: 1,
+      unitCostKes: 9800,
+      supplierId: "sup-005",
+      consumedAt: "2026-04-22T15:00:00Z",
+    },
+    {
+      description: "Oil filter — Actros",
+      quantity: 1,
+      unitCostKes: 1800,
+      supplierId: "sup-001",
+      consumedAt: "2026-04-22T15:00:00Z",
+    },
+    {
+      description: "Air filter element",
+      quantity: 1,
+      unitCostKes: 2400,
+      supplierId: "sup-001",
+      consumedAt: "2026-04-22T15:00:00Z",
+    },
+  ].forEach((s) => {
+    const id = `jcp-${randomUUID().slice(0, 8)}`;
+    jobCardSpares.set(id, {
+      id,
+      jobCardId: jc2Id,
+      ...s,
+      totalCostKes: s.quantity * s.unitCostKes,
+      posted: true,
+      postedAt: s.consumedAt,
+    });
+  });
+  recomputeTotals(jc2Id);
+
+  // Awaiting parts
+  const jc3Id = "jc-003";
+  const jc3: JobCard = {
+    id: jc3Id,
+    number: "JC-2026-003",
+    truckId: "trk-007", // KDB 612J
+    status: "awaiting_parts",
+    mechanicName: "Mwiki Workshop Services",
+    openingOdometer: 522_110,
+    mechanicAnalysis:
+      "Front-axle bearing failure. Awaiting OEM bearing kit from Roadtrek.",
+    openedAt: "2026-04-29T08:00:00Z",
+    laborTotalKes: 0,
+    sparesTotalKes: 0,
+    totalKes: 0,
+  };
+  jobCards.set(jc3Id, jc3);
+  [
+    {
+      description: "Front-axle inspection + diagnostic",
+      hours: 4,
+      costKes: 7000,
+      performedAt: "2026-04-29T15:00:00Z",
+    },
+  ].forEach((s) => {
+    const id = `jcs-${randomUUID().slice(0, 8)}`;
+    jobCardServices.set(id, { id, jobCardId: jc3Id, ...s });
+  });
+  recomputeTotals(jc3Id);
+
+  jobCardCounter = 4;
+}
+seedJobCards();
+
+export function listJobCards(filterStatus?: JobCardStatus): JobCard[] {
+  const all = [...jobCards.values()].sort(
+    (a, b) => new Date(b.openedAt).getTime() - new Date(a.openedAt).getTime(),
+  );
+  return filterStatus ? all.filter((j) => j.status === filterStatus) : all;
+}
+
+export function getJobCard(id: string): JobCardDetail | undefined {
+  const jc = jobCards.get(id);
+  if (!jc) return undefined;
+  const services = [...jobCardServices.values()]
+    .filter((s) => s.jobCardId === id)
+    .sort((a, b) => new Date(a.performedAt).getTime() - new Date(b.performedAt).getTime());
+  const spares = [...jobCardSpares.values()]
+    .filter((s) => s.jobCardId === id)
+    .sort((a, b) => new Date(a.consumedAt).getTime() - new Date(b.consumedAt).getTime());
+  return { ...jc, services, spares };
+}
+
+export function jobCardsForTruck(truckId: string): JobCard[] {
+  return [...jobCards.values()]
+    .filter((j) => j.truckId === truckId)
+    .sort((a, b) => new Date(b.openedAt).getTime() - new Date(a.openedAt).getTime());
+}
+
+export function createJobCard(input: {
+  truckId: string;
+  mechanicName: string;
+  openingOdometer?: number;
+  mechanicAnalysis?: string;
+}): JobCard {
+  const id = randomUUID();
+  const jc: JobCard = {
+    id,
+    number: nextJobCardNumber(),
+    truckId: input.truckId,
+    status: "open",
+    mechanicName: input.mechanicName,
+    openingOdometer: input.openingOdometer,
+    mechanicAnalysis: input.mechanicAnalysis ?? "",
+    openedAt: new Date().toISOString(),
+    laborTotalKes: 0,
+    sparesTotalKes: 0,
+    totalKes: 0,
+  };
+  jobCards.set(id, jc);
+  // Move truck into workshop status
+  const truck = trucks.get(input.truckId);
+  if (truck) trucks.set(truck.id, { ...truck, status: "in_workshop" });
+  return jc;
+}
+
+export function updateJobCardAnalysis(id: string, analysis: string): JobCard | undefined {
+  const jc = jobCards.get(id);
+  if (!jc) return undefined;
+  const updated = { ...jc, mechanicAnalysis: analysis };
+  jobCards.set(id, updated);
+  return updated;
+}
+
+export function setJobCardStatus(id: string, status: JobCardStatus): JobCard | undefined {
+  const jc = jobCards.get(id);
+  if (!jc) return undefined;
+  const updated = { ...jc, status };
+  jobCards.set(id, updated);
+  return updated;
+}
+
+export function addJobCardService(input: {
+  jobCardId: string;
+  description: string;
+  hours: number;
+  costKes: number;
+}): JobCardService {
+  const id = randomUUID();
+  const svc: JobCardService = {
+    id,
+    jobCardId: input.jobCardId,
+    description: input.description,
+    hours: input.hours,
+    costKes: input.costKes,
+    performedAt: new Date().toISOString(),
+  };
+  jobCardServices.set(id, svc);
+  // Auto-progress status
+  const jc = jobCards.get(input.jobCardId);
+  if (jc && jc.status === "open") {
+    jobCards.set(jc.id, { ...jc, status: "in_progress" });
+  }
+  recomputeTotals(input.jobCardId);
+  return svc;
+}
+
+export function removeJobCardService(serviceId: string): boolean {
+  const svc = jobCardServices.get(serviceId);
+  if (!svc) return false;
+  jobCardServices.delete(serviceId);
+  recomputeTotals(svc.jobCardId);
+  return true;
+}
+
+export function addJobCardSpare(input: {
+  jobCardId: string;
+  description: string;
+  quantity: number;
+  unitCostKes: number;
+  supplierId?: string;
+}): JobCardSpare {
+  const id = randomUUID();
+  const spare: JobCardSpare = {
+    id,
+    jobCardId: input.jobCardId,
+    description: input.description,
+    quantity: input.quantity,
+    unitCostKes: input.unitCostKes,
+    totalCostKes: input.quantity * input.unitCostKes,
+    supplierId: input.supplierId,
+    consumedAt: new Date().toISOString(),
+    // Phase 5: actual AP bill is created by a posting service; for now we tag posted=true
+    posted: true,
+    postedAt: new Date().toISOString(),
+  };
+  jobCardSpares.set(id, spare);
+  // Auto-progress status
+  const jc = jobCards.get(input.jobCardId);
+  if (jc && jc.status === "open") {
+    jobCards.set(jc.id, { ...jc, status: "in_progress" });
+  }
+  recomputeTotals(input.jobCardId);
+  return spare;
+}
+
+export function removeJobCardSpare(spareId: string): boolean {
+  const spare = jobCardSpares.get(spareId);
+  if (!spare) return false;
+  jobCardSpares.delete(spareId);
+  recomputeTotals(spare.jobCardId);
+  return true;
+}
+
+export function closeJobCard(input: {
+  jobCardId: string;
+  closingOdometer?: number;
+  notes?: string;
+}): JobCard | undefined {
+  const jc = jobCards.get(input.jobCardId);
+  if (!jc) return undefined;
+  const updated: JobCard = {
+    ...jc,
+    status: "completed",
+    closedAt: new Date().toISOString(),
+    closingOdometer: input.closingOdometer,
+    notes: input.notes ?? jc.notes,
+  };
+  jobCards.set(jc.id, updated);
+  // If no other in_workshop job cards on this truck, return truck to active
+  const stillInShop = [...jobCards.values()].some(
+    (j) =>
+      j.truckId === jc.truckId &&
+      j.id !== jc.id &&
+      (j.status === "open" || j.status === "in_progress" || j.status === "awaiting_parts"),
+  );
+  if (!stillInShop) {
+    const truck = trucks.get(jc.truckId);
+    if (truck && truck.status === "in_workshop") {
+      trucks.set(truck.id, { ...truck, status: "active" });
+    }
+  }
   return updated;
 }

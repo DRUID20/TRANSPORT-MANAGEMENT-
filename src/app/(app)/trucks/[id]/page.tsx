@@ -7,6 +7,8 @@ import {
   driverForTruck,
   trailerForTruck,
 } from "@/server/store/mock-store";
+import { jobCardsForTruck } from "@/server/actions/job-cards";
+import { JobCardStatusPill } from "@/components/workshop/job-card-status-pill";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { PageHeader } from "@/components/layout/page-header";
@@ -30,6 +32,7 @@ export default async function TruckDetailPage({ params }: { params: Promise<{ id
     : undefined;
   const driver = driverForTruck(truck.id);
   const trailer = trailerForTruck(truck.id);
+  const jobCards = await jobCardsForTruck(truck.id);
 
   return (
     <div className="flex flex-col gap-6">
@@ -209,27 +212,76 @@ export default async function TruckDetailPage({ params }: { params: Promise<{ id
         </Card>
       )}
 
-      {/* Placeholders for Phase 2+ */}
-      <div className="grid gap-4 lg:grid-cols-2">
-        <Card>
-          <CardHeader>
-            <CardTitle>Recent trips</CardTitle>
-            <CardDescription>Phase 2 — Trips module</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <EmptyHint icon={FileText} text="Trip history will appear here once Trips ship." />
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader>
-            <CardTitle>Service & Job Cards</CardTitle>
-            <CardDescription>Phase 1C — Workshop module</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <EmptyHint icon={Gauge} text="Job cards posted to this truck will appear here." />
-          </CardContent>
-        </Card>
-      </div>
+      {/* Service & Job Cards */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle>Service &amp; Job Cards</CardTitle>
+              <CardDescription>
+                {jobCards.length === 0
+                  ? "No job cards yet for this truck."
+                  : `${jobCards.length} job card${jobCards.length === 1 ? "" : "s"} on file.`}
+              </CardDescription>
+            </div>
+            <Link
+              href={{ pathname: "/workshop/new", query: { truck: truck.id } }}
+              className="inline-flex items-center gap-1.5 rounded-md border border-border bg-bg-base px-3 py-1.5 text-xs font-medium text-fg-secondary transition-colors hover:border-border-strong hover:text-fg-primary"
+            >
+              + New Job Card
+            </Link>
+          </div>
+        </CardHeader>
+        <CardContent className="!p-0">
+          {jobCards.length === 0 ? (
+            <EmptyHint icon={Gauge} text="Open the first Job Card from Workshop." />
+          ) : (
+            <ul className="flex flex-col divide-y divide-border">
+              {jobCards.map((j) => (
+                <li key={j.id}>
+                  <Link
+                    href={`/workshop/${j.id}`}
+                    className="group flex items-center justify-between gap-3 px-5 py-3 transition-colors hover:bg-bg-base/40"
+                  >
+                    <div className="min-w-0">
+                      <div className="flex items-baseline gap-2">
+                        <span className="font-mono text-sm font-medium text-fg-primary group-hover:text-brand-blue">
+                          {j.number}
+                        </span>
+                        <span className="text-xs text-fg-tertiary">
+                          {new Date(j.openedAt).toLocaleDateString("en-GB")}
+                        </span>
+                      </div>
+                      {j.mechanicAnalysis && (
+                        <div className="line-clamp-1 text-xs text-fg-secondary">
+                          {j.mechanicAnalysis}
+                        </div>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <span className="font-mono tnum text-xs text-fg-secondary">
+                        KSh {j.totalKes.toLocaleString()}
+                      </span>
+                      <JobCardStatusPill status={j.status} />
+                    </div>
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Phase 2+ placeholder */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Recent trips</CardTitle>
+          <CardDescription>Phase 2 — Trips module</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <EmptyHint icon={FileText} text="Trip history will appear here once Trips ship." />
+        </CardContent>
+      </Card>
     </div>
   );
 }
