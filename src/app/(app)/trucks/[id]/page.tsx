@@ -1,14 +1,24 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { Calendar, FileText, Fuel, Gauge, Layers, Truck as TruckIcon } from "lucide-react";
+import { Calendar, Container, FileText, Fuel, Gauge, Layers, Phone, Truck as TruckIcon } from "lucide-react";
 import { getTruck } from "@/server/actions/trucks";
 import { getSubcontractorById } from "@/server/actions/subcontractors";
+import {
+  driverForTruck,
+  trailerForTruck,
+} from "@/server/store/mock-store";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { PageHeader } from "@/components/layout/page-header";
 import { OwnerPill } from "@/components/fleet/owner-pill";
 import { TruckStatusPill } from "@/components/fleet/truck-status-pill";
 import { ExpiryChip } from "@/components/fleet/expiry-chip";
+import { Avatar } from "@/components/fleet/avatar";
+import {
+  TrailerStatusPill,
+  trailerTypeLabel,
+} from "@/components/fleet/trailer-status-pill";
+import { DriverStatusPill } from "@/components/fleet/driver-status-pill";
 
 export default async function TruckDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -18,6 +28,8 @@ export default async function TruckDetailPage({ params }: { params: Promise<{ id
   const sub = truck.subcontractorId
     ? await getSubcontractorById(truck.subcontractorId)
     : undefined;
+  const driver = driverForTruck(truck.id);
+  const trailer = trailerForTruck(truck.id);
 
   return (
     <div className="flex flex-col gap-6">
@@ -121,6 +133,66 @@ export default async function TruckDetailPage({ params }: { params: Promise<{ id
               </div>
             ) : (
               <span className="text-sm text-fg-tertiary">Subcontractor not found.</span>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Driver + Trailer */}
+      <div className="grid gap-4 lg:grid-cols-2">
+        <Card>
+          <CardHeader>
+            <CardTitle>Default driver</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {driver ? (
+              <Link
+                href={`/drivers/${driver.id}`}
+                className="group flex items-center gap-4"
+              >
+                <Avatar name={driver.fullName} size="md" />
+                <div className="flex-1">
+                  <div className="text-base font-semibold text-fg-primary group-hover:text-brand-blue">
+                    {driver.fullName}
+                  </div>
+                  <div className="flex items-center gap-1.5 font-mono text-xs text-fg-tertiary">
+                    <Phone className="size-3" />
+                    {driver.phone}
+                  </div>
+                </div>
+                <DriverStatusPill status={driver.status} />
+              </Link>
+            ) : (
+              <span className="text-sm text-fg-tertiary">No default driver assigned.</span>
+            )}
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Attached trailer</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {trailer ? (
+              <Link
+                href={`/trailers/${trailer.id}`}
+                className="group flex items-center gap-4"
+              >
+                <div className="flex size-10 items-center justify-center rounded-md bg-bg-base text-fg-tertiary ring-1 ring-border group-hover:text-brand-blue">
+                  <Container className="size-5" />
+                </div>
+                <div className="flex-1">
+                  <div className="font-mono text-base font-semibold text-fg-primary group-hover:text-brand-blue">
+                    {trailer.registration}
+                  </div>
+                  <div className="text-xs text-fg-tertiary">
+                    {trailerTypeLabel[trailer.type]} · {trailer.capacityTonnes}t
+                  </div>
+                </div>
+                <TrailerStatusPill status={trailer.status} />
+              </Link>
+            ) : (
+              <span className="text-sm text-fg-tertiary">No trailer attached.</span>
             )}
           </CardContent>
         </Card>

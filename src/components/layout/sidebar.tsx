@@ -14,6 +14,9 @@ import {
   Settings,
   Wallet,
   Handshake,
+  Container,
+  IdCard,
+  Store,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Logo } from "@/components/layout/logo";
@@ -32,6 +35,8 @@ const navGroups: { title: string; items: NavItem[] }[] = [
       { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
       { href: "/trips", label: "Trips", icon: Route, badge: "soon" },
       { href: "/trucks", label: "Trucks", icon: Truck },
+      { href: "/trailers", label: "Trailers", icon: Container },
+      { href: "/drivers", label: "Drivers", icon: IdCard },
       { href: "/workshop", label: "Workshop", icon: Wrench, badge: "soon" },
     ],
   },
@@ -40,6 +45,7 @@ const navGroups: { title: string; items: NavItem[] }[] = [
     items: [
       { href: "/customers", label: "Customers", icon: Building2, badge: "soon" },
       { href: "/subcontractors", label: "Subcontractors", icon: Handshake },
+      { href: "/suppliers", label: "Suppliers", icon: Store },
     ],
   },
   {

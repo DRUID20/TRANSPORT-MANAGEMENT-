@@ -58,6 +58,85 @@ export interface Subcontractor {
   createdAt: string;
 }
 
+// ============================================================
+// Trailers
+// ============================================================
+export type TrailerType =
+  | "flatbed"
+  | "tanker"
+  | "curtain_side"
+  | "reefer"
+  | "tipper"
+  | "low_loader"
+  | "container_skeleton";
+
+export type TrailerStatus = "active" | "in_workshop" | "idle" | "retired";
+
+export interface Trailer {
+  id: string;
+  registration: string;
+  ownerType: OwnerType;
+  subcontractorId?: string;
+  type: TrailerType;
+  capacityTonnes: number;
+  axles: number;
+  year: number;
+  status: TrailerStatus;
+  attachedTruckId?: string;        // currently coupled to which truck
+  insuranceExpiry?: string;
+  ntsaInspectionExpiry?: string;
+  notes?: string;
+  createdAt: string;
+}
+
+// ============================================================
+// Drivers
+// ============================================================
+export type DriverStatus = "active" | "on_leave" | "on_trip" | "suspended" | "terminated";
+export type LicenceClass = "BCE" | "CD" | "CE" | "DE";
+
+export interface Driver {
+  id: string;
+  fullName: string;
+  phone: string;
+  nationalId: string;
+  status: DriverStatus;
+  licenceClass: LicenceClass;
+  licenceNumber: string;
+  licenceExpiry?: string;
+  medicalExpiry?: string;
+  passportNumber?: string;
+  passportExpiry?: string;
+  comesaDriverPermitExpiry?: string;
+  defaultTruckId?: string;         // home truck (changeable per trip)
+  hireDate?: string;
+  notes?: string;
+  createdAt: string;
+}
+
+// ============================================================
+// Suppliers (for AP / Workshop)
+// ============================================================
+export type PaymentTerms = "cash_on_delivery" | "net_7" | "net_14" | "net_30" | "net_60";
+export type DefaultPaymentMethod = "mpesa" | "bank" | "cash";
+
+export interface Supplier {
+  id: string;
+  name: string;
+  contactPerson?: string;
+  phone: string;
+  email?: string;
+  kraPin?: string;
+  paymentTerms: PaymentTerms;
+  defaultPaymentMethod: DefaultPaymentMethod;
+  mpesaNumber?: string;
+  bankName?: string;
+  bankAccount?: string;
+  defaultExpenseCategory?: string; // free-text for now (Phase 5 will reference CoA)
+  notes?: string;
+  createdAt: string;
+}
+
 /**
  * Helper: derive a 30/60/90-day expiry classification for the dashboard.
  */
