@@ -83,6 +83,13 @@ import type {
   SupplierPayment,
 } from "@/lib/types/ap";
 import type { BankStatementTransaction } from "@/lib/types/bank";
+import type {
+  Contract,
+  ContractStatus,
+  Department,
+  Employee,
+  EmployeeStatus,
+} from "@/lib/types/hr";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 
@@ -3737,5 +3744,563 @@ export function bankReconSummary(accountCode: string) {
     difference: statementBalance - glBalance,
     unmatchedStatementCount,
     unmatchedGlCount,
+  };
+}
+
+// ============================================================
+// HR (Phase 6A): Departments, Employees, Contracts
+// ============================================================
+const departmentSeed: Department[] = [
+  { id: "dept-ops", name: "Operations", code: "OPS", costCentre: "CC-100", description: "Trip planning, dispatch, drivers, cross-border ops." },
+  { id: "dept-wsp", name: "Workshop", code: "WSP", costCentre: "CC-200", description: "Truck maintenance, repair and tyre management." },
+  { id: "dept-fin", name: "Finance", code: "FIN", costCentre: "CC-300", description: "Accounting, AR / AP, payroll, treasury." },
+  { id: "dept-hr",  name: "Human Resources", code: "HR", costCentre: "CC-400", description: "People, payroll inputs, contracts, leave, appraisals." },
+  { id: "dept-it",  name: "IT & Systems", code: "IT", costCentre: "CC-500", description: "TX System, telematics, integrations." },
+  { id: "dept-mgmt", name: "Management", code: "MGMT", costCentre: "CC-900", description: "Executive leadership." },
+];
+const departments = new Map<string, Department>(departmentSeed.map((d) => [d.id, d]));
+
+const employeeSeed: Employee[] = [
+  // Management
+  {
+    id: "emp-001",
+    employeeNumber: "NVL-001",
+    fullName: "Daniel Achieng",
+    preferredName: "Daniel",
+    gender: "male",
+    dob: "1978-03-12",
+    nationalId: "12345678",
+    kraPin: "A001234567Z",
+    nssfNo: "NSSF-100001",
+    shaNo: "SHA-100001",
+    mpesaPhone: "+254 722 000 001",
+    email: "daniel@nilevalley.co.ke",
+    physicalAddress: "Westlands, Nairobi",
+    bankName: "Equity Bank",
+    bankBranch: "Westlands",
+    bankAccountNo: "0100200300401",
+    bankAccountName: "Daniel Achieng",
+    hireDate: "2020-01-15",
+    status: "active",
+    departmentId: "dept-mgmt",
+    jobTitle: "Managing Director",
+    createdAt: "2020-01-15T08:00:00Z",
+  },
+  {
+    id: "emp-002",
+    employeeNumber: "NVL-002",
+    fullName: "Esther Wanjiru",
+    preferredName: "Esther",
+    gender: "female",
+    dob: "1985-07-22",
+    nationalId: "23456789",
+    kraPin: "A002345678Y",
+    nssfNo: "NSSF-100002",
+    shaNo: "SHA-100002",
+    mpesaPhone: "+254 722 000 002",
+    email: "esther@nilevalley.co.ke",
+    physicalAddress: "Kileleshwa, Nairobi",
+    bankName: "KCB",
+    bankBranch: "Sarit Centre",
+    bankAccountNo: "1101200300402",
+    bankAccountName: "Esther Wanjiru",
+    hireDate: "2020-04-01",
+    status: "active",
+    departmentId: "dept-fin",
+    jobTitle: "Finance Manager",
+    lineManagerId: "emp-001",
+    createdAt: "2020-04-01T08:00:00Z",
+  },
+  {
+    id: "emp-003",
+    employeeNumber: "NVL-003",
+    fullName: "Brian Otieno",
+    gender: "male",
+    dob: "1989-11-04",
+    nationalId: "34567890",
+    kraPin: "A003456789X",
+    nssfNo: "NSSF-100003",
+    shaNo: "SHA-100003",
+    mpesaPhone: "+254 722 000 003",
+    email: "brian@nilevalley.co.ke",
+    physicalAddress: "Kasarani, Nairobi",
+    bankName: "Co-op Bank",
+    bankAccountNo: "0102200300403",
+    hireDate: "2021-02-15",
+    status: "active",
+    departmentId: "dept-ops",
+    jobTitle: "Operations Manager",
+    lineManagerId: "emp-001",
+    createdAt: "2021-02-15T08:00:00Z",
+  },
+  {
+    id: "emp-004",
+    employeeNumber: "NVL-004",
+    fullName: "Faith Njeri",
+    gender: "female",
+    dob: "1992-05-18",
+    nationalId: "45678901",
+    kraPin: "A004567890W",
+    nssfNo: "NSSF-100004",
+    shaNo: "SHA-100004",
+    mpesaPhone: "+254 722 000 004",
+    email: "faith@nilevalley.co.ke",
+    physicalAddress: "Kahawa West, Nairobi",
+    bankName: "Equity Bank",
+    bankAccountNo: "0100200300404",
+    hireDate: "2022-06-01",
+    status: "active",
+    departmentId: "dept-hr",
+    jobTitle: "HR Manager",
+    lineManagerId: "emp-001",
+    createdAt: "2022-06-01T08:00:00Z",
+  },
+  {
+    id: "emp-005",
+    employeeNumber: "NVL-005",
+    fullName: "Peter Kamau",
+    gender: "male",
+    dob: "1980-09-30",
+    nationalId: "56789012",
+    kraPin: "A005678901V",
+    nssfNo: "NSSF-100005",
+    shaNo: "SHA-100005",
+    mpesaPhone: "+254 722 000 005",
+    physicalAddress: "Embakasi, Nairobi",
+    bankName: "KCB",
+    bankAccountNo: "1101200300405",
+    hireDate: "2019-11-01",
+    status: "active",
+    departmentId: "dept-wsp",
+    jobTitle: "Workshop Foreman",
+    lineManagerId: "emp-003",
+    createdAt: "2019-11-01T08:00:00Z",
+  },
+  {
+    id: "emp-006",
+    employeeNumber: "NVL-006",
+    fullName: "Grace Akinyi",
+    gender: "female",
+    dob: "1995-01-12",
+    nationalId: "67890123",
+    mpesaPhone: "+254 722 000 006",
+    email: "grace@nilevalley.co.ke",
+    hireDate: "2024-01-15",
+    status: "probation",
+    departmentId: "dept-ops",
+    jobTitle: "Dispatcher",
+    lineManagerId: "emp-003",
+    createdAt: "2024-01-15T08:00:00Z",
+  },
+  {
+    id: "emp-007",
+    employeeNumber: "NVL-007",
+    fullName: "Samuel Kiprotich",
+    gender: "male",
+    dob: "1990-08-25",
+    nationalId: "78901234",
+    kraPin: "A006789012U",
+    mpesaPhone: "+254 722 000 007",
+    physicalAddress: "Ruiru",
+    bankName: "Equity Bank",
+    bankAccountNo: "0100200300407",
+    hireDate: "2022-03-01",
+    status: "active",
+    departmentId: "dept-wsp",
+    jobTitle: "Mechanic",
+    lineManagerId: "emp-005",
+    createdAt: "2022-03-01T08:00:00Z",
+  },
+  // Drivers — link via driverId
+  {
+    id: "emp-100",
+    employeeNumber: "NVL-100",
+    fullName: "Joseph Mwangi",
+    gender: "male",
+    dob: "1982-04-10",
+    nationalId: "10000001",
+    kraPin: "A010000001Z",
+    nssfNo: "NSSF-200001",
+    shaNo: "SHA-200001",
+    mpesaPhone: "+254 722 410 220",
+    physicalAddress: "Athi River",
+    bankName: "Equity Bank",
+    bankAccountNo: "0100200400001",
+    hireDate: "2021-05-01",
+    status: "active",
+    departmentId: "dept-ops",
+    jobTitle: "Long-haul Driver (CE)",
+    lineManagerId: "emp-003",
+    driverId: "drv-001",
+    createdAt: "2021-05-01T08:00:00Z",
+  },
+  {
+    id: "emp-101",
+    employeeNumber: "NVL-101",
+    fullName: "Ali Hassan",
+    gender: "male",
+    nationalId: "10000002",
+    mpesaPhone: "+254 722 410 221",
+    hireDate: "2021-06-15",
+    status: "active",
+    departmentId: "dept-ops",
+    jobTitle: "Long-haul Driver (CE)",
+    lineManagerId: "emp-003",
+    driverId: "drv-002",
+    createdAt: "2021-06-15T08:00:00Z",
+  },
+  {
+    id: "emp-102",
+    employeeNumber: "NVL-102",
+    fullName: "Daniel Otieno",
+    gender: "male",
+    nationalId: "10000003",
+    mpesaPhone: "+254 722 410 222",
+    hireDate: "2022-01-10",
+    status: "active",
+    departmentId: "dept-ops",
+    jobTitle: "Long-haul Driver (CE)",
+    lineManagerId: "emp-003",
+    driverId: "drv-003",
+    createdAt: "2022-01-10T08:00:00Z",
+  },
+  {
+    id: "emp-103",
+    employeeNumber: "NVL-103",
+    fullName: "Mwangi Kariuki",
+    gender: "male",
+    nationalId: "10000004",
+    mpesaPhone: "+254 722 410 223",
+    hireDate: "2022-04-20",
+    status: "active",
+    departmentId: "dept-ops",
+    jobTitle: "Long-haul Driver (CE)",
+    lineManagerId: "emp-003",
+    driverId: "drv-004",
+    createdAt: "2022-04-20T08:00:00Z",
+  },
+  {
+    id: "emp-104",
+    employeeNumber: "NVL-104",
+    fullName: "Patrick Wafula",
+    gender: "male",
+    nationalId: "10000005",
+    mpesaPhone: "+254 722 410 224",
+    hireDate: "2023-02-01",
+    status: "active",
+    departmentId: "dept-ops",
+    jobTitle: "Long-haul Driver (CE)",
+    lineManagerId: "emp-003",
+    driverId: "drv-005",
+    createdAt: "2023-02-01T08:00:00Z",
+  },
+  {
+    id: "emp-105",
+    employeeNumber: "NVL-105",
+    fullName: "Stephen Njoroge",
+    gender: "male",
+    nationalId: "10000006",
+    mpesaPhone: "+254 722 410 225",
+    hireDate: "2023-08-15",
+    status: "active",
+    departmentId: "dept-ops",
+    jobTitle: "Driver (BCE)",
+    lineManagerId: "emp-003",
+    driverId: "drv-006",
+    createdAt: "2023-08-15T08:00:00Z",
+  },
+  {
+    id: "emp-106",
+    employeeNumber: "NVL-106",
+    fullName: "Hassan Omar",
+    gender: "male",
+    nationalId: "10000007",
+    mpesaPhone: "+254 722 410 226",
+    hireDate: "2024-01-08",
+    status: "probation",
+    departmentId: "dept-ops",
+    jobTitle: "Driver (BCE)",
+    lineManagerId: "emp-003",
+    driverId: "drv-007",
+    createdAt: "2024-01-08T08:00:00Z",
+  },
+];
+const employees = new Map<string, Employee>(employeeSeed.map((e) => [e.id, e]));
+
+// Set department heads now that employees exist
+departments.set("dept-mgmt", { ...departments.get("dept-mgmt")!, headEmployeeId: "emp-001" });
+departments.set("dept-fin",  { ...departments.get("dept-fin")!,  headEmployeeId: "emp-002" });
+departments.set("dept-ops",  { ...departments.get("dept-ops")!,  headEmployeeId: "emp-003" });
+departments.set("dept-hr",   { ...departments.get("dept-hr")!,   headEmployeeId: "emp-004" });
+departments.set("dept-wsp",  { ...departments.get("dept-wsp")!,  headEmployeeId: "emp-005" });
+
+const contractSeed: Contract[] = [
+  {
+    id: "ctr-001",
+    employeeId: "emp-001",
+    type: "permanent",
+    startDate: "2020-01-15",
+    noticePeriodDays: 90,
+    basicSalary: 600_000,
+    currency: "KES",
+    payFrequency: "monthly",
+    allowances: [
+      { name: "House", amount: 200_000, taxable: true },
+      { name: "Transport", amount: 50_000, taxable: false },
+    ],
+    status: "active",
+    createdAt: "2020-01-15T08:00:00Z",
+  },
+  {
+    id: "ctr-002",
+    employeeId: "emp-002",
+    type: "permanent",
+    startDate: "2020-04-01",
+    noticePeriodDays: 60,
+    basicSalary: 350_000,
+    currency: "KES",
+    payFrequency: "monthly",
+    allowances: [
+      { name: "House", amount: 100_000, taxable: true },
+      { name: "Transport", amount: 30_000, taxable: false },
+    ],
+    status: "active",
+    createdAt: "2020-04-01T08:00:00Z",
+  },
+  {
+    id: "ctr-003",
+    employeeId: "emp-003",
+    type: "permanent",
+    startDate: "2021-02-15",
+    noticePeriodDays: 60,
+    basicSalary: 280_000,
+    currency: "KES",
+    payFrequency: "monthly",
+    allowances: [
+      { name: "House", amount: 80_000, taxable: true },
+      { name: "Transport", amount: 25_000, taxable: false },
+    ],
+    status: "active",
+    createdAt: "2021-02-15T08:00:00Z",
+  },
+  {
+    id: "ctr-004",
+    employeeId: "emp-004",
+    type: "permanent",
+    startDate: "2022-06-01",
+    noticePeriodDays: 60,
+    basicSalary: 220_000,
+    currency: "KES",
+    payFrequency: "monthly",
+    allowances: [
+      { name: "House", amount: 60_000, taxable: true },
+      { name: "Transport", amount: 20_000, taxable: false },
+    ],
+    status: "active",
+    createdAt: "2022-06-01T08:00:00Z",
+  },
+  {
+    id: "ctr-005",
+    employeeId: "emp-005",
+    type: "permanent",
+    startDate: "2019-11-01",
+    noticePeriodDays: 60,
+    basicSalary: 180_000,
+    currency: "KES",
+    payFrequency: "monthly",
+    allowances: [
+      { name: "House", amount: 40_000, taxable: true },
+      { name: "Transport", amount: 15_000, taxable: false },
+    ],
+    status: "active",
+    createdAt: "2019-11-01T08:00:00Z",
+  },
+  {
+    id: "ctr-006",
+    employeeId: "emp-006",
+    type: "fixed_term",
+    startDate: "2024-01-15",
+    endDate: "2026-01-14",
+    probationEndDate: "2024-07-14",
+    noticePeriodDays: 30,
+    basicSalary: 75_000,
+    currency: "KES",
+    payFrequency: "monthly",
+    allowances: [{ name: "Transport", amount: 10_000, taxable: false }],
+    status: "active",
+    createdAt: "2024-01-15T08:00:00Z",
+  },
+  {
+    id: "ctr-007",
+    employeeId: "emp-007",
+    type: "permanent",
+    startDate: "2022-03-01",
+    noticePeriodDays: 30,
+    basicSalary: 80_000,
+    currency: "KES",
+    payFrequency: "monthly",
+    allowances: [{ name: "Transport", amount: 12_000, taxable: false }],
+    status: "active",
+    createdAt: "2022-03-01T08:00:00Z",
+  },
+  // Driver contracts — uniform basic + per-day road allowance via payroll
+  ...["emp-100", "emp-101", "emp-102", "emp-103", "emp-104"].map((eid, i) => ({
+    id: `ctr-1${String(i).padStart(2, "0")}`,
+    employeeId: eid,
+    type: "permanent" as const,
+    startDate: "2022-01-01",
+    noticePeriodDays: 30,
+    basicSalary: 65_000,
+    currency: "KES" as const,
+    payFrequency: "monthly" as const,
+    allowances: [
+      { name: "Transport", amount: 8_000, taxable: false },
+      { name: "Cross-border per diem", amount: 12_000, taxable: false },
+    ],
+    status: "active" as const,
+    createdAt: "2022-01-01T08:00:00Z",
+  })),
+  {
+    id: "ctr-105",
+    employeeId: "emp-105",
+    type: "permanent",
+    startDate: "2023-08-15",
+    noticePeriodDays: 30,
+    basicSalary: 55_000,
+    currency: "KES",
+    payFrequency: "monthly",
+    allowances: [{ name: "Transport", amount: 6_000, taxable: false }],
+    status: "active",
+    createdAt: "2023-08-15T08:00:00Z",
+  },
+  {
+    id: "ctr-106",
+    employeeId: "emp-106",
+    type: "fixed_term",
+    startDate: "2024-01-08",
+    endDate: "2025-01-07",
+    probationEndDate: "2024-07-07",
+    noticePeriodDays: 14,
+    basicSalary: 45_000,
+    currency: "KES",
+    payFrequency: "monthly",
+    allowances: [{ name: "Transport", amount: 5_000, taxable: false }],
+    status: "active",
+    createdAt: "2024-01-08T08:00:00Z",
+  },
+];
+const contracts = new Map<string, Contract>(contractSeed.map((c) => [c.id, c]));
+
+// ----- Departments -----
+export function listDepartments(): Department[] {
+  return [...departments.values()].sort((a, b) => a.name.localeCompare(b.name));
+}
+export function getDepartment(id: string): Department | undefined {
+  return departments.get(id);
+}
+export function createDepartment(input: Omit<Department, "id">): Department {
+  const id = `dept-${randomUUID().slice(0, 8)}`;
+  const d: Department = { ...input, id };
+  departments.set(id, d);
+  return d;
+}
+
+// ----- Employees -----
+export function listEmployees(filter?: {
+  departmentId?: string;
+  status?: EmployeeStatus;
+  search?: string;
+}): Employee[] {
+  let all = [...employees.values()];
+  if (filter?.departmentId) all = all.filter((e) => e.departmentId === filter.departmentId);
+  if (filter?.status) all = all.filter((e) => e.status === filter.status);
+  if (filter?.search) {
+    const q = filter.search.toLowerCase();
+    all = all.filter(
+      (e) =>
+        e.fullName.toLowerCase().includes(q) ||
+        e.employeeNumber.toLowerCase().includes(q) ||
+        e.jobTitle.toLowerCase().includes(q) ||
+        e.nationalId.includes(q),
+    );
+  }
+  return all.sort((a, b) => a.employeeNumber.localeCompare(b.employeeNumber));
+}
+export function getEmployee(id: string): Employee | undefined {
+  return employees.get(id);
+}
+export function getEmployeeByDriverId(driverId: string): Employee | undefined {
+  for (const e of employees.values()) if (e.driverId === driverId) return e;
+  return undefined;
+}
+export function nextEmployeeNumber(): string {
+  let max = 0;
+  for (const e of employees.values()) {
+    const m = e.employeeNumber.match(/^NVL-(\d+)$/);
+    if (m) max = Math.max(max, parseInt(m[1]!, 10));
+  }
+  return `NVL-${String(max + 1).padStart(3, "0")}`;
+}
+export function createEmployee(input: Omit<Employee, "id" | "createdAt">): Employee {
+  const id = `emp-${randomUUID().slice(0, 8)}`;
+  const e: Employee = { ...input, id, createdAt: new Date().toISOString() };
+  employees.set(id, e);
+  return e;
+}
+export function updateEmployee(id: string, patch: Partial<Employee>): Employee | undefined {
+  const e = employees.get(id);
+  if (!e) return undefined;
+  const updated: Employee = { ...e, ...patch, id: e.id, createdAt: e.createdAt };
+  employees.set(id, updated);
+  return updated;
+}
+
+// ----- Contracts -----
+export function listContracts(filter?: {
+  employeeId?: string;
+  status?: ContractStatus;
+}): Contract[] {
+  let all = [...contracts.values()];
+  if (filter?.employeeId) all = all.filter((c) => c.employeeId === filter.employeeId);
+  if (filter?.status) all = all.filter((c) => c.status === filter.status);
+  return all.sort((a, b) => b.startDate.localeCompare(a.startDate));
+}
+export function getContract(id: string): Contract | undefined {
+  return contracts.get(id);
+}
+export function activeContractFor(employeeId: string): Contract | undefined {
+  return [...contracts.values()].find(
+    (c) => c.employeeId === employeeId && c.status === "active",
+  );
+}
+export function createContract(input: Omit<Contract, "id" | "createdAt">): Contract {
+  const id = `ctr-${randomUUID().slice(0, 8)}`;
+  const c: Contract = { ...input, id, createdAt: new Date().toISOString() };
+  contracts.set(id, c);
+  return c;
+}
+export function terminateContract(id: string): Contract | undefined {
+  const c = contracts.get(id);
+  if (!c) return undefined;
+  const updated: Contract = { ...c, status: "terminated" };
+  contracts.set(id, updated);
+  return updated;
+}
+
+/** Total monthly cost (basic + allowances) for an employee in their contract currency. */
+export function monthlyCostForEmployee(employeeId: string): {
+  basic: number;
+  allowances: number;
+  total: number;
+  currency: string;
+} | null {
+  const c = activeContractFor(employeeId);
+  if (!c) return null;
+  const allow = c.allowances.reduce((s, a) => s + a.amount, 0);
+  return {
+    basic: c.basicSalary,
+    allowances: allow,
+    total: c.basicSalary + allow,
+    currency: c.currency,
   };
 }
