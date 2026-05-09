@@ -116,7 +116,7 @@ Postgres with **row-level security** so each org only sees its own data. Multi-c
 | Phase | Scope | Estimate |
 |---|---|---|
 | **0 — Foundation** | Repo, CI/CD, auth, roles, multi-currency primitives, Sentry, deployment, base UI | 1–2 wks |
-| **1 — Asset Register + Fleet** | Assets, trucks, drivers, expiry alerts | 1–2 wks |
+| **1 — Asset Register + Fleet + Workshop/Job Cards** | Assets, trucks, drivers, expiry alerts, **Job Card workflow (mechanic analysis, services, spares posted to truck, supplier AP statement)** | 2–3 wks |
 | **2 — Trips + Cross-border + Driver PWA + Doc scan** | Trip lifecycle, customs docs, driver phone app, camera + AI extract, POD | 3 wks |
 | **3 — Customer Portal + Tracking** | Customer login / shareable link, status, ETA, POD download | 1 wk |
 | **4 — Expenses + Fuel + M-Pesa** | Receipt scan, approval, fuel logs, reimbursement | 2 wks |
@@ -167,7 +167,7 @@ Total ≈ **16–20 weeks** to full MVP, but Phase 1 is usable in production aro
 - KRA eTIMS invoicing.
 - Native iOS / Android apps (PWA is the chosen mobile path).
 - GPS device integration (deferred — abstraction is in the data model).
-- Workshop / jobcards / tyre & parts inventory (not requested in this round).
+- ~~Workshop / jobcards / tyre & parts inventory~~ → **NOW IN SCOPE** (added 2026-05-09 from Nile Valley notes — Workshop & Job Cards module).
 - Payroll calculation engine (we export inputs to an external payroll provider).
 
 ---
@@ -214,3 +214,11 @@ Total ≈ **16–20 weeks** to full MVP, but Phase 1 is usable in production aro
 - 2026-05-09: Open questions raised by management-pack study captured in `management-pack-reference.md` §5 (affiliates? budget already exists? cost centres? subcontractor share? stock-take frequency? close cut-off & sign-off path?).
 - 2026-05-09: FX rate provider chosen — **CBK primary (user confirmed), Frankfurter.app fallback, manual override with audit trail.** Strategy documented in `docs/finance/fx-rate-strategy.md`. Daily Vercel Cron at 17:30 EAT. Pluggable `FxRateProvider` interface so the source can be swapped without touching business logic.
 - 2026-05-09: Operational workflow baseline adopted (standard cross-border TMS lifecycle: Lead → Plan → Dispatch → Load → Transit → Border → Deliver → POD → Close → Invoice → Collect, plus assets/maintenance/cost-capture/customer-portal/daily-weekly-monthly cycles). Saved to `docs/operations/workflow-baseline.md`. **Nile Valley to layer specific deviations and extensions on top** in the same file as it walks through its real process.
+- 2026-05-09: Nile Valley extensions captured from handwritten notes (`docs/operations/workflow-baseline.md` §5):
+  - **TX System replaces "Pumas"** (Nile Valley's current system).
+  - **Workshop / Job Cards module pulled back IN scope** (was previously out-of-scope) — every yard service generates a Job Card with mechanic analysis, services done, spares used; spares charged to truck; supplier AP statement auto-generated.
+  - **Journey Log** is the per-trip record with: quantity, loading/offloading dates, distance covered (with destinations), mileage rate, mileage, fuel consumed, **road wear**.
+  - **Per-truck P&L** elevated from analytic to core deliverable.
+  - **Road Wear accrual** added as a new concept (Dr Road Wear Expense / Cr Provision for Maintenance & Tyres at trip close; consumed when actual maintenance/tyres are paid). Needs CoA additions and per-km rate methodology — clarification pending.
+  - **HR module extended**: payroll, statutory deductions per employee, employee appraisal/performance, salaries & loans, **job-description-driven RBAC** (each employee's screens are activated by job description, stricter than standard RBAC).
+  - **Subcontractor vs Own** tagging confirmed as a first-class dimension on every entry.

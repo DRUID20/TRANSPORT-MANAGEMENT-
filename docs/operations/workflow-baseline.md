@@ -103,3 +103,86 @@ These are the points where most TMSes differ. Nile Valley will tell us its choic
 ## 4. Open additions
 
 This file is a living baseline. As Nile Valley walks through its own process, we **add a §X "Nile Valley deviations"** for each lifecycle stage that diverges, and an **§Y "Nile Valley extensions"** for activities not in the baseline.
+
+---
+
+## 5. Nile Valley extensions (from handwritten notes, 2026-05-09)
+
+The current system in use at Nile Valley is called **Pumas**. TX System replaces it. The Pumas behaviours we must reproduce or improve:
+
+### 5.1 Maintenance — Job Card workflow (now IN scope)
+
+> *Previously marked out-of-scope. Pulled back in based on these notes.*
+
+- A **Job Card** is generated **every time a truck is serviced at the yard**.
+- Job Card contents:
+  - **Mechanic analysis** (the diagnostic / what was wrong)
+  - **Services done for the day** (the work performed)
+  - **Spares** consumed (item, qty, cost)
+- Posting behaviour:
+  - **Spares are posted to the respective vehicle** (cost charged to the truck → drives per-truck P&L)
+  - **Supplier AP statement** is generated automatically when spares are bought from a supplier
+  - **Payment** is processed inside TX System (not in a separate accounting tool)
+  - **Grouping**: maintenance expense routed into the respective expense groups (so the OPEX analysis stays clean)
+
+### 5.2 Operations — Journey Log (per trip)
+
+A trip is recorded as a **Journey Log** with these fields:
+
+| Field | Notes |
+|---|---|
+| Quantity | Cargo quantity (units / tonnes / litres / TEUs) |
+| Loading date | When loaded at origin |
+| Offloading date | When delivered at destination |
+| Distance covered | With destinations listed |
+| **Mileage rate** | TBD — clarify with user (rate charged to customer per km? cost per km? both?) |
+| Mileage | Actual km driven |
+| Fuel consumed | Litres |
+| **Road wear** | Per-km wear & tear accrual — see §5.5 |
+
+Operational expenses (fuel, tolls, border, driver per-diem) are **posted against the Journey Log number** so every cost is tied to a trip.
+
+### 5.3 HR module — extensions
+
+- **Payroll** with Kenyan statutory deductions per employee (PAYE, NSSF, NHIF/SHIF, NITA, AHL, Pension)
+- **Employee appraisal / performance** (cycle TBD — quarterly? annual?)
+- **Salaries & loans to employees** (loans tracked, deducted from payroll over instalments)
+- **Job-description-driven RBAC**: each employee's role is defined by their job description, and TX System activates **only the screens / accounts** relevant to that role. (This is stricter than standard role-based access — it's role + per-screen mapping driven from HR.)
+
+### 5.4 Per-truck P&L (elevated to a core deliverable)
+
+System generates a **P&L per truck**:
+- Revenue: trip income allocated to the truck (rate × quantity / km × mileage rate / etc., per the rate basis)
+- Costs: fuel, tolls, border, driver allowances, maintenance (via job cards), spares, tyres, road-wear accrual, insurance amortised, depreciation, tracker subscription
+- Result: gross profit per truck, period-by-period, with drill-down to underlying trips and job cards
+
+### 5.5 Road Wear accrual (NEW concept — needs design discussion)
+
+- Recognises tyre + maintenance wear as a per-km cost on every trip, instead of waiting for the actual tyre replacement / service to hit P&L.
+- Likely posting:
+  - **Trip close**: Dr `5042xx Road Wear Expense` / Cr `21xxxx Provision for Maintenance & Tyres` (a current liability or contra-asset, TBD)
+  - **Actual tyre purchase / service**: Dr `21xxxx Provision …` / Cr Cash/AP (consumes the provision; any difference goes to actual maintenance expense)
+- Needs a **rate per km** — typically derived from historical (tyre cost + maintenance cost) ÷ km driven over the past 12 months. Question: how does Pumas currently calculate it?
+
+### 5.6 Subcontractor vs Own — every entry tagged
+
+- Every journey log, expense, and revenue entry carries an `executor_type ∈ {own_fleet, subcontractor, sister_company}` flag (already in plan §13).
+
+### 5.7 Module mapping — Pumas → TX System
+
+| Pumas function | TX System module |
+|---|---|
+| **Maintenance**: posts spares, charges vehicle, AP statement, payment, groups expenses, generates job cards | **New module: Workshop & Job Cards** (added to Phase 1 scope) |
+| **Operations**: journey logs, mileage + fuel posted, operational expenses | **Trips & Cross-border** (Phase 2) — Journey Log is the trip record |
+| **Finance**: reports, ledger/TB/IS/SOFP/CF/AR/AP aging, forex, asset register, tax, accruals, control accounts, revaluation reserves | **Finance / Accounting** (Phase 5) + **Monthly Management Pack** (Phase 9) |
+
+---
+
+## 6. Clarifications still needed
+
+1. **Mileage rate** — what does this represent? Customer billing rate per km, internal cost per km, or both?
+2. **Road wear** — how is the per-km rate currently computed in Pumas? And which account does the accrual sit on?
+3. **Job descriptions for RBAC** — do you have the existing list of roles + screens-per-role, or do we design it together?
+4. **Employee loans** — paid from petty cash? Bank? M-Pesa? And what's the typical repayment term (3 months, 6 months, longer)?
+5. **Appraisal cycle** — quarterly, half-yearly, or annual? Any KPIs already used?
+6. **Workshop scope** — just job cards on our own trucks, or do you also do third-party workshop work (revenue-generating)?
