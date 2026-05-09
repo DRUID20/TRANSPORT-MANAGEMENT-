@@ -81,9 +81,8 @@ export default async function HrIndexPage() {
       href: "/hr/appraisals",
       label: "Performance",
       icon: GraduationCap,
-      desc: "Annual appraisal cycle + ratings.",
+      desc: "Annual appraisal cycle. Goals + competencies + 3-stage signoff.",
       count: undefined,
-      soon: true,
     },
     {
       href: "/hr/permissions",

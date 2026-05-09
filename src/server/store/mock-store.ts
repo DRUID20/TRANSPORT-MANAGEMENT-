@@ -118,6 +118,15 @@ import {
   computePaye,
   computeSha,
 } from "@/lib/types/payroll";
+import type {
+  AppraisalCycle,
+  AppraisalCycleStatus,
+  AppraisalGoal,
+  AppraisalReview,
+  AppraisalReviewStatus,
+  CompetencyRating,
+} from "@/lib/types/appraisal";
+import { STANDARD_COMPETENCIES } from "@/lib/types/appraisal";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 
@@ -5201,4 +5210,283 @@ export function cancelLoan(id: string): Loan | { error: string } {
   const updated: Loan = { ...l, status: "cancelled" };
   loans.set(id, updated);
   return updated;
+}
+
+// ============================================================
+// Performance / Appraisal (Phase 6E)
+// ============================================================
+const appraisalCycles = new Map<string, AppraisalCycle>();
+const appraisalReviews = new Map<string, AppraisalReview>();
+
+function reviewKey(cycleId: string, employeeId: string): string {
+  return `apr-${cycleId}-${employeeId}`;
+}
+
+function buildEmptyReview(cycleId: string, employeeId: string): AppraisalReview {
+  const employee = employees.get(employeeId);
+  return {
+    id: reviewKey(cycleId, employeeId),
+    cycleId,
+    employeeId,
+    managerId: employee?.lineManagerId,
+    goals: [],
+    competencies: STANDARD_COMPETENCIES.map((c) => ({ competency: c })),
+    status: "draft",
+    createdAt: new Date().toISOString(),
+  };
+}
+
+function seedAppraisals() {
+  const currentYear = new Date().getFullYear();
+  const cycle: AppraisalCycle = {
+    id: `apc-${currentYear}`,
+    label: String(currentYear),
+    year: currentYear,
+    startDate: `${currentYear}-01-01`,
+    endDate: `${currentYear}-12-31`,
+    status: "open",
+    createdAt: new Date().toISOString(),
+  };
+  appraisalCycles.set(cycle.id, cycle);
+
+  // Seed reviews for active office staff with varying levels of completion
+  const seedReviews: Array<{
+    employeeId: string;
+    status: AppraisalReviewStatus;
+    rating?: 1 | 2 | 3 | 4 | 5;
+    goals: Array<{ description: string; target?: string; self?: number; mgr?: number }>;
+    selfComp?: number;
+    mgrComp?: number;
+    employeeComment?: string;
+    managerComment?: string;
+    hrComment?: string;
+    recommendation?: "promote" | "increment" | "training" | "pip" | "none";
+    incrementPct?: number;
+  }> = [
+    {
+      employeeId: "emp-002",
+      status: "hr_finalised",
+      rating: 4,
+      goals: [
+        { description: "Close monthly books by 5th working day", target: "5th of every month", self: 90, mgr: 85 },
+        { description: "Reduce DSO from 65 to 50 days", target: "DSO ≤ 50", self: 70, mgr: 75 },
+        { description: "Implement TX System Phase 5", target: "Go-live Q3", self: 100, mgr: 100 },
+      ],
+      selfComp: 4, mgrComp: 4,
+      employeeComment: "Solid year with TX go-live as the standout achievement.",
+      managerComment: "Esther led the finance transformation. Recommend a 7% increment.",
+      hrComment: "Approved. Increment to take effect 1 Jan.",
+      recommendation: "increment",
+      incrementPct: 7,
+    },
+    {
+      employeeId: "emp-003",
+      status: "manager_reviewed",
+      rating: 4,
+      goals: [
+        { description: "Improve fleet utilisation to 85%", target: "≥85% days on trip", self: 80, mgr: 78 },
+        { description: "Reduce avg border crossing time", target: "≤6 hrs Malaba", self: 75, mgr: 70 },
+      ],
+      selfComp: 4, mgrComp: 4,
+      employeeComment: "Tough Q2 with the engine overhauls but recovered well in Q3-Q4.",
+      managerComment: "Strong year. Awaiting HR sign-off on the 5% increment.",
+      recommendation: "increment",
+      incrementPct: 5,
+    },
+    {
+      employeeId: "emp-004",
+      status: "employee_submitted",
+      goals: [
+        { description: "Roll out HR Module of TX System", target: "Phase 6 live by Q4", self: 75 },
+        { description: "Reduce voluntary attrition to <8%", target: "≤8%", self: 80 },
+      ],
+      selfComp: 4,
+      employeeComment: "Phase 6 on track. Attrition trending down.",
+    },
+    {
+      employeeId: "emp-005",
+      status: "draft",
+      goals: [
+        { description: "Reduce unscheduled downtime by 20%", target: "Maintain >85% truck availability" },
+      ],
+    },
+    {
+      employeeId: "emp-006",
+      status: "draft",
+      goals: [],
+    },
+    {
+      employeeId: "emp-007",
+      status: "draft",
+      goals: [
+        { description: "Complete diesel refresher training", target: "NITA Cert 2026" },
+      ],
+    },
+  ];
+
+  for (const s of seedReviews) {
+    const review = buildEmptyReview(cycle.id, s.employeeId);
+    review.goals = s.goals.map((g, i) => ({
+      id: `goal-${cycle.id}-${s.employeeId}-${i}`,
+      description: g.description,
+      target: g.target,
+      selfRating: g.self,
+      managerRating: g.mgr,
+    }));
+    if (s.selfComp || s.mgrComp) {
+      review.competencies = STANDARD_COMPETENCIES.map((c) => ({
+        competency: c,
+        selfRating: s.selfComp as 1 | 2 | 3 | 4 | 5 | undefined,
+        managerRating: s.mgrComp as 1 | 2 | 3 | 4 | 5 | undefined,
+      }));
+    }
+    review.status = s.status;
+    review.overallRating = s.rating;
+    review.employeeComment = s.employeeComment;
+    review.managerComment = s.managerComment;
+    review.hrComment = s.hrComment;
+    review.recommendation = s.recommendation;
+    review.proposedIncrementPct = s.incrementPct;
+    if (s.status === "employee_submitted" || s.status === "manager_reviewed" || s.status === "hr_finalised") {
+      review.submittedAt = new Date(Date.now() - 14 * 86400_000).toISOString();
+    }
+    if (s.status === "manager_reviewed" || s.status === "hr_finalised") {
+      review.managerReviewedAt = new Date(Date.now() - 7 * 86400_000).toISOString();
+    }
+    if (s.status === "hr_finalised") {
+      review.hrFinalisedAt = new Date(Date.now() - 1 * 86400_000).toISOString();
+    }
+    appraisalReviews.set(review.id, review);
+  }
+}
+seedAppraisals();
+
+export function listAppraisalCycles(): AppraisalCycle[] {
+  return [...appraisalCycles.values()].sort((a, b) => b.year - a.year);
+}
+export function getAppraisalCycle(id: string): AppraisalCycle | undefined {
+  return appraisalCycles.get(id);
+}
+export function createAppraisalCycle(input: {
+  label: string;
+  year: number;
+  startDate: string;
+  endDate: string;
+  notes?: string;
+}): AppraisalCycle | { error: string } {
+  const id = `apc-${input.year}`;
+  if (appraisalCycles.has(id)) return { error: "Cycle for that year already exists" };
+  const cycle: AppraisalCycle = {
+    ...input,
+    id,
+    status: "open",
+    createdAt: new Date().toISOString(),
+  };
+  appraisalCycles.set(id, cycle);
+  return cycle;
+}
+
+export function setAppraisalCycleStatus(
+  id: string,
+  status: AppraisalCycleStatus,
+): AppraisalCycle | undefined {
+  const c = appraisalCycles.get(id);
+  if (!c) return undefined;
+  appraisalCycles.set(id, { ...c, status });
+  return appraisalCycles.get(id);
+}
+
+/** All reviews for a cycle. Auto-creates draft reviews for any active
+ *  employee that doesn't have one yet. */
+export function listReviewsForCycle(cycleId: string): AppraisalReview[] {
+  for (const e of employees.values()) {
+    if (e.status === "terminated") continue;
+    const k = reviewKey(cycleId, e.id);
+    if (!appraisalReviews.has(k)) {
+      appraisalReviews.set(k, buildEmptyReview(cycleId, e.id));
+    }
+  }
+  return [...appraisalReviews.values()]
+    .filter((r) => r.cycleId === cycleId)
+    .sort((a, b) => {
+      const ea = employees.get(a.employeeId);
+      const eb = employees.get(b.employeeId);
+      return (ea?.employeeNumber ?? "").localeCompare(eb?.employeeNumber ?? "");
+    });
+}
+
+export function getAppraisalReview(
+  cycleId: string,
+  employeeId: string,
+): AppraisalReview | undefined {
+  const k = reviewKey(cycleId, employeeId);
+  if (!appraisalReviews.has(k) && employees.has(employeeId) && appraisalCycles.has(cycleId)) {
+    appraisalReviews.set(k, buildEmptyReview(cycleId, employeeId));
+  }
+  return appraisalReviews.get(k);
+}
+
+export function updateAppraisalReview(input: {
+  cycleId: string;
+  employeeId: string;
+  goals: Array<Omit<AppraisalGoal, "id"> & { id?: string }>;
+  competencies: CompetencyRating[];
+  overallRating?: number;
+  employeeComment?: string;
+  managerComment?: string;
+  hrComment?: string;
+  recommendation?: "promote" | "increment" | "training" | "pip" | "none";
+  proposedIncrementPct?: number;
+}): AppraisalReview | { error: string } {
+  const k = reviewKey(input.cycleId, input.employeeId);
+  const existing = appraisalReviews.get(k);
+  if (!existing) return { error: "Review not found" };
+  if (existing.status === "hr_finalised") return { error: "Review is HR-finalised — locked" };
+  const updated: AppraisalReview = {
+    ...existing,
+    goals: input.goals.map((g, i) => ({
+      ...g,
+      id: g.id ?? `goal-${input.cycleId}-${input.employeeId}-${i}`,
+    })),
+    competencies: input.competencies,
+    overallRating: input.overallRating as 1 | 2 | 3 | 4 | 5 | undefined,
+    employeeComment: input.employeeComment,
+    managerComment: input.managerComment,
+    hrComment: input.hrComment,
+    recommendation: input.recommendation,
+    proposedIncrementPct: input.proposedIncrementPct,
+  };
+  appraisalReviews.set(k, updated);
+  return updated;
+}
+
+export function advanceAppraisalReview(
+  cycleId: string,
+  employeeId: string,
+  to: AppraisalReviewStatus,
+): AppraisalReview | { error: string } {
+  const k = reviewKey(cycleId, employeeId);
+  const existing = appraisalReviews.get(k);
+  if (!existing) return { error: "Review not found" };
+
+  const order: AppraisalReviewStatus[] = ["draft", "employee_submitted", "manager_reviewed", "hr_finalised"];
+  if (order.indexOf(to) <= order.indexOf(existing.status)) {
+    return { error: `Cannot move backwards from ${existing.status} to ${to}` };
+  }
+  const now = new Date().toISOString();
+  const updated: AppraisalReview = {
+    ...existing,
+    status: to,
+    submittedAt: to === "employee_submitted" ? now : existing.submittedAt,
+    managerReviewedAt: to === "manager_reviewed" ? now : existing.managerReviewedAt,
+    hrFinalisedAt: to === "hr_finalised" ? now : existing.hrFinalisedAt,
+  };
+  appraisalReviews.set(k, updated);
+  return updated;
+}
+
+export function reviewsForEmployee(employeeId: string): AppraisalReview[] {
+  return [...appraisalReviews.values()]
+    .filter((r) => r.employeeId === employeeId)
+    .sort((a, b) => b.cycleId.localeCompare(a.cycleId));
 }

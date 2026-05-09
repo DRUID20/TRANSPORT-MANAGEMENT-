@@ -21,6 +21,7 @@ import { EmployeeStatusPill } from "@/components/hr/employee-status-pill";
 import { EmployeeComplianceCard } from "@/components/hr/employee-compliance-card";
 import { EmployeeLeaveCard } from "@/components/hr/employee-leave-card";
 import { EmployeePayrollCard } from "@/components/hr/employee-payroll-card";
+import { EmployeeAppraisalCard } from "@/components/hr/employee-appraisal-card";
 
 export default async function EmployeeDetailPage({
   params,
@@ -272,7 +273,10 @@ export default async function EmployeeDetailPage({
       {/* Payroll & Loans (Phase 6D) */}
       <EmployeePayrollCard employeeId={e.id} />
 
-      {/* Phase 6E–F placeholders */}
+      {/* Performance (Phase 6E) */}
+      <EmployeeAppraisalCard employeeId={e.id} />
+
+      {/* Phase 6F placeholder */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
@@ -280,8 +284,8 @@ export default async function EmployeeDetailPage({
             Coming in this phase
           </CardTitle>
           <CardDescription>
-            Appraisal ratings and JD-based permissions will be wired in as
-            Phases 6E–6F ship.
+            Job-Description-driven permissions (Phase 6F) will land next — each role
+            will activate specific screens and actions for this employee.
           </CardDescription>
         </CardHeader>
       </Card>

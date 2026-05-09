@@ -31,6 +31,7 @@ import {
   Banknote,
   CalendarRange,
   CalendarDays,
+  GraduationCap,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Logo } from "@/components/layout/logo";
@@ -76,6 +77,7 @@ const navGroups: { title: string; items: NavItem[] }[] = [
       { href: "/hr/attendance", label: "Attendance", icon: CalendarDays },
       { href: "/hr/payroll", label: "Payroll", icon: Wallet },
       { href: "/hr/loans", label: "Loans", icon: Wallet },
+      { href: "/hr/appraisals", label: "Appraisals", icon: GraduationCap },
     ],
   },
   {
