@@ -112,10 +112,10 @@ Every later phase plugs into this skeleton — no module ever ships unstyled.
 
 | Asset | Status |
 |---|---|
-| Logo | **Coming from Nile Valley** (vector preferred — SVG / AI / PDF; horizontal *and* icon-mark versions if available) |
-| Brand colour palette | **Not yet decided.** When the logo arrives, Claude proposes 2–3 palette options derived from / paired with the logo for sign-off. |
-| Typography | Default to **Inter** (clean, modern, command-centre fit) unless Nile Valley specifies a brand font. |
-| Favicon / app icon | Generated from the logo (512×512 PNG + ICO + Apple touch icon). |
+| Logo | **Coming from Nile Valley** (vector preferred — SVG / AI / PDF; horizontal *and* icon-mark versions if available). Used for app branding, favicon, login screen, exports, customer-portal header. |
+| Brand colour palette | **LOCKED — Apple × SpaceX fusion.** Full token list in [`color-tokens.md`](./color-tokens.md). |
+| Typography | **LOCKED — Inter** (UI) + **JetBrains Mono** (numerals/IDs). Both free, web-optimised, match the SF Pro / SpaceX-control feel. |
+| Favicon / app icon | Generated from the logo when it lands (512×512 PNG + ICO + Apple touch icon variants). |
 
 When these arrive, we encode them as design tokens (CSS variables) so the whole product re-themes by changing a single file.
 
@@ -129,3 +129,4 @@ When these arrive, we encode them as design tokens (CSS variables) so the whole 
 - 2026-05-09: Brand assets pending from Nile Valley (logo + colours + font + favicon).
 - 2026-05-09: Reference apps narrowed by Nile Valley: **Apple** (polish/depth), **M-Pesa / banking** (financial trust), **Instagram/TikTok** (visual density). Synthesis: "Fleet command centre with Apple-grade polish, M-Pesa-grade financial trust, Instagram-grade visual density."
 - 2026-05-09: Logo confirmed coming; colour palette to be proposed by Claude (2–3 options) once the logo lands.
+- 2026-05-09: **Palette LOCKED — Apple × SpaceX fusion.** SpaceX provides the technical authority (pure black surfaces, JetBrains Mono numerals, high contrast); Apple provides the polish (refined greys, soft shadows, semantic status colours, Apple Blue accent, Inter typography, frosted-glass overlays). Full design tokens in `docs/design/color-tokens.md`. Logo still needed but only to verify accent harmony + generate favicons.
