@@ -5,6 +5,30 @@ Last updated: 2026-05-09
 
 ---
 
+## 0. The bar — "beautiful enough that people *want* to use it"
+
+Per Nile Valley: TX System must not be a utility you tolerate; it must be a product your team **reaches for** every day. The standard is *beautiful + addictive*, not *functional + acceptable*.
+
+Every screen we ship is held against this checklist before merge:
+
+- [ ] **Instant feel** — actions respond in <100ms (optimistic updates, no spinners on the happy path)
+- [ ] **Beautiful empty state** — never a blank screen; explains and looks intentional
+- [ ] **Polished loading** — skeleton loaders, never a bare spinner
+- [ ] **Delightful micro-interactions** — hover lifts, smooth status pill transitions, satisfying success animations
+- [ ] **Friendly error state** — clear message + suggested fix, never a red wall of text
+- [ ] **Keyboard accessible + shortcuts** — Cmd-K palette + shortcuts on every common action
+- [ ] **Smart defaults** — remembers last filter, last truck, last route; fewer clicks
+- [ ] **Live feel** — real-time updates without refresh where it matters (dispatch, KPIs, trip status)
+- [ ] **Pixel-tight typography & spacing** — consistent scale; aligned to the 4px grid
+- [ ] **Tasteful animation** — Framer Motion transitions; never gratuitous
+- [ ] **Print-ready** — exports (Management Pack PDF, invoice, POD) look like a banker designed them
+- [ ] **In-context help** — tooltips, hints, no need to open a manual
+- [ ] **Mobile feel** — driver PWA has tactile feedback, big tap targets, sound/haptic on doc-scan success
+
+PRs that fail this checklist do not merge. This is enforced via PR review, not just hoped for.
+
+---
+
 ## 1. Visual language: "Fleet Command Centre"
 
 TX System feels like a **logistics ops control room**, not a generic CRUD app:
