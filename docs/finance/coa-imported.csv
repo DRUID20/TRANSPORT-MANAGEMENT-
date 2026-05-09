@@ -1,0 +1,176 @@
+Descriptions,Category,Type,Status,Currency_
+NON- CURRENT ASSETS,,,Active,KES
+COMPUTERS - ACCUM DEP,,Acc Deprn - Computers & Accessories,Active,KES
+COMPUTER EQUIPMENT -ACCUM DEP,,Acc Deprn - Computers & Accessories,Active,KES
+COMPUTERS  SOFTWARE - ACCUM DEP,,Acc Deprn - Computers Software,Active,KES
+FURNITURE AND FIXTURE- ACCUM DEP,,Acc Deprn - Furniture & Fittings,Active,KES
+FREEHOLD BUILDINGS-ACCUM DEP,,Acc Deprn - Leasehold Properties,Active,KES
+MOTOR VEHICLES - ACCUM DEP,,Acc Deprn - Motor Vehicles,Active,KES
+OFFICE EQUIPMENT -ACUM DEP,,Acc Deprn - Office Equipment,Active,KES
+PLANT & MACHINERY - ACCUM DEP,,Acc Deprn - Plant & Machinery,Active,KES
+COMPUTERS - COST,,Computers & Accessories,Active,KES
+COMPUTER EQUIPMENT - COST,,Computers & Accessories,Active,KES
+COMPUTERS  SOFTWARE-COST,,Computers Software,Active,KES
+FURNITURE & FIXTURES-COST,,Furniture & Fittings,Active,KES
+FREEHOLD LAND - COST,,Land and Buildings,Active,KES
+FREEHOLD BUILDINGS- COST,,Land and Buildings,Active,KES
+MOTOR VEHICLES - COST,,Motor Vehicles,Active,KES
+OFFICE EQUIPMENT - COST,,Office Equipment,Active,KES
+FREEHOLD LAND - CIP,,Other Current Assets,Active,KES
+PLANT & MACHINERY - COST,,Plant and Machinery,Active,KES
+TAX RECEIVABLE,,Non-current assets,Active,KES
+DEFERRED TAX ASSETS,,Deferred Tax,Active,KES
+OTHER NON-CURRENT ASSETS,,Non-current assets,Active,KES
+ASSETS HELD FOR SALE,,Non-current assets,Active,KES
+GOODWILL,,Other Fixed Assets,Active,KES
+INTANGIBLES,,Non-current assets,Active,KES
+LONG-TERM INVESTMENTS,,Long Term Liabilities,Active,KES
+STOCK,,Inventory,Active,KES
+INVENTORY ASSET,,Current assets,Active,KES
+RECEIVABLES,,debtors,Active,KES
+ACCOUNTS RECEIVABLE (A/R),,debtors,Active,KES
+CURRENT ASSET,,Current assets,Active,KES
+ALLOWANCE FOR BAD DEBT,,Debtors,Active,KES
+AVAILABLE FOR SALE ASSETS (SHORT-TERM),,Current assets,Active,KES
+PREPAID EXPENSES,,Prepayments,Active,KES
+UNCATEGORISED ASSET,,Current assets,Active,KES
+PREPAID TAX,,Prepayments,Active,KES
+BANK ACCOUNTS,,Cash At Bank,Active,KES
+CASH IN HAND,,Cash In Hand,Active,KES
+PETTYCASH,,Cash In Hand,Active,KES
+INTERCOMPANY,,,Active,KES
+INTERCOMPANY,,InterCompany Current Assets,Active,KES
+121110.0,,Other Current Assets,Active,KES
+STAFF LOAN,,Other Current Assets,Active,KES
+STAFF ADVANCE,,Other Current Assets,Active,KES
+122180.0,,Other Current Assets,Active,KES
+122186.0,,Other Current Assets,Active,KES
+PAYABLE ACCOUNTS,,Trade Creditors,Active,KES
+ACCOUNTS PAYABLE (A/P),,Trade Creditors,Active,KES
+ELECTRICITY CLEARING,,Other Current Liabilities,Active,KES
+SALARY CLEARING,,Other Current Liabilities,Active,KES
+STOCK CREDITOR CLEARANCE ACCOUNT,,Other Current Liabilities,Active,KES
+PAYROLL LIABILITIES,,Current liabilities,Active,KES
+PAYROLL CLEARING,,Other Current Liabilities,Active,KES
+PAYROLL LIABILITIES,,Current liabilities,Active,KES
+OTHER PAYABLES -,,Other Current Liabilities,Active,KES
+OTHER PAYABLES,,Other Current Liabilities,Active,KES
+DIVIDENDS PAYABLE,,Current liabilities,Active,KES
+SHORT-TERM DEBIT,,Current liabilities,Active,KES
+V.A.T PAYABLE,,Current liabilities,Active,KES
+V.A.T SUSPENSE,,Current liabilities,Active,KES
+INCOME TAX PAYABLE,,Other Current Liabilities,Active,KES
+PROVISION FOR BAD DEBT,,Other Current Liabilities,Closed,KES
+222515.0,,Other Current Assets,Active,KES
+223118.0,,Other Current Assets,Active,KES
+223119.0,,Other Current Assets,Active,KES
+OTHER PAYABLES - NSSF,,Other Current Liabilities,Active,KES
+OTHERS PAYABLES - NHIF,,Other Current Liabilities,Active,KES
+OTHERS PAYABLES-PENSION,,Other Current Liabilities,Active,KES
+OTHER PAYABLES NITA,,Other Current Liabilities,Active,KES
+VAT CONTROL ACCOUNT,,Other Current Liabilities,Active,KES
+OTHERS PAYABLES - PAYE,,Other Current Liabilities,Active,KES
+OTHER PAYABLES - HOUSING,,Other Current Liabilities,Active,KES
+CLEARING ACCOUNT - REPAIR,,Other Current Liabilities,Active,KES
+LONGTERM LOANS,,Non-current liabilities,Active,KES
+STOCK ADJUSTMENT ACCOUNT,,Other Current Liabilities,Active,KES
+LONG-TERM DEBT,,Long Term Liabilities,Active,KES
+GRATUITY PAYABLE,,Long Term Liabilities,Active,KES
+ACCRUALS,,Other Current Liabilities,Active,KES
+ACCRUED LIABILITIES,,Other Current Liabilities,Active,KES
+ACCRUED LEAVE PAYABLE,,Other Current Liabilities,Active,KES
+ACCRUED NON-CURRENT LIABILITIES,,Non-current liabilities,Active,KES
+AUTHORIZED AND CAPITAL,,Owner's equity,Active,KES
+DIVIDEND DISBURSED,,Owner's equity,Active,KES
+EQUITY IN EARNINGS OF SUBSIDIARIES,,Owner's equity,Active,KES
+OPENING BALANCE EQUITY,,Owner's equity,Active,KES
+OTHER COMPREHENSIVE INCOME,,Owner's equity,Active,KES
+SHARE CAPITAL,,Capital,Active,KES
+RESERVES,,Owner's equity,Active,KES
+RETAINED EARNINGS,,Retained Earnings,Active,KES
+INCOME,,Income,Active,KES
+BILLABLE EXPENSE INCOME,,Income,Active,KES
+DISCOUNTS RECEIVED,,Income,Active,KES
+REVENUE - GENERAL,,Income,Active,KES
+SALES,,Income,Active,KES
+SALES - WHOLESALE,,Income,Active,KES
+SALES OF PRODUCT INCOME,,Income,Active,KES
+UNAPPLIED CASH PAYMENT INCOME,,Income,Active,KES
+UNCATEGORISED INCOME,,Income,Active,KES
+CURRENCY TRANSLATION ACCOUNT,,Capital,Active,KES
+OTHER INCOMES,,Other income,Active,KES
+LOSS ON DISPOSAL OF ASSETS,,Other income,Active,KES
+OTHER OPERATING INCOME (EXPENSES),,Other income,Active,KES
+"UNREALISED LOSS ON SECURITIES, NET OF TAX",,Other income,Active,KES
+COST OF SALES,,Cost of sales,Active,KES
+CHANGE IN INVENTORY - COS,,Cost of sales,Active,KES
+DIRECT LABOUR - COS,,Cost of sales,Active,KES
+DISCOUNTS ALLOWED - COS,,Expenses,Active,KES
+ELECTRICITY,,Expenses,Active,KES
+OTHER - COS,,Cost of sales,Active,KES
+OVERHEAD - COS,,Cost of sales,Active,KES
+SUBCONTRACTORS - COS,,Cost of sales,Active,KES
+FUEL,,Cost of Sales,Active,KES
+PAYROLL EXPENSES,,Expenses,Active,KES
+GROSS SALARY,,Expenses,Active,KES
+NSSF-EMPLOYER CONTRIBUTION,,Expenses,Active,KES
+OTHER PAYABLES NSSF,,Expenses,Closed,KES
+OTHER PAYABLES NHIF,,Expenses,Closed,KES
+OTHER PAYABLES PAYE,,Expenses,Closed,KES
+PENSION - EMPLOYER CONTRIBUTION,,Expenses,Active,KES
+NITA - EMPLOYER CONTRIBUTION,,Expenses,Active,KES
+HOUSING - EMPLOYER CONTRIBUTION,,Expenses,Active,KES
+FRINGE BENEFIT,,Expenses,Active,KES
+ADMIN COST,,Expenses,Active,KES
+ADVERTISING/PROMOTIONAL,,Expenses,Active,KES
+MAINTENANCE,,Expenses,Active,KES
+MAINTENANCE/OFFICE,,Expenses,Active,KES
+STAFF WELFARE & MEDICAL,,Expenses,Active,KES
+MPESA CHARGES,,Expenses,Active,KES
+OTHER TYPES OF EXPENSES-ADVERTISING EXPENSES,,Expenses,Active,KES
+POSTAGE,,Expenses,Active,KES
+TRANSPORT,,Expenses,Active,KES
+AMORTISATION EXPENSE,,Expenses,Active,KES
+BAD DEBTS,,Expenses,Active,KES
+BANK CHARGES,,Expenses,Active,KES
+COMMISSIONS AND FEES,,Expenses,Active,KES
+EQUIPMENT RENTAL,,Expenses,Active,KES
+INCOME TAX EXPENSE,,Expenses,Active,KES
+INSURANCE - GENERAL,,Expenses,Active,KES
+INSURANCE - LIABILITY,,Expenses,Active,KES
+LEGAL AND PROFESSIONAL FEES,,Expenses,Active,KES
+"LOSS ON DISCONTINUED OPERATIONS, NET OF TAX",,Expenses,Active,KES
+MEALS AND ENTERTAINMENT,,Expenses,Active,KES
+OFFICE EXPENSES,,Expenses,Active,KES
+OTHER GENERAL AND ADMINISTRATIVE EXPENSES,,Expenses,Active,KES
+STATIONERY AND PRINTING,,Expenses,Active,KES
+UNCATEGORISED EXPENSE,,Expenses,Active,KES
+OTHER SELLING EXPENSES,,Expenses,Active,KES
+RENT OR LEASE PAYMENTS,,Expenses,Active,KES
+REPAIRS AND MAINTENANCE,,Expenses,Active,KES
+SHIPPING AND DELIVERY EXPENSE,,Expenses,Active,KES
+PURCHASES,,Expenses,Active,KES
+SUPPLIES,,Expenses,Active,KES
+TRAVEL EXPENSES - GENERAL AND ADMIN EXPENSES,,Expenses,Active,KES
+TRAVEL EXPENSES - SELLING EXPENSES,,Expenses,Active,KES
+UNAPPLIED CASH BILL PAYMENT EXPENSE,,Expenses,Active,KES
+UTILITIES,,Expenses,Active,KES
+MOTOR VEHICLE RUNNING,,Expenses,Active,KES
+COMPUTERS - DEP,,Expenses,Active,KES
+COMPUTERS  SOFTWARE - DEP,,Expenses,Active,KES
+FURNITURE AND FIXTURE- DEP,,Expenses,Active,KES
+FREEHOLD BUILDINGS-DEP,,Expenses,Active,KES
+MOTOR VEHICLES - DEP,,Expenses,Active,KES
+OFFICE EQUIPMENT -DEP,,Expenses,Active,KES
+PLANT & MACHINERY - DEP,,Expenses,Active,KES
+AUDIT AND PROFFESIONAL FEE,,Expenses,Active,KES
+BONUS,,Expenses,Active,KES
+GRATUITY,,Expenses,Active,KES
+MOBILE,,Expenses,Active,KES
+INTERNET AND EMAIL,,Expenses,Active,KES
+GENERATOR RUNNING EXPENSE,,Expenses,Active,KES
+580010.0,,Other Current Assets,Active,KES
+731610.0,,Other Current Assets,Active,KES
+xxx,,Debtors,Active,KES
+SUSPENSE,,Other Current Assets,Active,KES
+WITHHOLDING VAT AC,,Other Current Liabilities,Active,KES

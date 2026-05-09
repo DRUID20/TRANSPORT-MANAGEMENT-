@@ -1,0 +1,202 @@
+Code,Name,Class,Group,Type,Normal Balance,Currency,Status,Notes
+100100,Freehold Land — Cost,Asset,Non-current,PPE,Debit,KES,Active,
+100200,Freehold Buildings — Cost,Asset,Non-current,PPE,Debit,KES,Active,
+100300,Motor Vehicles — Cost,Asset,Non-current,PPE,Debit,KES,Active,"Trucks, prime movers, trailers"
+100400,Plant & Machinery — Cost,Asset,Non-current,PPE,Debit,KES,Active,
+100500,Furniture & Fixtures — Cost,Asset,Non-current,PPE,Debit,KES,Active,
+100600,Office Equipment — Cost,Asset,Non-current,PPE,Debit,KES,Active,
+100700,Computer Equipment — Cost,Asset,Non-current,PPE,Debit,KES,Active,
+100800,Computer Software — Cost,Asset,Non-current,PPE,Debit,KES,Active,
+100900,Capital Work in Progress,Asset,Non-current,PPE,Debit,KES,Active,Was 'FREEHOLD LAND - CIP'
+101200,Acc. Dep. — Buildings (Freehold),Asset,Non-current,Acc. Dep.,Credit,KES,Active,Was wrongly typed as Leasehold
+101300,Acc. Dep. — Motor Vehicles,Asset,Non-current,Acc. Dep.,Credit,KES,Active,
+101400,Acc. Dep. — Plant & Machinery,Asset,Non-current,Acc. Dep.,Credit,KES,Active,
+101500,Acc. Dep. — Furniture & Fixtures,Asset,Non-current,Acc. Dep.,Credit,KES,Active,
+101600,Acc. Dep. — Office Equipment,Asset,Non-current,Acc. Dep.,Credit,KES,Active,
+101700,Acc. Dep. — Computer Equipment,Asset,Non-current,Acc. Dep.,Credit,KES,Active,
+101800,Acc. Dep. — Computer Software (Amortisation),Asset,Non-current,Acc. Dep.,Credit,KES,Active,
+102100,Goodwill,Asset,Non-current,Intangible,Debit,KES,Active,
+102200,Intangible Assets — Other,Asset,Non-current,Intangible,Debit,KES,Active,
+102300,Long-term Investments,Asset,Non-current,Investment,Debit,KES,Active,Reclassified from Long-term Liability
+102400,Deferred Tax Assets,Asset,Non-current,Tax,Debit,KES,Active,
+102500,Other Non-current Assets,Asset,Non-current,Other,Debit,KES,Active,
+102600,Tax Receivable (Long-term),Asset,Non-current,Tax,Debit,KES,Active,
+102700,Assets Held for Sale,Asset,Non-current,Other,Debit,KES,Active,
+110100,Inventory — Stock,Asset,Current,Inventory,Debit,KES,Active,
+110200,Inventory — Spares & Consumables,Asset,Current,Inventory,Debit,KES,Active,NEW
+110300,Inventory — Tyres,Asset,Current,Inventory,Debit,KES,Active,NEW
+111100,Trade Debtors / AR — KES,Asset,Current,Receivable,Debit,KES,Active,Sub-ledger by customer
+111200,Trade Debtors / AR — USD,Asset,Current,Receivable,Debit,USD,Active,NEW. Sub-ledger by customer
+111300,Allowance for Bad Debts (contra),Asset,Current,Receivable,Credit,KES,Active,
+111500,Intercompany Receivables,Asset,Current,Receivable,Debit,KES,Active,Was duplicated INTERCOMPANY
+111600,Staff Loans,Asset,Current,Receivable,Debit,KES,Active,
+111700,Staff Advances,Asset,Current,Receivable,Debit,KES,Active,
+111800,Driver Trip Advances,Asset,Current,Receivable,Debit,KES,Active,NEW. Reconciled at trip close
+111900,Other Receivables,Asset,Current,Receivable,Debit,KES,Active,
+112100,Prepaid Insurance,Asset,Current,Prepayment,Debit,KES,Active,
+112200,Prepaid Tax,Asset,Current,Prepayment,Debit,KES,Active,
+112300,Prepaid Licences & Permits,Asset,Current,Prepayment,Debit,KES,Active,NEW
+112400,Prepaid Rent,Asset,Current,Prepayment,Debit,KES,Active,
+112500,Other Prepaid Expenses,Asset,Current,Prepayment,Debit,KES,Active,
+113100,VAT Recoverable / Input,Asset,Current,Tax,Debit,KES,Active,NEW
+113200,Withholding VAT Asset,Asset,Current,Tax,Debit,KES,Active,NEW
+113300,Available-for-sale Assets (Short-term),Asset,Current,Investment,Debit,KES,Active,
+113400,Suspense Account,Asset,Current,Other,Debit,KES,Active,Use sparingly; should clear monthly
+113500,Uncategorised Asset,Asset,Current,Other,Debit,KES,Active,Migration only — should be zero
+120100,Cash in Hand — Main,Asset,Current,Cash,Debit,KES,Active,
+120200,Petty Cash,Asset,Current,Cash,Debit,KES,Active,
+120300,Cash in Transit,Asset,Current,Cash,Debit,KES,Active,
+121100,Bank — KES (Operations),Asset,Current,Bank,Debit,KES,Active,
+121200,Bank — KES (Payroll),Asset,Current,Bank,Debit,KES,Active,NEW
+122100,Bank — USD,Asset,Current,Bank,Debit,USD,Active,"NEW. Foreign-currency, revalued"
+123100,Bank — UGX,Asset,Current,Bank,Debit,UGX,Active,Placeholder
+124100,Bank — TZS,Asset,Current,Bank,Debit,TZS,Active,Placeholder
+125100,Bank — RWF,Asset,Current,Bank,Debit,RWF,Active,Placeholder
+129100,M-Pesa Paybill — Float,Asset,Current,Mobile Money,Debit,KES,Active,NEW
+200100,Long-term Loans / Debt,Liability,Non-current,Debt,Credit,KES,Active,
+200200,Gratuity Payable (Long-term),Liability,Non-current,Provision,Credit,KES,Active,
+200300,Accrued Non-current Liabilities,Liability,Non-current,Accrual,Credit,KES,Active,
+200400,Deferred Tax Liabilities,Liability,Non-current,Tax,Credit,KES,Active,
+210100,Trade Creditors / AP — KES,Liability,Current,Payable,Credit,KES,Active,Sub-ledger by supplier
+210200,Trade Creditors / AP — USD,Liability,Current,Payable,Credit,USD,Active,NEW. Sub-ledger by supplier
+210300,Other Payables,Liability,Current,Payable,Credit,KES,Active,Was duplicated
+210400,Accrued Liabilities,Liability,Current,Accrual,Credit,KES,Active,
+210500,Accrued Leave Payable,Liability,Current,Accrual,Credit,KES,Active,
+210600,Dividends Payable,Liability,Current,Payable,Credit,KES,Active,
+210700,Short-term Debt,Liability,Current,Debt,Credit,KES,Active,
+210800,Stock Creditor Clearing,Liability,Current,Clearing,Credit,KES,Active,
+210900,Stock Adjustment Account,Liability,Current,Clearing,Credit,KES,Active,
+211000,Repair Clearing,Liability,Current,Clearing,Credit,KES,Active,
+211100,Electricity Clearing,Liability,Current,Clearing,Credit,KES,Active,
+211200,Salary Clearing,Liability,Current,Clearing,Credit,KES,Active,
+211300,Payroll Clearing,Liability,Current,Clearing,Credit,KES,Active,
+211400,Intercompany Payables,Liability,Current,Payable,Credit,KES,Active,NEW companion to 111500
+220100,PAYE Payable,Liability,Current,Statutory,Credit,KES,Active,
+220200,NSSF Payable,Liability,Current,Statutory,Credit,KES,Active,
+220300,NHIF / SHIF Payable,Liability,Current,Statutory,Credit,KES,Active,
+220400,NITA Payable,Liability,Current,Statutory,Credit,KES,Active,
+220500,Affordable Housing Levy Payable,Liability,Current,Statutory,Credit,KES,Active,
+220600,Pension Payable,Liability,Current,Statutory,Credit,KES,Active,
+220700,VAT Payable (Output),Liability,Current,Tax,Credit,KES,Active,
+220800,VAT Suspense,Liability,Current,Tax,Credit,KES,Active,
+220900,Withholding VAT Payable,Liability,Current,Tax,Credit,KES,Active,
+221000,Withholding Tax Payable,Liability,Current,Tax,Credit,KES,Active,NEW
+221100,Income Tax Payable,Liability,Current,Tax,Credit,KES,Active,
+300100,Share Capital — Authorised & Issued,Equity,Equity,Capital,Credit,KES,Active,
+300200,Share Premium,Equity,Equity,Capital,Credit,KES,Active,NEW
+300300,Reserves,Equity,Equity,Reserve,Credit,KES,Active,
+300400,Retained Earnings,Equity,Equity,Retained,Credit,KES,Active,
+300500,Opening Balance Equity,Equity,Equity,Opening,Credit,KES,Active,Migration only
+300600,Currency Translation Reserve,Equity,Equity,OCI,Credit,KES,Active,Renamed CURRENCY TRANSLATION ACCOUNT
+300700,Other Comprehensive Income,Equity,Equity,OCI,Credit,KES,Active,
+300800,Equity in Earnings of Subsidiaries,Equity,Equity,Investment,Credit,KES,Active,
+300900,Dividends Disbursed (contra),Equity,Equity,Distribution,Debit,KES,Active,
+400100,Freight Revenue — Domestic,Income,Operating,Revenue,Credit,KES,Active,
+400200,Freight Revenue — Cross-border / Export,Income,Operating,Revenue,Credit,KES,Active,NEW. Zero-rated VAT
+400300,Demurrage Income,Income,Operating,Revenue,Credit,KES,Active,NEW
+400400,Detention Income,Income,Operating,Revenue,Credit,KES,Active,NEW
+400500,Loading / Offloading Income,Income,Operating,Revenue,Credit,KES,Active,NEW
+400600,Storage / Warehousing Income,Income,Operating,Revenue,Credit,KES,Active,NEW
+400700,Container Handling Income,Income,Operating,Revenue,Credit,KES,Active,NEW
+400800,Other Logistics Services Income,Income,Operating,Revenue,Credit,KES,Active,
+400900,Sales of Product Income,Income,Operating,Revenue,Credit,KES,Active,
+401000,Billable Expense Income,Income,Operating,Revenue,Credit,KES,Active,Pass-through to customer
+410100,Other Income — General,Income,Other,Other,Credit,KES,Active,
+410200,Insurance Claims Received,Income,Other,Other,Credit,KES,Active,NEW
+410300,Gain on Disposal of Assets,Income,Other,Other,Credit,KES,Active,NEW
+410400,Discounts Received,Income,Other,Other,Credit,KES,Active,
+410500,Sundry Income,Income,Other,Other,Credit,KES,Active,
+410600,Unapplied Cash Payment Income,Income,Other,Other,Credit,KES,Active,
+500100,Fuel,Direct Cost,Cost of Sales,Direct,Debit,KES,Active,"Dim: country, truck_id, trip_id"
+500200,Toll Fees,Direct Cost,Cost of Sales,Direct,Debit,KES,Active,"NEW. Dim: country, truck_id, trip_id"
+500300,Border / Customs / Transit Charges,Direct Cost,Cost of Sales,Direct,Debit,KES,Active,NEW
+500400,Weighbridge Fees,Direct Cost,Cost of Sales,Direct,Debit,KES,Active,NEW
+500500,Loading & Offloading Charges,Direct Cost,Cost of Sales,Direct,Debit,KES,Active,NEW
+500600,Demurrage Expense,Direct Cost,Cost of Sales,Direct,Debit,KES,Active,NEW
+500700,Detention Expense,Direct Cost,Cost of Sales,Direct,Debit,KES,Active,NEW
+500800,Container Handling Costs,Direct Cost,Cost of Sales,Direct,Debit,KES,Active,NEW
+502100,Driver Per-Diem & Allowances,Direct Cost,Cost of Sales,Driver,Debit,KES,Active,NEW
+502200,Driver Overnight Allowance,Direct Cost,Cost of Sales,Driver,Debit,KES,Active,NEW
+502300,Driver Welfare (meals/accommodation),Direct Cost,Cost of Sales,Driver,Debit,KES,Active,NEW
+502400,Casual Labour,Direct Cost,Cost of Sales,Driver,Debit,KES,Active,
+502500,Subcontracted Haulage,Direct Cost,Cost of Sales,Subcontract,Debit,KES,Active,Was SUBCONTRACTORS - COS
+503100,Vehicle Insurance — Comprehensive,Direct Cost,Cost of Sales,Insurance,Debit,KES,Active,NEW
+503200,Vehicle Insurance — Third-party,Direct Cost,Cost of Sales,Insurance,Debit,KES,Active,NEW
+503300,Goods-in-Transit (GIT) Insurance,Direct Cost,Cost of Sales,Insurance,Debit,KES,Active,NEW
+504100,Tyres — Purchases,Direct Cost,Cost of Sales,Vehicle,Debit,KES,Active,NEW
+504200,Tyre Repairs & Vulcanising,Direct Cost,Cost of Sales,Vehicle,Debit,KES,Active,NEW
+504300,Spare Parts & Consumables,Direct Cost,Cost of Sales,Vehicle,Debit,KES,Active,NEW
+504400,Lubricants & Oils,Direct Cost,Cost of Sales,Vehicle,Debit,KES,Active,NEW
+504500,Vehicle Repairs & Maintenance,Direct Cost,Cost of Sales,Vehicle,Debit,KES,Active,
+504600,Generator Running Expense,Direct Cost,Cost of Sales,Vehicle,Debit,KES,Active,
+504700,Workshop Tools & Consumables,Direct Cost,Cost of Sales,Vehicle,Debit,KES,Active,NEW
+504800,Vehicle Tracking / GPS Subscription,Direct Cost,Cost of Sales,Vehicle,Debit,KES,Active,NEW
+504900,"Vehicle Licences (NTSA, COMESA, Transit Permits)",Direct Cost,Cost of Sales,Vehicle,Debit,KES,Active,NEW
+505100,Customs Bonds / Transit Guarantees,Direct Cost,Cost of Sales,Customs,Debit,KES,Active,NEW
+506100,Discounts Allowed,Direct Cost,Cost of Sales,Adjustment,Debit,KES,Active,Was misclassified as Expense
+507000,Change in Inventory — COS,Direct Cost,Cost of Sales,Adjustment,Debit,KES,Active,
+509000,Other Direct Costs,Direct Cost,Cost of Sales,Direct,Debit,KES,Active,
+600100,Gross Salaries (Office),Expense,Operating,Personnel,Debit,KES,Active,
+600200,Bonuses,Expense,Operating,Personnel,Debit,KES,Active,
+600300,Gratuity,Expense,Operating,Personnel,Debit,KES,Active,
+600400,NSSF — Employer Contribution,Expense,Operating,Personnel,Debit,KES,Active,
+600500,NHIF / SHIF — Employer Contribution,Expense,Operating,Personnel,Debit,KES,Active,
+600600,NITA — Employer Contribution,Expense,Operating,Personnel,Debit,KES,Active,
+600700,Affordable Housing — Employer Contribution,Expense,Operating,Personnel,Debit,KES,Active,NEW
+600800,Pension — Employer Contribution,Expense,Operating,Personnel,Debit,KES,Active,
+600900,Fringe Benefits,Expense,Operating,Personnel,Debit,KES,Active,
+601000,Staff Welfare & Medical,Expense,Operating,Personnel,Debit,KES,Active,
+601100,Staff Training & Development,Expense,Operating,Personnel,Debit,KES,Active,NEW
+601200,Driver Training & Licensing,Expense,Operating,Personnel,Debit,KES,Active,NEW
+610100,Rent or Lease Payments,Expense,Operating,Admin,Debit,KES,Active,
+610200,Utilities — Electricity,Expense,Operating,Admin,Debit,KES,Active,
+610300,Utilities — Water,Expense,Operating,Admin,Debit,KES,Active,NEW
+610400,Mobile Phone Charges,Expense,Operating,Admin,Debit,KES,Active,
+610500,Internet & Email,Expense,Operating,Admin,Debit,KES,Active,
+610600,Office Supplies & Stationery,Expense,Operating,Admin,Debit,KES,Active,
+610700,Postage & Courier,Expense,Operating,Admin,Debit,KES,Active,
+610800,Bank Charges,Expense,Operating,Admin,Debit,KES,Active,
+610900,M-Pesa Charges,Expense,Operating,Admin,Debit,KES,Active,
+611000,Audit Fees,Expense,Operating,Admin,Debit,KES,Active,
+611100,Legal & Professional Fees,Expense,Operating,Admin,Debit,KES,Active,
+611200,Consulting Fees,Expense,Operating,Admin,Debit,KES,Active,NEW
+611300,Insurance — General (non-vehicle),Expense,Operating,Admin,Debit,KES,Active,
+611400,Insurance — Liability,Expense,Operating,Admin,Debit,KES,Active,
+611500,Repairs & Maintenance — Office,Expense,Operating,Admin,Debit,KES,Active,
+611600,Office Equipment Rental,Expense,Operating,Admin,Debit,KES,Active,
+611700,Software / SaaS Subscriptions,Expense,Operating,Admin,Debit,KES,Active,NEW
+611800,Membership & Subscriptions,Expense,Operating,Admin,Debit,KES,Active,NEW
+611900,Donations & CSR,Expense,Operating,Admin,Debit,KES,Active,NEW
+612000,Fines & Penalties (non-deductible),Expense,Operating,Admin,Debit,KES,Active,NEW
+612100,Meals & Entertainment,Expense,Operating,Admin,Debit,KES,Active,
+612200,Travel — General Admin,Expense,Operating,Admin,Debit,KES,Active,
+612300,Other General & Admin,Expense,Operating,Admin,Debit,KES,Active,
+612400,Uncategorised Expense,Expense,Operating,Admin,Debit,KES,Active,Migration only
+620100,Advertising & Promotional,Expense,Operating,Selling,Debit,KES,Active,
+620200,Commissions Paid,Expense,Operating,Selling,Debit,KES,Active,
+620300,Travel — Selling,Expense,Operating,Selling,Debit,KES,Active,
+620400,Other Selling Expenses,Expense,Operating,Selling,Debit,KES,Active,
+630100,Depreciation — Buildings,Expense,Operating,Depreciation,Debit,KES,Active,
+630200,Depreciation — Motor Vehicles,Expense,Operating,Depreciation,Debit,KES,Active,
+630300,Depreciation — Plant & Machinery,Expense,Operating,Depreciation,Debit,KES,Active,
+630400,Depreciation — Furniture & Fixtures,Expense,Operating,Depreciation,Debit,KES,Active,
+630500,Depreciation — Office Equipment,Expense,Operating,Depreciation,Debit,KES,Active,
+630600,Depreciation — Computer Equipment,Expense,Operating,Depreciation,Debit,KES,Active,
+630700,Depreciation — Computer Software,Expense,Operating,Depreciation,Debit,KES,Active,
+630800,Amortisation Expense,Expense,Operating,Depreciation,Debit,KES,Active,
+630900,Bad Debts Written Off,Expense,Operating,Bad Debt,Debit,KES,Active,
+631000,Bad Debt Provision Charge,Expense,Operating,Bad Debt,Debit,KES,Active,NEW (separated from write-off)
+700100,Loss on Disposal of Assets,Other Expense,Below the line,Other,Debit,KES,Active,Reclassified from Other Income
+700200,Loss on Discontinued Operations (net of tax),Other Expense,Below the line,Other,Debit,KES,Active,
+700300,Unrealised Loss on Securities (net of tax),Other Expense,Below the line,Other,Debit,KES,Active,
+700400,Other Operating Income / (Expenses),Other Expense,Below the line,Other,Debit,KES,Active,
+700500,Unapplied Cash Bill Payment Expense,Other Expense,Below the line,Other,Debit,KES,Active,
+710100,Realised FX Gain,Other Income,Finance,FX,Credit,KES,Active,NEW
+710200,Realised FX Loss,Other Expense,Finance,FX,Debit,KES,Active,NEW
+710300,Unrealised FX Gain,Other Income,Finance,FX,Credit,KES,Active,NEW
+710400,Unrealised FX Loss,Other Expense,Finance,FX,Debit,KES,Active,NEW
+710500,Interest Income,Other Income,Finance,Finance,Credit,KES,Active,NEW
+710600,Interest Expense,Other Expense,Finance,Finance,Debit,KES,Active,NEW
+710700,Finance Charges Paid,Other Expense,Finance,Finance,Debit,KES,Active,NEW
+800100,Income Tax Expense,Tax,Tax,Tax,Debit,KES,Active,
+800200,Deferred Tax Expense,Tax,Tax,Tax,Debit,KES,Active,NEW
