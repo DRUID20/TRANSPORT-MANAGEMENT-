@@ -42,12 +42,21 @@ TX System feels like a **logistics ops control room**, not a generic CRUD app:
 - **Micro-interactions** — hover states, optimistic updates, skeleton loaders, toast notifications
 
 ### Reference apps for the look-and-feel
+**Operational baseline (structure and density):**
 - **Samsara** — gold standard fleet command UI
 - **Geotab** — dense fleet dashboards
 - **Linear** (dark mode) — premium typography + tight spacing
 - **Vercel dashboard** — chart polish + dark mode
 - **Cloudflare dashboard** — dense data, strong navigation
 - **Datadog / Grafana** — real-time dense panels (for the dispatch board specifically)
+
+**Polish and feel (per Nile Valley's chosen references):**
+- **Apple apps** (Settings, Wallet, Photos) — glassy panels, depth, refined typography, smooth motion. Drives the polish bar across every screen.
+- **M-Pesa / banking apps** — big bold numbers, clear primary CTAs, trust signals on every transaction. Drives the look of finance, expenses, and the driver advance / reimbursement screens.
+- **Instagram / TikTok** — rich cards, content-forward layouts, swipey lists. Drives the driver PWA feed and the KPI scroll on the home dashboard.
+
+### Synthesis (one-line spec)
+> A **fleet command centre** with **Apple-grade polish**, **M-Pesa-grade financial trust**, and **Instagram-grade visual density** — dark-first, light when needed, real-time everywhere it matters.
 
 ## 2. Light mode
 
@@ -99,12 +108,14 @@ To avoid every phase looking "basic" in early demos, **Phase 0 is widened by ~1 
 
 Every later phase plugs into this skeleton — no module ever ships unstyled.
 
-## 6. Brand assets — what we need from Nile Valley
+## 6. Brand assets — status
 
-1. **Logo** — vector preferred (SVG / AI / PDF). Horizontal *and* icon-mark versions if you have them.
-2. **Brand colour palette** — primary, secondary, plus any greys / status colours you already use. Hex or RGB codes.
-3. **Typography** — if Nile Valley has a brand font, send the name (and the file if it's a paid font). Otherwise we'll pick a clean web font (likely Inter or Geist) that matches the command-centre feel.
-4. **Favicon / app icon** — for browser tab + PWA home-screen icon.
+| Asset | Status |
+|---|---|
+| Logo | **Coming from Nile Valley** (vector preferred — SVG / AI / PDF; horizontal *and* icon-mark versions if available) |
+| Brand colour palette | **Not yet decided.** When the logo arrives, Claude proposes 2–3 palette options derived from / paired with the logo for sign-off. |
+| Typography | Default to **Inter** (clean, modern, command-centre fit) unless Nile Valley specifies a brand font. |
+| Favicon / app icon | Generated from the logo (512×512 PNG + ICO + Apple touch icon). |
 
 When these arrive, we encode them as design tokens (CSS variables) so the whole product re-themes by changing a single file.
 
@@ -116,3 +127,5 @@ When these arrive, we encode them as design tokens (CSS variables) so the whole 
 - 2026-05-09: Tooling: shadcn/ui + Tailwind + Tremor + Lucide + Framer Motion + next-themes + TanStack Table/Query.
 - 2026-05-09: Reference apps: Samsara, Geotab, Linear (dark), Vercel, Cloudflare, Datadog, Grafana.
 - 2026-05-09: Brand assets pending from Nile Valley (logo + colours + font + favicon).
+- 2026-05-09: Reference apps narrowed by Nile Valley: **Apple** (polish/depth), **M-Pesa / banking** (financial trust), **Instagram/TikTok** (visual density). Synthesis: "Fleet command centre with Apple-grade polish, M-Pesa-grade financial trust, Instagram-grade visual density."
+- 2026-05-09: Logo confirmed coming; colour palette to be proposed by Claude (2–3 options) once the logo lands.
