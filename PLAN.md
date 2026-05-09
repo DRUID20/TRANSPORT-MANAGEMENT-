@@ -56,7 +56,11 @@ Last updated: 2026-05-09
 10. **Reports & AI** — dashboards, exports (PDF/Excel), natural-language Q&A on a read-only reporting view, weekly fleet summary email.
 11. **Notifications** — WhatsApp + SMS (Africa's Talking) + in-app + email for trip events, expiries, customer ETAs, driver alerts.
 12. **Admin** — users, roles (Admin / Finance / Ops Manager / Dispatcher / Driver / Customer), audit log, org settings.
-13. **Truck Performance Tracker** — analytics layer over Fleet + Trips + Fuel + Maintenance + HR data. Per-truck KPIs and rankings:
+13. **Truck Performance Tracker** — analytics layer over Fleet + Trips + Fuel + Maintenance + HR data. Per-truck KPIs and rankings (extended after studying the Fleet Logistics monthly pack — see [`docs/finance/management-pack-reference.md`](./docs/finance/management-pack-reference.md)):
+    - **Volume KPIs (top of P&L)**: trips completed, tonnes hauled, TEUs moved, total km, laden km, deadhead km %, active truck-days
+    - **Per-customer × per-route matrix**: Actual vs Budget vs Projection volume; under/over-achievement flags
+    - **Fleet vs Subcontractor split**: % volume per executor type per customer/route
+    - **Idle truck list**: truck reg, last trip, days idle, status, expected next-trip date
     - **Efficiency**: km/L (and L/100km), cost per km, revenue per km, **profit per km / per truck / per route**
     - **Utilization**: % days on trip, idle days, deadhead km % (empty running)
     - **Reliability**: mean time between breakdowns, unplanned downtime hours, maintenance-interval adherence
@@ -66,6 +70,20 @@ Last updated: 2026-05-09
     - **Cross-border**: average border-crossing time per route, top-3 slowest borders
     - **Fleet leaderboard**: best/worst trucks on each KPI for the period
     - Drill-down from any KPI to the underlying trips, fuel logs, expenses, and service records.
+14. **Monthly Management Pack** — auto-generated end-of-month close package modelled on the Fleet Logistics pack ([reference doc](./docs/finance/management-pack-reference.md)). Schedules:
+    - Cover narrative (AI-assisted draft, FM edits & signs off)
+    - Income Statement (KES + USD), volume KPIs at top, comparatives + budget + variance
+    - Statement of Financial Position (KES + USD), comparatives
+    - Statement of Cash Flow (indirect)
+    - Trial Balance with categorisation columns (so IS/SFP rebuild from GL is auditable)
+    - OPEX Analysis (Actual / Budget / %Met / Comments) by cost group
+    - Aged AR & Aged AP (KES + USD)
+    - Bank Reconciliation per account
+    - Fixed Asset Register + monthly depreciation run + Disposals schedule
+    - Intercompany reconciliation per affiliate (if applicable)
+    - FX rates: daily feed, period average, period closing
+    - Inventory: physical-count vs system, variance qty + value
+    - Structured close checklist with sign-off (FM → CM → MD)
 
 > **Workflow discovery**: at the start of each phase, the user walks Claude through the exact screens and rules for that module before any code is written.
 
@@ -101,11 +119,12 @@ Postgres with **row-level security** so each org only sees its own data. Multi-c
 | **2 — Trips + Cross-border + Driver PWA + Doc scan** | Trip lifecycle, customs docs, driver phone app, camera + AI extract, POD | 3 wks |
 | **3 — Customer Portal + Tracking** | Customer login / shareable link, status, ETA, POD download | 1 wk |
 | **4 — Expenses + Fuel + M-Pesa** | Receipt scan, approval, fuel logs, reimbursement | 2 wks |
-| **5 — Finance / Accounting** | CoA, GL, AP, AR, bank rec, multi-currency, FX | 3–4 wks |
+| **5 — Finance / Accounting** | CoA, GL, AP, AR, bank rec, multi-currency, FX, **Budget framework**, **Cost-centre dimension**, **FAR + auto-depreciation**, **inventory (spares/tyres)** | 4–5 wks |
 | **6 — HR** | Contracts, leave, expiries, payroll inputs | 1–2 wks |
 | **7 — Notifications** | WhatsApp + SMS via Africa's Talking, email, in-app | 1 wk |
 | **8 — Reports + AI assistant** | Dashboards, exports, NL Q&A, weekly summary email | 1–2 wks |
-| **8b — Truck Performance Tracker** | KPI engine + leaderboard + per-truck profit, fuel efficiency, tyre cost, downtime, compliance | 1–2 wks (built on top of Phase 8) |
+| **8b — Truck Performance Tracker** | KPI engine + leaderboard + per-truck profit, fuel efficiency, tyre cost, downtime, compliance, idle-truck list, customer × route volume matrix, fleet-vs-subcontractor split | 1–2 wks (built on top of Phase 8) |
+| **9 — Monthly Management Pack** | Auto-generated monthly close pack: narrative, IS, SFP, SCF, TB, OPEX, AR/AP aging, bank rec, FAR, disposals, intercompany, FX, inventory, sign-off workflow | 2 wks |
 | **Later — GPS / Teltonika** | Wialon or Flespi or direct ingest, live map, geofences, driver-behaviour score | when ready |
 
 Total ≈ **16–20 weeks** to full MVP, but Phase 1 is usable in production around week 3–4.
@@ -181,3 +200,14 @@ Total ≈ **16–20 weeks** to full MVP, but Phase 1 is usable in production aro
 - 2026-05-09: Chart of Accounts inherited and being re-numbered. Cleaned CoA in [`docs/finance/coa-proposed.csv`](./docs/finance/coa-proposed.csv); design notes in [`docs/finance/coa-design.md`](./docs/finance/coa-design.md); original import preserved in [`docs/finance/coa-imported.csv`](./docs/finance/coa-imported.csv). 201 accounts in proposed CoA (vs 175 imported, after dropping 8 orphan rows + 4 closed garbage rows + dedupes, and adding FX, trucking-specific, USD bank, and additional expense groups).
 - 2026-05-09: New CoA numbering = 6-digit flat with class prefix (1=Asset, 2=Liability, 3=Equity, 4=Income, 5=Direct Cost, 6=Operating Expense, 7=Other/Finance, 8=Tax). Country / truck / trip handled as transaction dimensions, not separate accounts.
 - 2026-05-09: Module 13 added — **Truck Performance Tracker** (KPIs: cost/km, revenue/km, profit/truck, fuel efficiency, tyre cost, utilisation, downtime, compliance, border-crossing time). Phase 8b in delivery sequence.
+- 2026-05-09: Studied Fleet Logistics monthly management pack (18 sheets — narrative, IS, SFP, SCF, TB, OPEX, AR/AP aging, bank rec, KPIs, inventory, FAR, disposals, intercompany, FX, last-month). Reference doc at `docs/finance/management-pack-reference.md`. Added:
+  - Module 14: Monthly Management Pack
+  - Volume KPIs (trips/tonnes/TEUs/km) at top of P&L
+  - Customer × route volume matrix in Performance Tracker
+  - Fleet-vs-subcontractor split as a first-class report
+  - Idle-truck list as a managed schedule
+  - TB → IS/SFP categorisation columns baked into CoA
+  - USD-equivalent column on every monetary report (using daily FX rate feed + period-end / period-average rules)
+  - Budget framework, cost-centre dimension, FAR + auto-depreciation, inventory (spares/tyres) added to Phase 5
+  - Phase 9 = Monthly Management Pack
+- 2026-05-09: Open questions raised by management-pack study captured in `management-pack-reference.md` §5 (affiliates? budget already exists? cost centres? subcontractor share? stock-take frequency? close cut-off & sign-off path?).
