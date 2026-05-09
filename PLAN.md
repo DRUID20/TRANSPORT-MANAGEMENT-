@@ -23,7 +23,7 @@ Last updated: 2026-05-09
 
 | Layer | Choice | Why |
 |---|---|---|
-| Frontend (web + driver PWA) | **Next.js 15 + TypeScript + Tailwind + shadcn/ui** | One codebase serves the office web app *and* the driver PWA. Installable to phone home screen, works offline. |
+| Frontend (web + driver PWA) | **Next.js 15 + TypeScript + Tailwind + shadcn/ui + Tremor + Framer Motion + next-themes** | One codebase serves the office web app *and* the driver PWA. Installable to phone home screen, works offline. UI direction = **Fleet Command Centre** (dark-first dense, light mode available); details in [`docs/design/ui-direction.md`](./docs/design/ui-direction.md). |
 | Backend | **Next.js server actions / route handlers** | No separate API server — less surface area, fewer moving parts, fewer bugs. |
 | Database | **Supabase (managed Postgres)** | Free tier covers 1–20 trucks; scales up cleanly. Built-in auth, storage, realtime, row-level security (RLS). |
 | Auth | **Supabase Auth** (email + phone OTP) | Drivers sign in by phone number. |
@@ -115,7 +115,7 @@ Postgres with **row-level security** so each org only sees its own data. Multi-c
 
 | Phase | Scope | Estimate |
 |---|---|---|
-| **0 — Foundation** | Repo, CI/CD, auth, roles, multi-currency primitives, Sentry, deployment, base UI | 1–2 wks |
+| **0 — Foundation** | Repo, CI/CD, auth, roles, multi-currency primitives, Sentry, deployment, **themed design system + dashboard skeleton (Fleet Command Centre, dark/light)** | 2–3 wks |
 | **1 — Asset Register + Fleet + Workshop/Job Cards** | Assets, trucks, drivers, expiry alerts, **Job Card workflow (mechanic analysis, services, spares posted to truck, supplier AP statement)** | 2–3 wks |
 | **2 — Trips + Cross-border + Driver PWA + Doc scan** | Trip lifecycle, customs docs, driver phone app, camera + AI extract, POD | 3 wks |
 | **3 — Customer Portal + Tracking** | Customer login / shareable link, status, ETA, POD download | 1 wk |
@@ -214,6 +214,7 @@ Total ≈ **16–20 weeks** to full MVP, but Phase 1 is usable in production aro
 - 2026-05-09: Open questions raised by management-pack study captured in `management-pack-reference.md` §5 (affiliates? budget already exists? cost centres? subcontractor share? stock-take frequency? close cut-off & sign-off path?).
 - 2026-05-09: FX rate provider chosen — **CBK primary (user confirmed), Frankfurter.app fallback, manual override with audit trail.** Strategy documented in `docs/finance/fx-rate-strategy.md`. Daily Vercel Cron at 17:30 EAT. Pluggable `FxRateProvider` interface so the source can be swapped without touching business logic.
 - 2026-05-09: Operational workflow baseline adopted (standard cross-border TMS lifecycle: Lead → Plan → Dispatch → Load → Transit → Border → Deliver → POD → Close → Invoice → Collect, plus assets/maintenance/cost-capture/customer-portal/daily-weekly-monthly cycles). Saved to `docs/operations/workflow-baseline.md`. **Nile Valley to layer specific deviations and extensions on top** in the same file as it walks through its real process.
+- 2026-05-09: UI direction = **Fleet Command Centre** (dark-first dense, light mode available, real-time motion, premium dashboards from day 1). Details in `docs/design/ui-direction.md`. Phase 0 widened by ~1 wk to ship themed design system + dashboard skeleton up front so no module ever ships unstyled. Brand assets (logo, colours, font, favicon) pending from Nile Valley.
 - 2026-05-09: Nile Valley extensions captured from handwritten notes (`docs/operations/workflow-baseline.md` §5):
   - **TX System replaces "Pumas"** (Nile Valley's current system).
   - **Workshop / Job Cards module pulled back IN scope** (was previously out-of-scope) — every yard service generates a Job Card with mechanic analysis, services done, spares used; spares charged to truck; supplier AP statement auto-generated.
