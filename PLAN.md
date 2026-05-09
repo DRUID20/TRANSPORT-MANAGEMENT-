@@ -9,7 +9,8 @@ Last updated: 2026-05-09
 ## 1. Business context
 
 - **Operator type**: Cross-border road freight, exports out of Kenya (likely to Uganda, Tanzania, Rwanda, DRC, South Sudan).
-- **Base country**: Kenya. Base currency: **KES**. Operational currencies: **USD, UGX, TZS, RWF** (multi-currency required).
+- **Base country**: Kenya. Base / primary currency: **KES (KSh)**. Operational currencies: **USD, UGX, TZS, RWF** (multi-currency required).
+- **Reporting currency rule**: All financial reports show **KES as primary**, with a **USD equivalent column / total** alongside (FX-converted at the relevant posting date). Users can also toggle a report to USD-primary if needed. This applies to P&L, trip profitability, AR/AP aging, expense reports, and dashboards.
 - **Initial scale**: 1–20 trucks, under 50 users.
 - **Tax**: KRA eTIMS **not** in scope. Exports are typically zero-rated; we do not generate eTIMS-compliant invoices.
 - **GPS hardware**: Teltonika **FMC** series already installed. Integration is **deferred** to a later phase. The data model will include a `telematics_provider` abstraction so plugging in Wialon/Flespi/direct ingest later is additive, not a rewrite.
@@ -156,6 +157,7 @@ Total ≈ **16–20 weeks** to full MVP, but Phase 1 is usable in production aro
 - 2026-05-09: Stack = Next.js + Supabase + Vercel.
 - 2026-05-09: Mobile = PWA, not native.
 - 2026-05-09: Region = Kenya, currency base = KES, multi-currency required for cross-border.
+- 2026-05-09: Reports show KES (primary) + USD (secondary/equivalent) by default; per-report toggle allowed.
 - 2026-05-09: GPS integration deferred; Teltonika FMC abstraction included in data model.
 - 2026-05-09: KRA eTIMS out of scope.
 - 2026-05-09: Notifications via Africa's Talking.
