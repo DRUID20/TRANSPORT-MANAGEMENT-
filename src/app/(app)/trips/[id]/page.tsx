@@ -11,16 +11,19 @@ import {
   Wallet,
 } from "lucide-react";
 import { getTripById } from "@/server/actions/trips";
+import { listTripDocuments } from "@/server/actions/documents";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { PageHeader } from "@/components/layout/page-header";
 import { TripStatusPill } from "@/components/trips/trip-status-pill";
 import { TripTimeline } from "@/components/trips/trip-timeline";
 import { TripStatusUpdate } from "@/components/trips/trip-status-update";
+import { TripDocuments } from "@/components/trips/trip-documents";
 
 export default async function TripDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const trip = await getTripById(id);
   if (!trip) notFound();
+  const documents = await listTripDocuments(id);
 
   return (
     <div className="flex flex-col gap-6">
@@ -143,6 +146,9 @@ export default async function TripDetailPage({ params }: { params: Promise<{ id:
           </CardContent>
         </Card>
       </div>
+
+      {/* Documents (loading, customs, weighbridge, POD…) */}
+      <TripDocuments tripId={trip.id} documents={documents} />
 
       {/* Trip lifecycle */}
       <div className="grid gap-4 lg:grid-cols-2">

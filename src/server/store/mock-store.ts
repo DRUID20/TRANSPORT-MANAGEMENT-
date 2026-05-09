@@ -32,6 +32,11 @@ import type {
   TripStatusEvent,
 } from "@/lib/types/trips";
 import { allowedTransitions, isTerminal } from "@/lib/types/trips";
+import type {
+  TripDocument,
+  TripDocumentKind,
+  TripDocumentStatus,
+} from "@/lib/types/documents";
 
 // Seed subcontractors
 const subcontractorSeed: Subcontractor[] = [
@@ -1534,4 +1539,141 @@ function applyTripStatusSideEffects(trip: Trip, status: TripStatus) {
       }
     }
   }
+}
+
+// ============================================================
+// Trip documents (Phase 2C — Loading & Documents)
+// ============================================================
+const tripDocuments = new Map<string, TripDocument>();
+
+function seedTripDocuments() {
+  const docsForFirstTrip = [...trips.values()][0];
+  if (!docsForFirstTrip) return;
+  const tripId = docsForFirstTrip.id;
+  const baseAt = new Date(docsForFirstTrip.createdAt).getTime();
+  const seeds: Array<Omit<TripDocument, "id">> = [
+    {
+      tripId,
+      kind: "manifest",
+      name: "Manifest — Mombasa CFS",
+      fileName: "manifest_TRP-2026-0001.pdf",
+      fileSize: 142_336,
+      mimeType: "application/pdf",
+      status: "approved",
+      uploadedBy: "Joseph Mwangi",
+      uploadedAt: new Date(baseAt + 6 * 3600_000).toISOString(),
+      reviewedBy: "Linet Wairimu",
+      reviewedAt: new Date(baseAt + 7 * 3600_000).toISOString(),
+      storageKey: "mock://demo/manifest.pdf",
+    },
+    {
+      tripId,
+      kind: "commercial_invoice",
+      name: "Commercial Invoice — Pearl of Africa #INV-9920",
+      fileName: "invoice_INV-9920.pdf",
+      fileSize: 88_104,
+      mimeType: "application/pdf",
+      status: "approved",
+      uploadedBy: "Joseph Mwangi",
+      uploadedAt: new Date(baseAt + 6 * 3600_000).toISOString(),
+      reviewedBy: "Linet Wairimu",
+      reviewedAt: new Date(baseAt + 7 * 3600_000).toISOString(),
+      storageKey: "mock://demo/invoice.pdf",
+    },
+    {
+      tripId,
+      kind: "weighbridge_slip",
+      name: "Weighbridge — Mariakani",
+      fileName: "weighbridge_mariakani.jpg",
+      fileSize: 1_842_336,
+      mimeType: "image/jpeg",
+      status: "pending",
+      uploadedBy: "Joseph Mwangi",
+      uploadedAt: new Date(baseAt + 8 * 3600_000).toISOString(),
+      storageKey: "mock://demo/weighbridge.jpg",
+    },
+    {
+      tripId,
+      kind: "comesa_yellow_card",
+      name: "COMESA Yellow Card",
+      fileName: "comesa_yellow_card.pdf",
+      fileSize: 410_212,
+      mimeType: "application/pdf",
+      status: "approved",
+      uploadedBy: "Linet Wairimu",
+      uploadedAt: new Date(baseAt + 1 * 3600_000).toISOString(),
+      reviewedBy: "Linet Wairimu",
+      reviewedAt: new Date(baseAt + 1.5 * 3600_000).toISOString(),
+      storageKey: "mock://demo/comesa.pdf",
+    },
+  ];
+  seeds.forEach((s, i) => {
+    const id = `tdoc-${String(i + 1).padStart(3, "0")}`;
+    tripDocuments.set(id, { ...s, id });
+  });
+}
+seedTripDocuments();
+
+export function listTripDocuments(tripId: string): TripDocument[] {
+  return [...tripDocuments.values()]
+    .filter((d) => d.tripId === tripId)
+    .sort((a, b) => new Date(b.uploadedAt).getTime() - new Date(a.uploadedAt).getTime());
+}
+
+export function getTripDocument(id: string): TripDocument | undefined {
+  return tripDocuments.get(id);
+}
+
+export function createTripDocument(input: {
+  tripId: string;
+  kind: TripDocumentKind;
+  name: string;
+  fileName: string;
+  fileSize: number;
+  mimeType: string;
+  uploadedBy: string;
+  notes?: string;
+}): TripDocument | undefined {
+  if (!trips.has(input.tripId)) return undefined;
+  const id = randomUUID();
+  const doc: TripDocument = {
+    id,
+    tripId: input.tripId,
+    kind: input.kind,
+    name: input.name,
+    fileName: input.fileName,
+    fileSize: input.fileSize,
+    mimeType: input.mimeType,
+    status: "pending",
+    uploadedBy: input.uploadedBy,
+    uploadedAt: new Date().toISOString(),
+    notes: input.notes,
+    storageKey: `mock://uploads/${id}/${input.fileName}`,
+  };
+  tripDocuments.set(id, doc);
+  return doc;
+}
+
+export function reviewTripDocument(input: {
+  documentId: string;
+  approve: boolean;
+  reason?: string;
+  reviewedBy: string;
+}): TripDocument | undefined {
+  const doc = tripDocuments.get(input.documentId);
+  if (!doc) return undefined;
+  const status: TripDocumentStatus = input.approve ? "approved" : "rejected";
+  const updated: TripDocument = {
+    ...doc,
+    status,
+    reviewedBy: input.reviewedBy,
+    reviewedAt: new Date().toISOString(),
+    rejectionReason: input.approve ? undefined : input.reason,
+  };
+  tripDocuments.set(doc.id, updated);
+  return updated;
+}
+
+export function deleteTripDocument(id: string): boolean {
+  return tripDocuments.delete(id);
 }
