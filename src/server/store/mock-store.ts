@@ -1498,6 +1498,63 @@ export function transitionTrip(input: {
   return { trip: updatedTrip, event };
 }
 
+/**
+ * Reconcile-and-close: capture actuals, run the same close side-effects
+ * as a normal status transition, mark trip ready to invoice.
+ */
+export function reconcileAndCloseTrip(input: {
+  tripId: string;
+  actualKm?: number;
+  actualFuelLitres?: number;
+  driverAdvanceUsedKes?: number;
+  closingNotes?: string;
+  actorName: string;
+}): { trip: Trip; event: TripStatusEvent } | { error: string } {
+  const trip = trips.get(input.tripId);
+  if (!trip) return { error: "Trip not found" };
+  if (isTerminal(trip.status)) {
+    return { error: `Trip is ${trip.status} and cannot be reconciled.` };
+  }
+  if (trip.status !== "delivered") {
+    return {
+      error: `Reconciliation only allowed from 'delivered'. Current: ${trip.status}.`,
+    };
+  }
+  const now = new Date().toISOString();
+  const updatedTrip: Trip = {
+    ...trip,
+    status: "closed",
+    closedAt: now,
+    actualKm: input.actualKm ?? trip.actualKm,
+    actualFuelLitres: input.actualFuelLitres ?? trip.actualFuelLitres,
+    driverAdvanceUsedKes: input.driverAdvanceUsedKes ?? trip.driverAdvanceUsedKes,
+    notes: input.closingNotes ?? trip.notes,
+    readyToInvoice: true,
+  };
+  trips.set(trip.id, updatedTrip);
+  applyTripStatusSideEffects(updatedTrip, "closed");
+
+  const eventId = `tev-${randomUUID().slice(0, 8)}`;
+  const event: TripStatusEvent = {
+    id: eventId,
+    tripId: trip.id,
+    fromStatus: trip.status,
+    toStatus: "closed",
+    occurredAt: now,
+    actorName: input.actorName,
+    note: input.closingNotes ?? "Trip reconciled and closed",
+  };
+  tripEvents.set(eventId, event);
+  return { trip: updatedTrip, event };
+}
+
+/** Sum cross-border charges (KES) for a trip. */
+export function tripBorderCharges(tripId: string): number {
+  return [...borderCrossings.values()]
+    .filter((b) => b.tripId === tripId)
+    .reduce((sum, b) => sum + (b.chargesKes ?? 0), 0);
+}
+
 function applyTripStatusSideEffects(trip: Trip, status: TripStatus) {
   const truck = trucks.get(trip.truckId);
   const driver = drivers.get(trip.driverId);

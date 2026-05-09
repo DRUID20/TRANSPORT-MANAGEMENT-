@@ -11,12 +11,19 @@ import {
   getTruck,
   listTrips as storeList,
   planTrip as storePlan,
+  reconcileAndCloseTrip as storeReconcile,
   transitionTrip as storeTransition,
+  tripBorderCharges as storeBorderCharges,
   tripsForDriver as storeForDriver,
   tripsForTruck as storeForTruck,
 } from "@/server/store/mock-store";
 import type { TripStatus } from "@/lib/types/trips";
-import { tripPlanSchema, type TripPlanInput } from "@/lib/validators/trips";
+import {
+  tripPlanSchema,
+  tripReconcileSchema,
+  type TripPlanInput,
+  type TripReconcileInput,
+} from "@/lib/validators/trips";
 
 export async function listTrips(filterStatus?: TripStatus) {
   return storeList(filterStatus);
@@ -31,7 +38,8 @@ export async function getTripById(id: string) {
   const trailer = t.trailerId ? getTrailer(t.trailerId) : undefined;
   const driver = getDriver(t.driverId);
   const events = eventsForTrip(t.id);
-  return { ...t, booking, customer, truck, trailer, driver, events };
+  const borderChargesKes = storeBorderCharges(t.id);
+  return { ...t, booking, customer, truck, trailer, driver, events, borderChargesKes };
 }
 
 export async function tripsForTruck(truckId: string) {
@@ -42,6 +50,21 @@ export async function tripsForDriver(driverId: string) {
 }
 
 export type ActionResult = { ok: true; id: string } | { ok: false; error: string };
+
+export async function reconcileAndCloseTrip(
+  input: TripReconcileInput,
+): Promise<{ ok: true; id: string } | { ok: false; error: string }> {
+  const parsed = tripReconcileSchema.safeParse(input);
+  if (!parsed.success) {
+    return { ok: false, error: parsed.error.errors.map((e) => e.message).join("; ") };
+  }
+  const result = storeReconcile(parsed.data);
+  if ("error" in result) return { ok: false, error: result.error };
+  revalidatePath("/trips");
+  revalidatePath(`/trips/${input.tripId}`);
+  revalidatePath("/dashboard");
+  return { ok: true, id: result.trip.id };
+}
 
 export type TransitionResult =
   | { ok: true; status: TripStatus }

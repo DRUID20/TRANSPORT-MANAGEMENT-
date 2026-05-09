@@ -138,6 +138,8 @@ export interface Trip {
   revenueCurrency: Currency;
   /** Driver advance issued at planning, refined at close (Phase 2E). */
   driverAdvanceKes?: number;
+  /** How much of the advance was actually spent (captured at close). */
+  driverAdvanceUsedKes?: number;
   /** Planning timestamps. */
   plannedDepartureDate?: string;
   plannedDeliveryDate?: string;
@@ -145,6 +147,12 @@ export interface Trip {
   actualDepartureAt?: string;
   actualDeliveryAt?: string;
   closedAt?: string;
+  /** Captured at close (Phase 2E). */
+  actualKm?: number;
+  actualFuelLitres?: number;
+  /** Once the trip is closed and reconciled, dispatch flips this on
+   * to release it to AR / invoicing in Phase 5. */
+  readyToInvoice?: boolean;
   notes?: string;
   createdAt: string;
 }

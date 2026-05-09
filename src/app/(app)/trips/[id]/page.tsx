@@ -20,6 +20,8 @@ import { TripTimeline } from "@/components/trips/trip-timeline";
 import { TripStatusUpdate } from "@/components/trips/trip-status-update";
 import { TripDocuments } from "@/components/trips/trip-documents";
 import { TripBorders } from "@/components/trips/trip-borders";
+import { TripReconciliation } from "@/components/trips/trip-reconciliation";
+import { Badge } from "@/components/ui/badge";
 
 export default async function TripDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -39,7 +41,12 @@ export default async function TripDetailPage({ params }: { params: Promise<{ id:
             ? `${trip.customer.name} · ${trip.origin} → ${trip.destination}`
             : `${trip.origin} → ${trip.destination}`
         }
-        actions={<TripStatusPill status={trip.status} />}
+        actions={
+          <>
+            <TripStatusPill status={trip.status} />
+            {trip.readyToInvoice && <Badge variant="success">Ready to invoice</Badge>}
+          </>
+        }
       />
 
       {/* Hero summary */}
@@ -156,6 +163,85 @@ export default async function TripDetailPage({ params }: { params: Promise<{ id:
       {/* Cross-border crossings */}
       <TripBorders tripId={trip.id} borders={borders} />
 
+      {/* Reconciliation panel (only when delivered) */}
+      <TripReconciliation
+        tripId={trip.id}
+        status={trip.status}
+        revenueAmount={trip.revenueAmount}
+        revenueCurrency={trip.revenueCurrency}
+        driverAdvanceKes={trip.driverAdvanceKes ?? 0}
+        borderChargesKes={trip.borderChargesKes}
+        initialActualKm={trip.actualKm}
+        initialActualFuelLitres={trip.actualFuelLitres}
+        initialDriverAdvanceUsedKes={trip.driverAdvanceUsedKes}
+      />
+
+      {/* Closed summary */}
+      {trip.status === "closed" && (
+        <Card className="border-status-success/30 bg-status-success/5">
+          <CardHeader>
+            <CardTitle className="text-status-success">Closed & reconciled</CardTitle>
+            <CardDescription>
+              {trip.closedAt && `Closed ${new Date(trip.closedAt).toLocaleString("en-GB")}.`}
+              {trip.readyToInvoice && " Ready to invoice."}
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+              <ClosedStat
+                label="Revenue"
+                value={`${trip.revenueAmount.toLocaleString()} ${trip.revenueCurrency}`}
+                tone="success"
+              />
+              <ClosedStat
+                label="Actual km"
+                value={trip.actualKm ? `${trip.actualKm.toLocaleString()} km` : "—"}
+              />
+              <ClosedStat
+                label="Actual fuel"
+                value={trip.actualFuelLitres ? `${trip.actualFuelLitres.toLocaleString()} L` : "—"}
+              />
+              <ClosedStat
+                label="Fuel efficiency"
+                value={
+                  trip.actualKm && trip.actualFuelLitres && trip.actualFuelLitres > 0
+                    ? `${(trip.actualKm / trip.actualFuelLitres).toFixed(2)} km/L`
+                    : "—"
+                }
+                tone="info"
+              />
+              <ClosedStat
+                label="Driver advance issued"
+                value={`KSh ${(trip.driverAdvanceKes ?? 0).toLocaleString()}`}
+              />
+              <ClosedStat
+                label="Driver advance used"
+                value={`KSh ${(trip.driverAdvanceUsedKes ?? 0).toLocaleString()}`}
+              />
+              <ClosedStat
+                label={
+                  (trip.driverAdvanceKes ?? 0) - (trip.driverAdvanceUsedKes ?? 0) >= 0
+                    ? "Advance balance (returned)"
+                    : "Advance overspent"
+                }
+                value={`KSh ${Math.abs(
+                  (trip.driverAdvanceKes ?? 0) - (trip.driverAdvanceUsedKes ?? 0),
+                ).toLocaleString()}`}
+                tone={
+                  (trip.driverAdvanceKes ?? 0) - (trip.driverAdvanceUsedKes ?? 0) >= 0
+                    ? "success"
+                    : "danger"
+                }
+              />
+              <ClosedStat
+                label="Border charges"
+                value={`KSh ${trip.borderChargesKes.toLocaleString()}`}
+              />
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Trip lifecycle */}
       <div className="grid gap-4 lg:grid-cols-2">
         <Card>
@@ -191,6 +277,29 @@ export default async function TripDetailPage({ params }: { params: Promise<{ id:
           </CardContent>
         </Card>
       )}
+    </div>
+  );
+}
+
+function ClosedStat({
+  label,
+  value,
+  tone = "default",
+}: {
+  label: string;
+  value: string;
+  tone?: "default" | "success" | "danger" | "info" | "warning";
+}) {
+  const colour =
+    tone === "success" ? "text-status-success" :
+    tone === "danger" ? "text-status-danger" :
+    tone === "info" ? "text-brand-blue" :
+    tone === "warning" ? "text-status-warning" :
+    "text-fg-primary";
+  return (
+    <div className="rounded-md bg-bg-base/60 p-3 ring-1 ring-border">
+      <div className="text-[10px] uppercase tracking-wider text-fg-tertiary">{label}</div>
+      <div className={`mt-0.5 font-mono tnum text-base font-semibold ${colour}`}>{value}</div>
     </div>
   );
 }

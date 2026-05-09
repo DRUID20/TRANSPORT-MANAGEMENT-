@@ -55,3 +55,13 @@ export const tripPlanSchema = z.object({
   notes: z.string().optional(),
 });
 export type TripPlanInput = z.infer<typeof tripPlanSchema>;
+
+export const tripReconcileSchema = z.object({
+  tripId: z.string().min(1),
+  actualKm: z.coerce.number().nonnegative().optional(),
+  actualFuelLitres: z.coerce.number().nonnegative().optional(),
+  driverAdvanceUsedKes: z.coerce.number().nonnegative().optional(),
+  closingNotes: z.string().optional(),
+  actorName: z.string().default("Dispatcher"),
+});
+export type TripReconcileInput = z.infer<typeof tripReconcileSchema>;
