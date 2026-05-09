@@ -22,6 +22,7 @@ import { TripDocuments } from "@/components/trips/trip-documents";
 import { TripBorders } from "@/components/trips/trip-borders";
 import { TripReconciliation } from "@/components/trips/trip-reconciliation";
 import { TripExpensesCard } from "@/components/trips/trip-expenses-card";
+import { TripInvoiceCard } from "@/components/trips/trip-invoice-card";
 import { Badge } from "@/components/ui/badge";
 
 export default async function TripDetailPage({ params }: { params: Promise<{ id: string }> }) {
@@ -166,6 +167,9 @@ export default async function TripDetailPage({ params }: { params: Promise<{ id:
 
       {/* Expenses */}
       <TripExpensesCard tripId={trip.id} />
+
+      {/* Invoice */}
+      <TripInvoiceCard tripId={trip.id} readyToInvoice={!!trip.readyToInvoice} />
 
       {/* Reconciliation panel (only when delivered) */}
       <TripReconciliation

@@ -66,6 +66,14 @@ import type {
   JournalStatus,
   TrialBalanceRow,
 } from "@/lib/types/ledger";
+import type {
+  CustomerInvoice,
+  CustomerPayment,
+  InvoiceLineItem,
+  InvoiceStatus,
+  InvoiceWithLines,
+  PaymentMethod as ARPaymentMethod,
+} from "@/lib/types/ar";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 
@@ -2770,4 +2778,319 @@ export function trialBalance(range?: {
     });
   }
   return rows.sort((a, b) => a.code.localeCompare(b.code));
+}
+
+// ============================================================
+// Accounts Receivable (Phase 5C)
+// ============================================================
+const invoices = new Map<string, CustomerInvoice>();
+const invoiceLines = new Map<string, InvoiceLineItem>();
+const customerPayments = new Map<string, CustomerPayment>();
+let invoiceCounter = 1;
+let receiptCounter = 1;
+
+function nextInvoiceNumber(): string {
+  const year = new Date().getFullYear();
+  const num = String(invoiceCounter++).padStart(5, "0");
+  return `INV-${year}-${num}`;
+}
+function nextReceiptNumber(): string {
+  const year = new Date().getFullYear();
+  const num = String(receiptCounter++).padStart(5, "0");
+  return `RCT-${year}-${num}`;
+}
+
+export function listInvoices(filter?: {
+  status?: InvoiceStatus;
+  customerId?: string;
+}): CustomerInvoice[] {
+  let all = [...invoices.values()];
+  if (filter?.status) all = all.filter((i) => i.status === filter.status);
+  if (filter?.customerId) all = all.filter((i) => i.customerId === filter.customerId);
+  return all.sort((a, b) => b.issueDate.localeCompare(a.issueDate));
+}
+
+export function getInvoice(id: string): InvoiceWithLines | undefined {
+  const inv = invoices.get(id);
+  if (!inv) return undefined;
+  const lines = [...invoiceLines.values()].filter((l) => l.invoiceId === id);
+  const payments = [...customerPayments.values()]
+    .filter((p) => p.invoiceId === id)
+    .sort((a, b) => a.date.localeCompare(b.date));
+  return { ...inv, lines, payments };
+}
+
+export function invoicesForTrip(tripId: string): CustomerInvoice[] {
+  return [...invoices.values()].filter((i) => i.tripId === tripId);
+}
+
+function recomputeInvoiceStatus(invoiceId: string): void {
+  const inv = invoices.get(invoiceId);
+  if (!inv) return;
+  const paid = [...customerPayments.values()]
+    .filter((p) => p.invoiceId === invoiceId)
+    .reduce((s, p) => s + p.amount, 0);
+  const balance = Math.max(0, inv.total - paid);
+  let status: InvoiceStatus = inv.status;
+  if (status === "cancelled" || status === "draft") {
+    // Don't auto-flip from draft / cancelled.
+  } else if (balance < 0.01) {
+    status = "paid";
+  } else if (paid > 0) {
+    status = "partially_paid";
+  } else {
+    // sent or overdue: check due date
+    const dueOverdue = new Date(inv.dueDate).getTime() < Date.now();
+    status = dueOverdue ? "overdue" : "sent";
+  }
+  invoices.set(invoiceId, { ...inv, paidAmount: paid, balance, status });
+}
+
+export function createInvoice(input: {
+  customerId: string;
+  tripId?: string;
+  issueDate: string;
+  dueDate: string;
+  currency: LedgerCurrency;
+  fxRate: number;
+  taxRate: number;
+  notes?: string;
+  lines: Array<{
+    description: string;
+    quantity: number;
+    unit?: string;
+    unitPrice: number;
+    revenueAccountCode?: string;
+  }>;
+}): CustomerInvoice | { error: string } {
+  if (!customers.has(input.customerId)) return { error: "Customer not found" };
+  if (input.lines.length === 0) return { error: "At least one line item required" };
+
+  const id = randomUUID();
+  const subtotal = input.lines.reduce((s, l) => s + l.quantity * l.unitPrice, 0);
+  const taxAmount = subtotal * input.taxRate;
+  const total = subtotal + taxAmount;
+
+  const inv: CustomerInvoice = {
+    id,
+    number: nextInvoiceNumber(),
+    customerId: input.customerId,
+    tripId: input.tripId,
+    issueDate: input.issueDate,
+    dueDate: input.dueDate,
+    currency: input.currency,
+    fxRate: input.fxRate,
+    subtotal,
+    taxRate: input.taxRate,
+    taxAmount,
+    total,
+    paidAmount: 0,
+    balance: total,
+    status: "draft",
+    notes: input.notes,
+    createdAt: new Date().toISOString(),
+  };
+  invoices.set(id, inv);
+
+  for (const line of input.lines) {
+    const lineId = randomUUID();
+    const lineTotal = line.quantity * line.unitPrice;
+    const item: InvoiceLineItem = {
+      id: lineId,
+      invoiceId: id,
+      description: line.description,
+      quantity: line.quantity,
+      unit: line.unit,
+      unitPrice: line.unitPrice,
+      lineTotal,
+      revenueAccountCode: line.revenueAccountCode,
+    };
+    invoiceLines.set(lineId, item);
+  }
+  return inv;
+}
+
+export function sendInvoice(invoiceId: string): CustomerInvoice | { error: string } {
+  const inv = invoices.get(invoiceId);
+  if (!inv) return { error: "Invoice not found" };
+  if (inv.status !== "draft") return { error: `Already ${inv.status}` };
+  invoices.set(inv.id, { ...inv, status: "sent" });
+
+  // Auto-post to GL: Dr AR / Cr Revenue (and Output VAT if applicable)
+  const customer = customers.get(inv.customerId);
+  // AR account: 111200 USD or 111100 KES
+  const arCode =
+    inv.currency === "USD" || customer?.billingCurrency === "USD"
+      ? "111200"
+      : "111100";
+  const arAcc = getAccountByCode(arCode);
+  // Revenue: prefer line.revenueAccountCode; fallback to 400200 (export) or 400100 (domestic)
+  const lines = [...invoiceLines.values()].filter((l) => l.invoiceId === inv.id);
+  const isExport = inv.currency !== "KES";
+  const revenueCode = lines[0]?.revenueAccountCode ?? (isExport ? "400200" : "400100");
+  const revenueAcc = getAccountByCode(revenueCode);
+  if (!arAcc || !revenueAcc) {
+    return { error: "Required accounts (AR / Revenue) not found in CoA" };
+  }
+
+  const journalLinesIn: Array<{
+    accountId: string;
+    debit: number;
+    credit: number;
+    currency: LedgerCurrency;
+    fxRate: number;
+    description?: string;
+  }> = [
+    {
+      accountId: arAcc.id,
+      debit: inv.total,
+      credit: 0,
+      currency: inv.currency,
+      fxRate: inv.fxRate,
+      description: `${inv.number} — ${customer?.name ?? "Customer"}`,
+    },
+    {
+      accountId: revenueAcc.id,
+      debit: 0,
+      credit: inv.subtotal,
+      currency: inv.currency,
+      fxRate: inv.fxRate,
+      description: `${inv.number} — freight revenue`,
+    },
+  ];
+  if (inv.taxAmount > 0) {
+    const vatAcc = getAccountByCode("220700");
+    if (vatAcc) {
+      journalLinesIn.push({
+        accountId: vatAcc.id,
+        debit: 0,
+        credit: inv.taxAmount,
+        currency: inv.currency,
+        fxRate: inv.fxRate,
+        description: `${inv.number} — output VAT`,
+      });
+    }
+  }
+
+  const result = postJournalEntry({
+    date: inv.issueDate,
+    memo: `Invoice ${inv.number} — ${customer?.name ?? "Customer"}`,
+    referenceType: "invoice",
+    referenceId: inv.id,
+    postedBy: "Finance",
+    lines: journalLinesIn,
+  });
+  if ("error" in result) {
+    // Roll back status
+    invoices.set(inv.id, inv);
+    return result;
+  }
+
+  invoices.set(inv.id, { ...inv, status: "sent", journalEntryId: result.id });
+  return invoices.get(inv.id)!;
+}
+
+export function cancelInvoice(invoiceId: string): CustomerInvoice | { error: string } {
+  const inv = invoices.get(invoiceId);
+  if (!inv) return { error: "Invoice not found" };
+  if (inv.status === "paid") return { error: "Cannot cancel a paid invoice" };
+  // If posted, reverse the JE
+  if (inv.journalEntryId) {
+    reverseJournalEntry({ entryId: inv.journalEntryId, postedBy: "Finance" });
+  }
+  const updated: CustomerInvoice = { ...inv, status: "cancelled" };
+  invoices.set(inv.id, updated);
+  return updated;
+}
+
+export function recordCustomerPayment(input: {
+  invoiceId: string;
+  date: string;
+  amount: number;
+  currency: LedgerCurrency;
+  fxRate: number;
+  paymentMethod: ARPaymentMethod;
+  reference?: string;
+  notes?: string;
+}): CustomerPayment | { error: string } {
+  const inv = invoices.get(input.invoiceId);
+  if (!inv) return { error: "Invoice not found" };
+  if (inv.status === "draft") return { error: "Send the invoice first" };
+  if (inv.status === "cancelled") return { error: "Invoice is cancelled" };
+
+  const id = randomUUID();
+  const payment: CustomerPayment = {
+    id,
+    number: nextReceiptNumber(),
+    invoiceId: inv.id,
+    customerId: inv.customerId,
+    date: input.date,
+    amount: input.amount,
+    currency: input.currency,
+    fxRate: input.fxRate,
+    paymentMethod: input.paymentMethod,
+    reference: input.reference,
+    notes: input.notes,
+    createdAt: new Date().toISOString(),
+  };
+  customerPayments.set(id, payment);
+
+  // Auto-post: Dr Bank / Cr AR
+  const customer = customers.get(inv.customerId);
+  const arCode =
+    inv.currency === "USD" || customer?.billingCurrency === "USD"
+      ? "111200"
+      : "111100";
+  const arAcc = getAccountByCode(arCode);
+
+  // Bank account: pick by payment method + currency
+  let bankCode: string;
+  if (input.paymentMethod === "mpesa") bankCode = "129100"; // M-Pesa Paybill
+  else if (input.paymentMethod === "cash") bankCode = "120100"; // Cash in Hand
+  else if (input.currency === "USD") bankCode = "122100";
+  else bankCode = "121100";
+  const bankAcc = getAccountByCode(bankCode);
+
+  if (!arAcc || !bankAcc) {
+    customerPayments.delete(id);
+    return { error: "Required accounts (AR / Bank) not found" };
+  }
+
+  const result = postJournalEntry({
+    date: input.date,
+    memo: `Receipt ${payment.number} — ${customer?.name ?? "Customer"} for ${inv.number}`,
+    referenceType: "payment",
+    referenceId: payment.id,
+    postedBy: "Finance",
+    lines: [
+      {
+        accountId: bankAcc.id,
+        debit: input.amount,
+        credit: 0,
+        currency: input.currency,
+        fxRate: input.fxRate,
+        description: `${payment.number} — receipt`,
+      },
+      {
+        accountId: arAcc.id,
+        debit: 0,
+        credit: input.amount,
+        currency: input.currency,
+        fxRate: input.fxRate,
+        description: `${payment.number} — applies to ${inv.number}`,
+      },
+    ],
+  });
+  if ("error" in result) {
+    customerPayments.delete(id);
+    return result;
+  }
+  customerPayments.set(id, { ...payment, journalEntryId: result.id });
+  recomputeInvoiceStatus(inv.id);
+  return customerPayments.get(id)!;
+}
+
+/** Force a refresh of overdue/paid statuses across all invoices. */
+export function refreshInvoiceStatuses(): void {
+  for (const inv of invoices.values()) recomputeInvoiceStatus(inv.id);
 }
