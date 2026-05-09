@@ -68,6 +68,7 @@ const navGroups: { title: string; items: NavItem[] }[] = [
       { href: "/hr", label: "HR Hub", icon: Users },
       { href: "/hr/employees", label: "Employees", icon: IdCard },
       { href: "/hr/departments", label: "Departments", icon: Building2 },
+      { href: "/hr/compliance", label: "HR Compliance", icon: ShieldCheck },
     ],
   },
   {

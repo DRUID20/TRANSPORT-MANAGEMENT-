@@ -90,6 +90,10 @@ import type {
   Employee,
   EmployeeStatus,
 } from "@/lib/types/hr";
+import type {
+  ComplianceKind,
+  ComplianceRecord,
+} from "@/lib/types/hr-compliance";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 
@@ -4303,4 +4307,162 @@ export function monthlyCostForEmployee(employeeId: string): {
     total: c.basicSalary + allow,
     currency: c.currency,
   };
+}
+
+// ============================================================
+// HR Compliance (Phase 6B): driving licences, medicals, passports
+// ============================================================
+const complianceRecords = new Map<string, ComplianceRecord>();
+
+function seedComplianceFromDrivers() {
+  // Each driver-linked employee gets compliance records derived from
+  // the existing Driver entity (licence/medical/passport/COMESA).
+  for (const e of employees.values()) {
+    if (!e.driverId) continue;
+    const d = drivers.get(e.driverId);
+    if (!d) continue;
+    if (d.licenceNumber) {
+      const id = `cmp-${e.id}-licence`;
+      complianceRecords.set(id, {
+        id,
+        employeeId: e.id,
+        kind: "driving_licence",
+        label: `Class ${d.licenceClass}`,
+        number: d.licenceNumber,
+        expiryDate: d.licenceExpiry,
+        issuingAuthority: "NTSA",
+        createdAt: e.createdAt,
+      });
+    }
+    if (d.medicalExpiry) {
+      const id = `cmp-${e.id}-medical`;
+      complianceRecords.set(id, {
+        id,
+        employeeId: e.id,
+        kind: "medical_certificate",
+        expiryDate: d.medicalExpiry,
+        issuingAuthority: "NTSA-approved clinic",
+        createdAt: e.createdAt,
+      });
+    }
+    if (d.passportNumber || d.passportExpiry) {
+      const id = `cmp-${e.id}-passport`;
+      complianceRecords.set(id, {
+        id,
+        employeeId: e.id,
+        kind: "passport",
+        number: d.passportNumber,
+        expiryDate: d.passportExpiry,
+        issuingAuthority: "Department of Immigration",
+        createdAt: e.createdAt,
+      });
+    }
+    if (d.comesaDriverPermitExpiry) {
+      const id = `cmp-${e.id}-comesa`;
+      complianceRecords.set(id, {
+        id,
+        employeeId: e.id,
+        kind: "comesa_permit",
+        expiryDate: d.comesaDriverPermitExpiry,
+        issuingAuthority: "COMESA Secretariat",
+        createdAt: e.createdAt,
+      });
+    }
+  }
+
+  // A few extra records on office staff (KRA PINs already on Employee, but
+  // we want explicit compliance records for passports of management).
+  const today = new Date();
+  const inDays = (n: number) => {
+    const d = new Date(today);
+    d.setDate(d.getDate() + n);
+    return d.toISOString().slice(0, 10);
+  };
+
+  const extras: Array<Partial<ComplianceRecord> & { employeeId: string; kind: ComplianceKind }> = [
+    {
+      employeeId: "emp-001",
+      kind: "passport",
+      number: "AK0102345",
+      expiryDate: inDays(740),
+      issuingAuthority: "Department of Immigration",
+    },
+    {
+      employeeId: "emp-002",
+      kind: "passport",
+      number: "AK0202345",
+      expiryDate: inDays(120),
+      issuingAuthority: "Department of Immigration",
+    },
+    {
+      employeeId: "emp-003",
+      kind: "passport",
+      number: "AK0302345",
+      expiryDate: inDays(20),         // expiring soon — for the dashboard
+      issuingAuthority: "Department of Immigration",
+    },
+    {
+      employeeId: "emp-005",
+      kind: "training_certificate",
+      label: "Hydraulics Level 3",
+      number: "KIE-2023-MX-882",
+      issueDate: "2023-09-12",
+      expiryDate: inDays(450),
+      issuingAuthority: "KIE Industrial Training",
+    },
+    {
+      employeeId: "emp-007",
+      kind: "training_certificate",
+      label: "Diesel Mechanic Cert",
+      number: "NITA-2022-MX-441",
+      issueDate: "2022-04-18",
+      expiryDate: inDays(-15),        // expired — for the dashboard
+      issuingAuthority: "NITA",
+    },
+  ];
+
+  for (const ex of extras) {
+    const id = `cmp-${randomUUID().slice(0, 8)}`;
+    complianceRecords.set(id, {
+      id,
+      employeeId: ex.employeeId,
+      kind: ex.kind,
+      label: ex.label,
+      number: ex.number,
+      issueDate: ex.issueDate,
+      expiryDate: ex.expiryDate,
+      issuingAuthority: ex.issuingAuthority,
+      createdAt: new Date().toISOString(),
+    });
+  }
+}
+seedComplianceFromDrivers();
+
+export function listComplianceRecords(filter?: {
+  employeeId?: string;
+  kind?: ComplianceKind;
+}): ComplianceRecord[] {
+  let all = [...complianceRecords.values()];
+  if (filter?.employeeId) all = all.filter((r) => r.employeeId === filter.employeeId);
+  if (filter?.kind) all = all.filter((r) => r.kind === filter.kind);
+  return all.sort((a, b) =>
+    (a.expiryDate ?? "9999").localeCompare(b.expiryDate ?? "9999"),
+  );
+}
+
+export function getComplianceRecord(id: string): ComplianceRecord | undefined {
+  return complianceRecords.get(id);
+}
+
+export function createComplianceRecord(
+  input: Omit<ComplianceRecord, "id" | "createdAt">,
+): ComplianceRecord {
+  const id = `cmp-${randomUUID().slice(0, 8)}`;
+  const r: ComplianceRecord = { ...input, id, createdAt: new Date().toISOString() };
+  complianceRecords.set(id, r);
+  return r;
+}
+
+export function deleteComplianceRecord(id: string): boolean {
+  return complianceRecords.delete(id);
 }

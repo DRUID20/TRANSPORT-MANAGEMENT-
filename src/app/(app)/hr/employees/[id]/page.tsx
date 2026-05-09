@@ -18,6 +18,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { PageHeader } from "@/components/layout/page-header";
 import { EmployeeStatusPill } from "@/components/hr/employee-status-pill";
+import { EmployeeComplianceCard } from "@/components/hr/employee-compliance-card";
 
 export default async function EmployeeDetailPage({
   params,
@@ -260,7 +261,10 @@ export default async function EmployeeDetailPage({
         </Card>
       )}
 
-      {/* Phase 6B–F placeholders */}
+      {/* Compliance (Phase 6B) */}
+      <EmployeeComplianceCard employeeId={e.id} />
+
+      {/* Phase 6C–F placeholders */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
@@ -269,7 +273,7 @@ export default async function EmployeeDetailPage({
           </CardTitle>
           <CardDescription>
             Leave history, attendance, payroll inputs, loans, appraisal ratings, and JD permissions
-            will be wired into this page as Phases 6B–6F ship.
+            will be wired into this page as Phases 6C–6F ship.
           </CardDescription>
         </CardHeader>
       </Card>

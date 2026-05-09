@@ -5,6 +5,7 @@ import {
   CalendarRange,
   GraduationCap,
   Plus,
+  KeyRound,
   ShieldCheck,
   Users,
   Wallet,
@@ -49,6 +50,13 @@ export default async function HrIndexPage() {
       count: departments.length,
     },
     {
+      href: "/hr/compliance",
+      label: "Compliance",
+      icon: ShieldCheck,
+      desc: "Driving licences, medicals, passports, COMESA permits, training certs.",
+      count: undefined,
+    },
+    {
       href: "/hr/leave",
       label: "Leave & Attendance",
       icon: CalendarRange,
@@ -75,7 +83,7 @@ export default async function HrIndexPage() {
     {
       href: "/hr/permissions",
       label: "Job-Description Permissions",
-      icon: ShieldCheck,
+      icon: KeyRound,
       desc: "JD-driven RBAC — each role activates specific screens.",
       count: undefined,
       soon: true,
