@@ -1,14 +1,26 @@
 "use client";
 
-import { useState } from "react";
-import { Activity, DollarSign, Fuel, Route as RouteIcon, Truck, Users } from "lucide-react";
+import { useEffect, useState } from "react";
+import {
+  Activity,
+  DollarSign,
+  FileWarning,
+  Fuel,
+  IdCard as IdCardIcon,
+  Route as RouteIcon,
+  Shield,
+  Truck,
+  Users,
+  Wrench,
+} from "lucide-react";
+import { getComplianceSummary } from "@/server/actions/compliance";
 import { KpiCard } from "@/components/dashboard/kpi-card";
 import { AreaChartCard } from "@/components/dashboard/area-chart-card";
 import { FilterBar } from "@/components/dashboard/filter-bar";
 import { StatusPill, type TripStatus } from "@/components/dashboard/status-pill";
 import { ProgressHero } from "@/components/dashboard/progress-hero";
 import { FleetDistribution } from "@/components/dashboard/fleet-distribution";
-import { NeedsAttention } from "@/components/dashboard/needs-attention";
+import { NeedsAttention, type AttentionItem } from "@/components/dashboard/needs-attention";
 import { TopPerformer } from "@/components/dashboard/top-performer";
 import { FuelPanel } from "@/components/dashboard/fuel-panel";
 import { RouteVisual } from "@/components/dashboard/route-visual";
@@ -74,6 +86,60 @@ export default function DashboardPage() {
   const [activeTab, setActiveTab] = useState("all");
   const trips = activeTab === "all" ? allTrips : allTrips.filter((t) => t.status === activeTab);
 
+  // Live compliance feed for the Needs Attention card
+  const [attention, setAttention] = useState<AttentionItem[]>([]);
+  useEffect(() => {
+    let cancelled = false;
+    getComplianceSummary().then((s) => {
+      if (cancelled) return;
+      const items: AttentionItem[] = [];
+      if (s.trucksInWorkshop > 0) {
+        items.push({
+          icon: Wrench,
+          count: s.trucksInWorkshop,
+          title: "Trucks in workshop",
+          hint: "Open job cards",
+          tone: "danger",
+          href: "/workshop",
+        });
+      }
+      if (s.insuranceExpiring > 0) {
+        items.push({
+          icon: Shield,
+          count: s.insuranceExpiring,
+          title: "Insurance expiring",
+          hint: "Within 30 days",
+          tone: "warning",
+          href: "/compliance?filter=insurance",
+        });
+      }
+      if (s.comesaExpiring > 0) {
+        items.push({
+          icon: FileWarning,
+          count: s.comesaExpiring,
+          title: "COMESA permits expiring",
+          hint: "Trucks + drivers",
+          tone: "warning",
+          href: "/compliance?filter=comesa",
+        });
+      }
+      if (s.driverDocsExpiring > 0) {
+        items.push({
+          icon: IdCardIcon,
+          count: s.driverDocsExpiring,
+          title: "Driver licences / medicals",
+          hint: "Within 30 days",
+          tone: "warning",
+          href: "/compliance?filter=driver",
+        });
+      }
+      setAttention(items);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
   return (
     <div className="flex flex-col gap-6">
       {/* Page header */}
@@ -127,7 +193,7 @@ export default function DashboardPage() {
             valueFormatter={(n) => formatMoney(n, "KES", { compact: true })}
           />
         </div>
-        <NeedsAttention />
+        <NeedsAttention items={attention} />
       </div>
 
       {/* Fleet distribution + Fuel + Cross-border */}
