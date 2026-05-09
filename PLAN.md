@@ -219,6 +219,9 @@ Total ≈ **16–20 weeks** to full MVP, but Phase 1 is usable in production aro
   - **Workshop / Job Cards module pulled back IN scope** (was previously out-of-scope) — every yard service generates a Job Card with mechanic analysis, services done, spares used; spares charged to truck; supplier AP statement auto-generated.
   - **Journey Log** is the per-trip record with: quantity, loading/offloading dates, distance covered (with destinations), mileage rate, mileage, fuel consumed, **road wear**.
   - **Per-truck P&L** elevated from analytic to core deliverable.
-  - **Road Wear accrual** added as a new concept (Dr Road Wear Expense / Cr Provision for Maintenance & Tyres at trip close; consumed when actual maintenance/tyres are paid). Needs CoA additions and per-km rate methodology — clarification pending.
+  - **Road Wear accrual deferred** (parked) — concept retained in the workflow doc for future revisit; no CoA accounts and no posting logic.
+  - **"Mileage" clarified** as driver road-use cash allowance (not a billing rate). New CoA account `502150 Driver Mileage Allowance (Road Use)` added.
+  - **Workshop scope confirmed cost-only** (internal trucks; no third-party workshop revenue).
+  - **RBAC design deferred** until just before Phase 0 auth wiring (Nile Valley wants distinct roles per system area; catalogue to be defined together at that point).
   - **HR module extended**: payroll, statutory deductions per employee, employee appraisal/performance, salaries & loans, **job-description-driven RBAC** (each employee's screens are activated by job description, stricter than standard RBAC).
   - **Subcontractor vs Own** tagging confirmed as a first-class dimension on every entry.

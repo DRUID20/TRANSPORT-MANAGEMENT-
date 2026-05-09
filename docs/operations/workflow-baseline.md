@@ -135,19 +135,19 @@ A trip is recorded as a **Journey Log** with these fields:
 | Loading date | When loaded at origin |
 | Offloading date | When delivered at destination |
 | Distance covered | With destinations listed |
-| **Mileage rate** | TBD — clarify with user (rate charged to customer per km? cost per km? both?) |
-| Mileage | Actual km driven |
+| **Mileage** (the driver allowance) | Cash paid to the driver for his road use. Posts to GL `502150 Driver Mileage Allowance (Road Use)`. Captured per Journey Log. |
+| Distance / km driven | Actual km |
 | Fuel consumed | Litres |
-| **Road wear** | Per-km wear & tear accrual — see §5.5 |
+| ~~Road wear~~ | **Deferred — concept parked.** Not implemented in TX System initially. Revisit later. |
 
 Operational expenses (fuel, tolls, border, driver per-diem) are **posted against the Journey Log number** so every cost is tied to a trip.
 
 ### 5.3 HR module — extensions
 
 - **Payroll** with Kenyan statutory deductions per employee (PAYE, NSSF, NHIF/SHIF, NITA, AHL, Pension)
-- **Employee appraisal / performance** (cycle TBD — quarterly? annual?)
+- **Employee appraisal / performance** (cycle TBD)
 - **Salaries & loans to employees** (loans tracked, deducted from payroll over instalments)
-- **Job-description-driven RBAC**: each employee's role is defined by their job description, and TX System activates **only the screens / accounts** relevant to that role. (This is stricter than standard role-based access — it's role + per-screen mapping driven from HR.)
+- **Role-based access (RBAC)** — design **deferred**. Nile Valley wants distinct roles with different parts of the system gated. We'll design the role catalogue and screens-per-role just before Phase 0 wires up auth/permissions, with input from Nile Valley.
 
 ### 5.4 Per-truck P&L (elevated to a core deliverable)
 
@@ -156,13 +156,10 @@ System generates a **P&L per truck**:
 - Costs: fuel, tolls, border, driver allowances, maintenance (via job cards), spares, tyres, road-wear accrual, insurance amortised, depreciation, tracker subscription
 - Result: gross profit per truck, period-by-period, with drill-down to underlying trips and job cards
 
-### 5.5 Road Wear accrual (NEW concept — needs design discussion)
+### 5.5 Road Wear accrual — **DEFERRED (parked)**
 
-- Recognises tyre + maintenance wear as a per-km cost on every trip, instead of waiting for the actual tyre replacement / service to hit P&L.
-- Likely posting:
-  - **Trip close**: Dr `5042xx Road Wear Expense` / Cr `21xxxx Provision for Maintenance & Tyres` (a current liability or contra-asset, TBD)
-  - **Actual tyre purchase / service**: Dr `21xxxx Provision …` / Cr Cash/AP (consumes the provision; any difference goes to actual maintenance expense)
-- Needs a **rate per km** — typically derived from historical (tyre cost + maintenance cost) ÷ km driven over the past 12 months. Question: how does Pumas currently calculate it?
+- Discussed as a possible per-km wear & tear accrual, but Nile Valley said: *"don't consider this one yet."*
+- Concept retained here for future revisit; no CoA accounts and no posting logic added at this stage.
 
 ### 5.6 Subcontractor vs Own — every entry tagged
 
@@ -178,11 +175,13 @@ System generates a **P&L per truck**:
 
 ---
 
-## 6. Clarifications still needed
+## 6. Clarifications
 
-1. **Mileage rate** — what does this represent? Customer billing rate per km, internal cost per km, or both?
-2. **Road wear** — how is the per-km rate currently computed in Pumas? And which account does the accrual sit on?
-3. **Job descriptions for RBAC** — do you have the existing list of roles + screens-per-role, or do we design it together?
-4. **Employee loans** — paid from petty cash? Bank? M-Pesa? And what's the typical repayment term (3 months, 6 months, longer)?
-5. **Appraisal cycle** — quarterly, half-yearly, or annual? Any KPIs already used?
-6. **Workshop scope** — just job cards on our own trucks, or do you also do third-party workshop work (revenue-generating)?
+| # | Topic | Status |
+|---|---|---|
+| 1 | Mileage rate meaning | **Resolved** — it's the driver's road-use allowance (cash). Posts to `502150 Driver Mileage Allowance (Road Use)`. |
+| 2 | Road Wear methodology | **Deferred / parked.** |
+| 3 | RBAC role catalogue | **Deferred** — design just before Phase 0 auth wiring. |
+| 4 | Workshop scope | **Resolved** — internal only, cost-side only, no AR. |
+| 5 | Employee loans | Still open: source (petty cash / bank / M-Pesa) and typical repayment term. |
+| 6 | Appraisal cycle | Still open: cadence (quarterly / half-year / annual) and KPIs. |

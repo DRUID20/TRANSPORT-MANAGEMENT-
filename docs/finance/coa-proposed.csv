@@ -62,7 +62,6 @@ Code,Name,Class,Group,Type,Normal Balance,Currency,Status,Notes
 210300,Other Payables,Liability,Current,Payable,Credit,KES,Active,Was duplicated
 210400,Accrued Liabilities,Liability,Current,Accrual,Credit,KES,Active,
 210500,Accrued Leave Payable,Liability,Current,Accrual,Credit,KES,Active,
-210550,Provision for Maintenance & Tyres,Liability,Current,Provision,Credit,KES,Active,NEW. Counterpart to 504950 Road Wear Accrual; reduced by actual tyre/maintenance spend
 210600,Dividends Payable,Liability,Current,Payable,Credit,KES,Active,
 210700,Short-term Debt,Liability,Current,Debt,Credit,KES,Active,
 210800,Stock Creditor Clearing,Liability,Current,Clearing,Credit,KES,Active,
@@ -117,6 +116,7 @@ Code,Name,Class,Group,Type,Normal Balance,Currency,Status,Notes
 500700,Detention Expense,Direct Cost,Cost of Sales,Direct,Debit,KES,Active,NEW
 500800,Container Handling Costs,Direct Cost,Cost of Sales,Direct,Debit,KES,Active,NEW
 502100,Driver Per-Diem & Allowances,Direct Cost,Cost of Sales,Driver,Debit,KES,Active,NEW
+502150,Driver Mileage Allowance (Road Use),Direct Cost,Cost of Sales,Driver,Debit,KES,Active,NEW. Cash paid to driver per km/trip for road use ('mileage')
 502200,Driver Overnight Allowance,Direct Cost,Cost of Sales,Driver,Debit,KES,Active,NEW
 502300,Driver Welfare (meals/accommodation),Direct Cost,Cost of Sales,Driver,Debit,KES,Active,NEW
 502400,Casual Labour,Direct Cost,Cost of Sales,Driver,Debit,KES,Active,
@@ -133,7 +133,6 @@ Code,Name,Class,Group,Type,Normal Balance,Currency,Status,Notes
 504700,Workshop Tools & Consumables,Direct Cost,Cost of Sales,Vehicle,Debit,KES,Active,NEW
 504800,Vehicle Tracking / GPS Subscription,Direct Cost,Cost of Sales,Vehicle,Debit,KES,Active,NEW
 504900,"Vehicle Licences (NTSA, COMESA, Transit Permits)",Direct Cost,Cost of Sales,Vehicle,Debit,KES,Active,NEW
-504950,Road Wear Accrual (per-km wear & tear),Direct Cost,Cost of Sales,Vehicle,Debit,KES,Active,NEW. Per-km accrual; consumed by Provision for Maintenance & Tyres
 505100,Customs Bonds / Transit Guarantees,Direct Cost,Cost of Sales,Customs,Debit,KES,Active,NEW
 506100,Discounts Allowed,Direct Cost,Cost of Sales,Adjustment,Debit,KES,Active,Was misclassified as Expense
 507000,Change in Inventory — COS,Direct Cost,Cost of Sales,Adjustment,Debit,KES,Active,
