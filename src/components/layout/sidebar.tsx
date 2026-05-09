@@ -18,6 +18,8 @@ import {
   IdCard,
   Store,
   ShieldCheck,
+  ClipboardList,
+  Tag,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Logo } from "@/components/layout/logo";
@@ -34,18 +36,20 @@ const navGroups: { title: string; items: NavItem[] }[] = [
     title: "Operations",
     items: [
       { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
-      { href: "/trips", label: "Trips", icon: Route, badge: "soon" },
+      { href: "/bookings", label: "Bookings", icon: ClipboardList },
+      { href: "/trips", label: "Trips", icon: Route },
       { href: "/trucks", label: "Trucks", icon: Truck },
       { href: "/trailers", label: "Trailers", icon: Container },
       { href: "/drivers", label: "Drivers", icon: IdCard },
       { href: "/workshop", label: "Workshop", icon: Wrench },
       { href: "/compliance", label: "Compliance", icon: ShieldCheck },
+      { href: "/rates", label: "Rates", icon: Tag },
     ],
   },
   {
     title: "Partners",
     items: [
-      { href: "/customers", label: "Customers", icon: Building2, badge: "soon" },
+      { href: "/customers", label: "Customers", icon: Building2 },
       { href: "/subcontractors", label: "Subcontractors", icon: Handshake },
       { href: "/suppliers", label: "Suppliers", icon: Store },
     ],

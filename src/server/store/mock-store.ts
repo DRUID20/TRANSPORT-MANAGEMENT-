@@ -22,6 +22,14 @@ import type {
   JobCardSpare,
   JobCardStatus,
 } from "@/lib/types/workshop";
+import type {
+  Booking,
+  BookingStatus,
+  Customer,
+  Rate,
+  Trip,
+  TripStatus,
+} from "@/lib/types/trips";
 
 // Seed subcontractors
 const subcontractorSeed: Subcontractor[] = [
@@ -993,4 +1001,396 @@ export function closeJobCard(input: {
     }
   }
   return updated;
+}
+
+// ============================================================
+// Customers (export shippers)
+// ============================================================
+const customerSeed: Customer[] = [
+  {
+    id: "cus-001",
+    name: "Saharan Trading Co.",
+    contactPerson: "Yusuf Adan",
+    phone: "+254 711 220 008",
+    email: "ops@saharantrading.com",
+    kraPin: "P051441002A",
+    billingAddress: "Sameer Park, Mombasa Road, Nairobi",
+    billingCurrency: "USD",
+    paymentTermsDays: 30,
+    notes: "Bulk shipper Mombasa → Juba; pays in USD; 30-day credit",
+    createdAt: "2024-08-15T08:00:00Z",
+  },
+  {
+    id: "cus-002",
+    name: "Pearl of Africa Coffee",
+    contactPerson: "Hellen Nakato",
+    phone: "+256 701 884 110",
+    email: "logistics@pearlcoffee.ug",
+    billingAddress: "Industrial Area, Kampala",
+    billingCurrency: "USD",
+    paymentTermsDays: 45,
+    notes: "Mombasa → Kampala return loads of coffee for export",
+    createdAt: "2025-01-22T08:00:00Z",
+  },
+  {
+    id: "cus-003",
+    name: "Kivu Mining Logistics",
+    contactPerson: "Patrick Mukamba",
+    phone: "+243 821 552 088",
+    email: "ops@kivumining.cd",
+    billingCurrency: "USD",
+    paymentTermsDays: 30,
+    notes: "Heavy mining equipment to Goma — quarterly volumes",
+    createdAt: "2025-03-10T08:00:00Z",
+  },
+  {
+    id: "cus-004",
+    name: "Karuturi Agro Exports",
+    contactPerson: "Ravi Karuturi",
+    phone: "+254 722 990 102",
+    email: "shipping@karuturi.com",
+    billingCurrency: "KES",
+    paymentTermsDays: 14,
+    notes: "Domestic + export Mombasa shipments; mostly per-tonne",
+    createdAt: "2025-05-04T08:00:00Z",
+  },
+  {
+    id: "cus-005",
+    name: "Rwanda Beverages Ltd",
+    contactPerson: "Jean-Claude Habimana",
+    phone: "+250 788 442 110",
+    email: "logistics@rwandabev.rw",
+    billingCurrency: "USD",
+    paymentTermsDays: 30,
+    notes: "Mombasa → Kigali — bottled goods on container chassis",
+    createdAt: "2025-09-18T08:00:00Z",
+  },
+];
+
+const customers = new Map<string, Customer>(customerSeed.map((c) => [c.id, c]));
+
+export function listCustomers(): Customer[] {
+  return [...customers.values()].sort((a, b) => a.name.localeCompare(b.name));
+}
+export function getCustomer(id: string): Customer | undefined {
+  return customers.get(id);
+}
+export function createCustomer(input: Omit<Customer, "id" | "createdAt">): Customer {
+  const c: Customer = { ...input, id: randomUUID(), createdAt: new Date().toISOString() };
+  customers.set(c.id, c);
+  return c;
+}
+export function updateCustomer(id: string, patch: Partial<Customer>): Customer | undefined {
+  const existing = customers.get(id);
+  if (!existing) return undefined;
+  const updated = { ...existing, ...patch, id: existing.id };
+  customers.set(id, updated);
+  return updated;
+}
+
+// ============================================================
+// Rate table
+// ============================================================
+const rateSeed: Rate[] = [
+  // Default routes (no customer override)
+  { id: "rate-001", origin: "Mombasa", destination: "Kampala", basis: "per_tonne", amount: 95,    currency: "USD", createdAt: "2025-01-01T08:00:00Z" },
+  { id: "rate-002", origin: "Mombasa", destination: "Kigali",  basis: "per_tonne", amount: 145,   currency: "USD", createdAt: "2025-01-01T08:00:00Z" },
+  { id: "rate-003", origin: "Mombasa", destination: "Goma",    basis: "per_tonne", amount: 195,   currency: "USD", createdAt: "2025-01-01T08:00:00Z" },
+  { id: "rate-004", origin: "Mombasa", destination: "Bujumbura", basis: "per_tonne", amount: 175, currency: "USD", createdAt: "2025-01-01T08:00:00Z" },
+  { id: "rate-005", origin: "Nairobi", destination: "Juba",    basis: "per_tonne", amount: 220,   currency: "USD", createdAt: "2025-01-01T08:00:00Z" },
+  { id: "rate-006", origin: "Nairobi", destination: "Dar es Salaam", basis: "per_tonne", amount: 75, currency: "USD", createdAt: "2025-01-01T08:00:00Z" },
+  { id: "rate-007", origin: "Mombasa", destination: "Mwanza",  basis: "per_tonne", amount: 85,    currency: "USD", createdAt: "2025-01-01T08:00:00Z" },
+  { id: "rate-008", origin: "Mombasa", destination: "Nairobi", basis: "per_tonne", amount: 18,    currency: "USD", createdAt: "2025-01-01T08:00:00Z" },
+  // Customer-specific override (Pearl of Africa Coffee gets a discounted Mombasa→Kampala)
+  { id: "rate-009", origin: "Mombasa", destination: "Kampala", customerId: "cus-002", basis: "per_tonne", amount: 88, currency: "USD", notes: "Volume agreement", createdAt: "2025-02-15T08:00:00Z" },
+  // Container-class
+  { id: "rate-010", origin: "Mombasa", destination: "Kigali",  cargoClass: "containerised", basis: "per_container", amount: 3200, currency: "USD", createdAt: "2025-01-01T08:00:00Z" },
+];
+
+const rates = new Map<string, Rate>(rateSeed.map((r) => [r.id, r]));
+
+export function listRates(): Rate[] {
+  return [...rates.values()].sort((a, b) => {
+    const ra = `${a.origin}>${a.destination}`;
+    const rb = `${b.origin}>${b.destination}`;
+    if (ra !== rb) return ra.localeCompare(rb);
+    // Customer-specific first
+    return (a.customerId ? 0 : 1) - (b.customerId ? 0 : 1);
+  });
+}
+export function getRate(id: string): Rate | undefined {
+  return rates.get(id);
+}
+export function createRate(input: Omit<Rate, "id" | "createdAt">): Rate {
+  const r: Rate = { ...input, id: randomUUID(), createdAt: new Date().toISOString() };
+  rates.set(r.id, r);
+  return r;
+}
+/**
+ * Look up the best rate for a (origin, destination, customerId, cargoClass) tuple.
+ * Customer-specific overrides win, then cargo-class matches, then defaults.
+ */
+export function lookupRate(args: {
+  origin: string;
+  destination: string;
+  customerId?: string;
+  cargoClass?: string;
+}): Rate | undefined {
+  const matches = listRates().filter(
+    (r) => r.origin.toLowerCase() === args.origin.toLowerCase() && r.destination.toLowerCase() === args.destination.toLowerCase(),
+  );
+  // 1. Customer-specific match
+  const cust = matches.find((r) => r.customerId === args.customerId);
+  if (cust) return cust;
+  // 2. Cargo-class match (default)
+  if (args.cargoClass) {
+    const cls = matches.find((r) => !r.customerId && r.cargoClass === args.cargoClass);
+    if (cls) return cls;
+  }
+  // 3. Default fallback
+  return matches.find((r) => !r.customerId && !r.cargoClass);
+}
+
+// ============================================================
+// Bookings
+// ============================================================
+let bookingCounter = 1;
+function nextBookingNumber(): string {
+  const year = new Date().getFullYear();
+  const num = String(bookingCounter++).padStart(4, "0");
+  return `BK-${year}-${num}`;
+}
+
+const bookings = new Map<string, Booking>();
+
+function seedBookings() {
+  const seeds: Omit<Booking, "id" | "createdAt">[] = [
+    {
+      number: "BK-2026-0001",
+      customerId: "cus-002",
+      origin: "Mombasa",
+      destination: "Kampala",
+      cargoType: "Coffee beans (bagged)",
+      cargoQuantity: 28,
+      cargoUnit: "tonnes",
+      requestedDate: "2026-05-12",
+      agreedAmount: 88,
+      agreedBasis: "per_tonne",
+      agreedCurrency: "USD",
+      status: "planned",
+      notes: "Load at Mombasa container freight station",
+    },
+    {
+      number: "BK-2026-0002",
+      customerId: "cus-001",
+      origin: "Nairobi",
+      destination: "Juba",
+      cargoType: "General cargo (palletised)",
+      cargoQuantity: 26,
+      cargoUnit: "tonnes",
+      requestedDate: "2026-05-14",
+      agreedAmount: 220,
+      agreedBasis: "per_tonne",
+      agreedCurrency: "USD",
+      status: "planned",
+    },
+    {
+      number: "BK-2026-0003",
+      customerId: "cus-005",
+      origin: "Mombasa",
+      destination: "Kigali",
+      cargoType: "Bottled beverages",
+      cargoQuantity: 1,
+      cargoUnit: "TEUs",
+      requestedDate: "2026-05-15",
+      agreedAmount: 3200,
+      agreedBasis: "per_container",
+      agreedCurrency: "USD",
+      status: "confirmed",
+    },
+    {
+      number: "BK-2026-0004",
+      customerId: "cus-003",
+      origin: "Mombasa",
+      destination: "Goma",
+      cargoType: "Mining equipment (oversized)",
+      cargoQuantity: 22,
+      cargoUnit: "tonnes",
+      requestedDate: "2026-05-22",
+      agreedAmount: 240,
+      agreedBasis: "per_tonne",
+      agreedCurrency: "USD",
+      status: "draft",
+      notes: "Customer to confirm dimensions before we plan",
+    },
+    {
+      number: "BK-2026-0005",
+      customerId: "cus-004",
+      origin: "Mombasa",
+      destination: "Nairobi",
+      cargoType: "Fresh produce",
+      cargoQuantity: 18,
+      cargoUnit: "tonnes",
+      requestedDate: "2026-05-10",
+      agreedAmount: 18,
+      agreedBasis: "per_tonne",
+      agreedCurrency: "USD",
+      status: "confirmed",
+    },
+  ];
+  seeds.forEach((s, i) => {
+    const id = `bk-${String(i + 1).padStart(3, "0")}`;
+    const fixedNum = s.number;
+    bookings.set(id, {
+      ...s,
+      id,
+      number: fixedNum,
+      createdAt: new Date(Date.now() - (seeds.length - i) * 86400000).toISOString(),
+    });
+  });
+  bookingCounter = seeds.length + 1;
+}
+seedBookings();
+
+export function listBookings(filterStatus?: BookingStatus): Booking[] {
+  const all = [...bookings.values()].sort(
+    (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
+  );
+  return filterStatus ? all.filter((b) => b.status === filterStatus) : all;
+}
+export function getBooking(id: string): Booking | undefined {
+  return bookings.get(id);
+}
+export function bookingsForCustomer(customerId: string): Booking[] {
+  return listBookings().filter((b) => b.customerId === customerId);
+}
+export function createBooking(input: Omit<Booking, "id" | "number" | "createdAt" | "status" | "tripId">): Booking {
+  const b: Booking = {
+    ...input,
+    id: randomUUID(),
+    number: nextBookingNumber(),
+    status: "draft",
+    createdAt: new Date().toISOString(),
+  };
+  bookings.set(b.id, b);
+  return b;
+}
+export function updateBookingStatus(id: string, status: BookingStatus, tripId?: string): Booking | undefined {
+  const existing = bookings.get(id);
+  if (!existing) return undefined;
+  const updated: Booking = { ...existing, status, tripId: tripId ?? existing.tripId };
+  bookings.set(id, updated);
+  return updated;
+}
+
+// ============================================================
+// Trips
+// ============================================================
+let tripCounter = 1;
+function nextTripNumber(): string {
+  const year = new Date().getFullYear();
+  const num = String(tripCounter++).padStart(4, "0");
+  return `TRP-${year}-${num}`;
+}
+
+const trips = new Map<string, Trip>();
+
+function seedTrips() {
+  // Plan trips for the two 'planned' bookings
+  const plannedBookings = [...bookings.values()].filter((b) => b.status === "planned");
+  plannedBookings.forEach((b, i) => {
+    const id = `trp-${String(i + 1).padStart(3, "0")}`;
+    const truckIds = ["trk-001", "trk-002"];
+    const driverIds = ["drv-001", "drv-002"];
+    const trailerIds = ["trl-001", "trl-002"];
+    const trip: Trip = {
+      id,
+      number: `TRP-2026-${String(i + 1).padStart(4, "0")}`,
+      bookingId: b.id,
+      truckId: truckIds[i] ?? "trk-001",
+      trailerId: trailerIds[i],
+      driverId: driverIds[i] ?? "drv-001",
+      status: "planned",
+      origin: b.origin,
+      destination: b.destination,
+      cargoType: b.cargoType,
+      cargoQuantity: b.cargoQuantity,
+      cargoUnit: b.cargoUnit,
+      revenueAmount: b.agreedBasis === "per_tonne" ? b.agreedAmount * b.cargoQuantity
+                   : b.agreedBasis === "per_container" ? b.agreedAmount * b.cargoQuantity
+                   : b.agreedAmount,
+      revenueCurrency: b.agreedCurrency,
+      driverAdvanceKes: 35000,
+      plannedDepartureDate: b.requestedDate,
+      createdAt: new Date(Date.now() - (plannedBookings.length - i) * 86400000).toISOString(),
+    };
+    trips.set(id, trip);
+    // Link booking back to trip
+    const booking = bookings.get(b.id);
+    if (booking) bookings.set(booking.id, { ...booking, tripId: id });
+  });
+  tripCounter = plannedBookings.length + 1;
+}
+seedTrips();
+
+export function listTrips(filterStatus?: TripStatus): Trip[] {
+  const all = [...trips.values()].sort(
+    (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
+  );
+  return filterStatus ? all.filter((t) => t.status === filterStatus) : all;
+}
+export function getTrip(id: string): Trip | undefined {
+  return trips.get(id);
+}
+export function tripsForTruck(truckId: string): Trip[] {
+  return listTrips().filter((t) => t.truckId === truckId);
+}
+export function tripsForDriver(driverId: string): Trip[] {
+  return listTrips().filter((t) => t.driverId === driverId);
+}
+
+export function planTrip(input: {
+  bookingId: string;
+  truckId: string;
+  trailerId?: string;
+  driverId: string;
+  driverAdvanceKes?: number;
+  plannedDepartureDate?: string;
+  plannedDeliveryDate?: string;
+  notes?: string;
+}): Trip | undefined {
+  const booking = bookings.get(input.bookingId);
+  if (!booking) return undefined;
+  if (booking.status === "planned" || booking.status === "cancelled") return undefined;
+
+  const id = randomUUID();
+  const revenue =
+    booking.agreedBasis === "per_tonne" || booking.agreedBasis === "per_container"
+      ? booking.agreedAmount * booking.cargoQuantity
+      : booking.agreedAmount;
+  const trip: Trip = {
+    id,
+    number: nextTripNumber(),
+    bookingId: input.bookingId,
+    truckId: input.truckId,
+    trailerId: input.trailerId,
+    driverId: input.driverId,
+    status: "planned",
+    origin: booking.origin,
+    destination: booking.destination,
+    cargoType: booking.cargoType,
+    cargoQuantity: booking.cargoQuantity,
+    cargoUnit: booking.cargoUnit,
+    revenueAmount: revenue,
+    revenueCurrency: booking.agreedCurrency,
+    driverAdvanceKes: input.driverAdvanceKes,
+    plannedDepartureDate: input.plannedDepartureDate,
+    plannedDeliveryDate: input.plannedDeliveryDate,
+    notes: input.notes,
+    createdAt: new Date().toISOString(),
+  };
+  trips.set(id, trip);
+  // Move booking to planned with link back
+  bookings.set(booking.id, { ...booking, status: "planned", tripId: id });
+  return trip;
 }
