@@ -2,14 +2,14 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Camera, Home, Route as RouteIcon, User } from "lucide-react";
+import { Camera, Home, Receipt, Route as RouteIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const items = [
-  { href: "/drv",         label: "Home",  icon: Home },
-  { href: "/drv/trip",    label: "Trip",  icon: RouteIcon },
-  { href: "/drv/scan",    label: "Scan",  icon: Camera },
-  { href: "/drv/profile", label: "Me",    icon: User },
+  { href: "/drv",          label: "Home",     icon: Home },
+  { href: "/drv/trip",     label: "Trip",     icon: RouteIcon },
+  { href: "/drv/scan",     label: "Scan",     icon: Camera },
+  { href: "/drv/expenses", label: "Expenses", icon: Receipt },
 ];
 
 export function DriverBottomNav() {

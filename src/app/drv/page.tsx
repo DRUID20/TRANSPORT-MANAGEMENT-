@@ -32,21 +32,24 @@ export default async function DriverHomePage() {
   return (
     <div className="flex flex-col gap-4">
       {/* Greeting */}
-      <Card>
-        <CardContent className="!p-4">
-          <div className="flex items-center gap-3">
-            <Avatar name={driver.fullName} size="md" />
-            <div className="flex-1">
-              <div className="text-base font-semibold text-fg-primary">
-                Hello, {driver.fullName.split(" ")[0]}
+      <Link href="/drv/profile" className="block">
+        <Card className="transition-colors hover:border-border-strong">
+          <CardContent className="!p-4">
+            <div className="flex items-center gap-3">
+              <Avatar name={driver.fullName} size="md" />
+              <div className="flex-1">
+                <div className="text-base font-semibold text-fg-primary">
+                  Hello, {driver.fullName.split(" ")[0]}
+                </div>
+                <div className="font-mono text-[11px] tnum text-fg-tertiary">
+                  {driver.phone}
+                </div>
               </div>
-              <div className="font-mono text-[11px] tnum text-fg-tertiary">
-                {driver.phone}
-              </div>
+              <ArrowRight className="size-4 text-fg-tertiary" />
             </div>
-          </div>
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
+      </Link>
 
       {/* Active trip */}
       {fullTrip ? (
