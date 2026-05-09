@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import {
+  eventsForTrip,
   getBooking,
   getCustomer,
   getDriver,
@@ -10,6 +11,7 @@ import {
   getTruck,
   listTrips as storeList,
   planTrip as storePlan,
+  transitionTrip as storeTransition,
   tripsForDriver as storeForDriver,
   tripsForTruck as storeForTruck,
 } from "@/server/store/mock-store";
@@ -28,7 +30,8 @@ export async function getTripById(id: string) {
   const truck = getTruck(t.truckId);
   const trailer = t.trailerId ? getTrailer(t.trailerId) : undefined;
   const driver = getDriver(t.driverId);
-  return { ...t, booking, customer, truck, trailer, driver };
+  const events = eventsForTrip(t.id);
+  return { ...t, booking, customer, truck, trailer, driver, events };
 }
 
 export async function tripsForTruck(truckId: string) {
@@ -39,6 +42,27 @@ export async function tripsForDriver(driverId: string) {
 }
 
 export type ActionResult = { ok: true; id: string } | { ok: false; error: string };
+
+export type TransitionResult =
+  | { ok: true; status: TripStatus }
+  | { ok: false; error: string };
+
+export async function transitionTrip(input: {
+  tripId: string;
+  toStatus: TripStatus;
+  actorName: string;
+  note?: string;
+  location?: string;
+}): Promise<TransitionResult> {
+  const result = storeTransition(input);
+  if ("error" in result) return { ok: false, error: result.error };
+  revalidatePath("/trips");
+  revalidatePath(`/trips/${input.tripId}`);
+  revalidatePath("/dashboard");
+  revalidatePath(`/trucks/${result.trip.truckId}`);
+  revalidatePath(`/drivers/${result.trip.driverId}`);
+  return { ok: true, status: result.trip.status };
+}
 
 export async function planTrip(input: TripPlanInput): Promise<ActionResult> {
   const parsed = tripPlanSchema.safeParse(input);

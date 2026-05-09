@@ -14,6 +14,8 @@ import { getTripById } from "@/server/actions/trips";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { PageHeader } from "@/components/layout/page-header";
 import { TripStatusPill } from "@/components/trips/trip-status-pill";
+import { TripTimeline } from "@/components/trips/trip-timeline";
+import { TripStatusUpdate } from "@/components/trips/trip-status-update";
 
 export default async function TripDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -142,21 +144,30 @@ export default async function TripDetailPage({ params }: { params: Promise<{ id:
         </Card>
       </div>
 
-      {/* Phase 2B placeholder */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Trip lifecycle</CardTitle>
-          <CardDescription>
-            Status transitions, timeline, dispatch updates — wired in Phase 2B.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <p className="py-8 text-center text-xs text-fg-tertiary">
-            Once Phase 2B ships, you'll see a timeline here showing status changes,
-            border crossings, and the driver's check-ins.
-          </p>
-        </CardContent>
-      </Card>
+      {/* Trip lifecycle */}
+      <div className="grid gap-4 lg:grid-cols-2">
+        <Card>
+          <CardHeader>
+            <CardTitle>Update status</CardTitle>
+            <CardDescription>
+              Move the trip through its lifecycle. The truck and driver follow automatically.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <TripStatusUpdate tripId={trip.id} currentStatus={trip.status} />
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Timeline</CardTitle>
+            <CardDescription>Every status change captured.</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <TripTimeline events={trip.events} />
+          </CardContent>
+        </Card>
+      </div>
 
       {trip.notes && (
         <Card>

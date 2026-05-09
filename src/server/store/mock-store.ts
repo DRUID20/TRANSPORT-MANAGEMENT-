@@ -29,7 +29,9 @@ import type {
   Rate,
   Trip,
   TripStatus,
+  TripStatusEvent,
 } from "@/lib/types/trips";
+import { allowedTransitions, isTerminal } from "@/lib/types/trips";
 
 // Seed subcontractors
 const subcontractorSeed: Subcontractor[] = [
@@ -1392,5 +1394,144 @@ export function planTrip(input: {
   trips.set(id, trip);
   // Move booking to planned with link back
   bookings.set(booking.id, { ...booking, status: "planned", tripId: id });
+  // Seed initial timeline event
+  const eventId = `tev-${randomUUID().slice(0, 8)}`;
+  tripEvents.set(eventId, {
+    id: eventId,
+    tripId: id,
+    fromStatus: null,
+    toStatus: "planned",
+    occurredAt: new Date().toISOString(),
+    actorName: "Dispatcher",
+    note: "Trip planned and assigned",
+  });
   return trip;
+}
+
+// ============================================================
+// Trip status events (timeline)
+// ============================================================
+const tripEvents = new Map<string, TripStatusEvent>();
+
+// Seed initial 'planned' events for the seeded trips so timelines aren't empty
+function seedTripEvents() {
+  for (const t of trips.values()) {
+    const id = `tev-${randomUUID().slice(0, 8)}`;
+    tripEvents.set(id, {
+      id,
+      tripId: t.id,
+      fromStatus: null,
+      toStatus: "planned",
+      occurredAt: t.createdAt,
+      actorName: "Dispatcher",
+      note: "Trip planned and assigned",
+    });
+  }
+}
+seedTripEvents();
+
+export function eventsForTrip(tripId: string): TripStatusEvent[] {
+  return [...tripEvents.values()]
+    .filter((e) => e.tripId === tripId)
+    .sort((a, b) => new Date(a.occurredAt).getTime() - new Date(b.occurredAt).getTime());
+}
+
+/** State-machine validated transition. Returns updated trip or undefined if invalid. */
+export function transitionTrip(input: {
+  tripId: string;
+  toStatus: TripStatus;
+  actorName: string;
+  note?: string;
+  location?: string;
+}): { trip: Trip; event: TripStatusEvent } | { error: string } {
+  const trip = trips.get(input.tripId);
+  if (!trip) return { error: "Trip not found" };
+  if (isTerminal(trip.status)) {
+    return { error: `Trip is ${trip.status} and cannot be changed.` };
+  }
+  const allowed = allowedTransitions(trip.status);
+  if (!allowed.includes(input.toStatus)) {
+    return {
+      error: `Cannot move from ${trip.status} to ${input.toStatus}. Allowed: ${allowed.join(", ") || "(none)"}.`,
+    };
+  }
+
+  const now = new Date().toISOString();
+
+  // Compute trip patch
+  const patch: Partial<Trip> = { status: input.toStatus };
+  if (input.toStatus === "in_transit" && !trip.actualDepartureAt) {
+    patch.actualDepartureAt = now;
+  }
+  if (input.toStatus === "delivered" && !trip.actualDeliveryAt) {
+    patch.actualDeliveryAt = now;
+  }
+  if (input.toStatus === "closed" && !trip.closedAt) {
+    patch.closedAt = now;
+  }
+  const updatedTrip: Trip = { ...trip, ...patch };
+  trips.set(trip.id, updatedTrip);
+
+  // Side effects on truck + driver
+  applyTripStatusSideEffects(updatedTrip, input.toStatus);
+
+  // Log the event
+  const eventId = `tev-${randomUUID().slice(0, 8)}`;
+  const event: TripStatusEvent = {
+    id: eventId,
+    tripId: trip.id,
+    fromStatus: trip.status,
+    toStatus: input.toStatus,
+    occurredAt: now,
+    actorName: input.actorName,
+    note: input.note,
+    location: input.location,
+  };
+  tripEvents.set(eventId, event);
+
+  return { trip: updatedTrip, event };
+}
+
+function applyTripStatusSideEffects(trip: Trip, status: TripStatus) {
+  const truck = trucks.get(trip.truckId);
+  const driver = drivers.get(trip.driverId);
+
+  if (status === "loading" || status === "in_transit" || status === "at_border" || status === "delivered") {
+    // Truck busy on a trip
+    if (truck && truck.status === "active") {
+      trucks.set(truck.id, { ...truck, status: "in_service" });
+    }
+    if (driver && driver.status === "active") {
+      drivers.set(driver.id, { ...driver, status: "on_trip" });
+    }
+  }
+
+  if (status === "closed" || status === "cancelled") {
+    // Free the truck if it was on this trip and not in workshop
+    if (truck && truck.status === "in_service") {
+      // Are there other open trips on this truck?
+      const others = [...trips.values()].some(
+        (t) =>
+          t.truckId === truck.id &&
+          t.id !== trip.id &&
+          !isTerminal(t.status) &&
+          t.status !== "planned",
+      );
+      if (!others) {
+        trucks.set(truck.id, { ...truck, status: "active" });
+      }
+    }
+    if (driver && driver.status === "on_trip") {
+      const others = [...trips.values()].some(
+        (t) =>
+          t.driverId === driver.id &&
+          t.id !== trip.id &&
+          !isTerminal(t.status) &&
+          t.status !== "planned",
+      );
+      if (!others) {
+        drivers.set(driver.id, { ...driver, status: "active" });
+      }
+    }
+  }
 }

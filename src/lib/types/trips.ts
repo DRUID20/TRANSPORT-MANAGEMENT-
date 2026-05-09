@@ -85,6 +85,40 @@ export type TripStatus =
   | "delayed"
   | "cancelled";
 
+/** A status transition event, captured for the trip timeline. */
+export interface TripStatusEvent {
+  id: string;
+  tripId: string;
+  fromStatus: TripStatus | null;   // null = initial 'planned' state
+  toStatus: TripStatus;
+  occurredAt: string;              // ISO datetime
+  actorName: string;               // dispatcher / driver name (free-text)
+  note?: string;
+  /** Optional location/border tag, e.g. "Malaba (KE→UG)". */
+  location?: string;
+}
+
+/**
+ * State machine for trips. Returns the set of statuses reachable from
+ * `from`. Used to drive the action buttons on the trip detail page.
+ */
+export function allowedTransitions(from: TripStatus): TripStatus[] {
+  switch (from) {
+    case "planned":     return ["loading", "cancelled"];
+    case "loading":     return ["in_transit", "delayed", "cancelled"];
+    case "in_transit":  return ["at_border", "delivered", "delayed", "cancelled"];
+    case "at_border":   return ["in_transit", "delivered", "delayed", "cancelled"];
+    case "delivered":   return ["closed", "delayed"];
+    case "delayed":     return ["loading", "in_transit", "at_border", "delivered", "cancelled"];
+    case "closed":      return [];
+    case "cancelled":   return [];
+  }
+}
+
+export function isTerminal(status: TripStatus): boolean {
+  return status === "closed" || status === "cancelled";
+}
+
 export interface Trip {
   id: string;
   number: string;          // e.g. "TRP-2026-0142"
