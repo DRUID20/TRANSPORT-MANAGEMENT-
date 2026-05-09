@@ -218,6 +218,14 @@ Total ≈ **16–20 weeks** to full MVP, but Phase 1 is usable in production aro
 - 2026-05-09: **UI quality bar = "beautiful + addictive"** — TX System is not a utility users tolerate; it is a product they reach for. Documented in `docs/design/ui-direction.md` §0 as a 13-point per-screen checklist (instant feel, beautiful empty states, friendly errors, smart defaults, live feel, print-ready exports, tactile mobile feedback, etc.). Enforced at PR review — screens that fail the checklist do not merge.
 - 2026-05-09: **Palette LOCKED — Apple × SpaceX fusion.** SpaceX = pure-black surfaces, JetBrains Mono numerals, high contrast; Apple = refined greys, soft shadows, Apple Blue accent, Apple semantic status colours, Inter typography, frosted-glass overlays. Full design tokens in `docs/design/color-tokens.md`.
 - 2026-05-09: **Nile Valley logo received**; two-blue brand identity (deep navy `#14266B` + bright accent `#1E5BB8` + transit swoosh). Brand blues **replace Apple Blue** as primary accent (own-brand wins). Apple semantic green/orange/red kept for status. SpaceX surface scale kept. Logo SVG/source still to be sent for exact hex sampling + favicon generation.
+- 2026-05-09: **Round-of-decisions from Nile Valley**:
+  - **Annual budget: deferred.** Budget framework will exist in Finance but starts empty; Nile Valley will populate later.
+  - **Truck registration**: each truck flagged at registration as **Company-Owned** or **Subcontractor** (with subcontractor reference). All trips inherit the tag.
+  - **Subcontractor fees**: **end-of-year settlement** model. Rate methodology deferred. System tracks per-trip revenue/cost against subcontractor trucks for clean year-end inputs.
+  - **Rate engine**: **destination-driven** rate table (origin → destination, possibly cargo class). Set by Nile Valley; per-booking override allowed with reason.
+  - **Inventory / stock-take: NOT in scope.** TX System is a TMS, not a warehouse system. Spares/tyres/lubricants expensed direct to vehicle. Inventory CoA accounts (110100/110200/110300) dropped (CoA now 199 accounts). Physical-vs-system rec schedule removed from Monthly Management Pack.
+  - **HR module: confirmed full** (payroll, statutory, appraisal, salaries & loans, RBAC).
+  - **Appraisal cycle: annual** (Claude's default; quarterly check-ins can be added later if needed).
 - 2026-05-09: Nile Valley extensions captured from handwritten notes (`docs/operations/workflow-baseline.md` §5):
   - **TX System replaces "Pumas"** (Nile Valley's current system).
   - **Workshop / Job Cards module pulled back IN scope** (was previously out-of-scope) — every yard service generates a Job Card with mechanic analysis, services done, spares used; spares charged to truck; supplier AP statement auto-generated.

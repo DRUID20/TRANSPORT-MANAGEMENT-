@@ -22,9 +22,6 @@ Code,Name,Class,Group,Type,Normal Balance,Currency,Status,Notes
 102500,Other Non-current Assets,Asset,Non-current,Other,Debit,KES,Active,
 102600,Tax Receivable (Long-term),Asset,Non-current,Tax,Debit,KES,Active,
 102700,Assets Held for Sale,Asset,Non-current,Other,Debit,KES,Active,
-110100,Inventory — Stock,Asset,Current,Inventory,Debit,KES,Active,
-110200,Inventory — Spares & Consumables,Asset,Current,Inventory,Debit,KES,Active,NEW
-110300,Inventory — Tyres,Asset,Current,Inventory,Debit,KES,Active,NEW
 111100,Trade Debtors / AR — KES,Asset,Current,Receivable,Debit,KES,Active,Sub-ledger by customer
 111200,Trade Debtors / AR — USD,Asset,Current,Receivable,Debit,USD,Active,NEW. Sub-ledger by customer
 111300,Allowance for Bad Debts (contra),Asset,Current,Receivable,Credit,KES,Active,

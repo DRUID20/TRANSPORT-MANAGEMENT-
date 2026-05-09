@@ -23,7 +23,7 @@ The FLK pack is a **complete, mature** monthly close. We will not invent the man
 | AGED AP | Aged payables, same buckets, per supplier | AP aging report |
 | BANK REC | Per-account bank rec: bank balance − unpresented cheques + uncleared lodgements = book balance | Auto-bank-rec per account (statement vs book), unmatched items flagged |
 | KEY RATIOS | **Per-truck performance**: volume per customer/route Actual vs Budget vs Projection, **Fleet vs Subcontractor split**, **idle truck list** | Truck Performance Tracker (Module 13 in PLAN.md) — extended to match this pack's KPIs |
-| Physical vs System Rec | Stock count vs system, item × location, variance qty + value | Inventory variance report (spares + tyres) |
+| ~~Physical vs System Rec~~ | (Inventory) | **Dropped** — TX System does not track inventory. Spares expensed direct to vehicle. |
 | FAR | Fixed Asset Register: asset code, tag, name, category, dates, vendor, depreciation method, rate, cost, NBV, monthly depreciation, YTD | FAR module with auto-monthly depreciation run; PPE additions/disposals integrated to GL |
 | DISPOSAL OF ASSET | Disposals: cost, accum dep, NBV, disposal value, gain/loss | Auto-generated from FAR disposal entries |
 | INTERCOM GRID | Intercompany rec per affiliate: our balance vs theirs, variance, status, comments | Intercompany reconciliation module (only if Nile Valley has affiliates — see Q below) |

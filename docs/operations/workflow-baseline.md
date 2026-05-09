@@ -161,9 +161,34 @@ System generates a **P&L per truck**:
 - Discussed as a possible per-km wear & tear accrual, but Nile Valley said: *"don't consider this one yet."*
 - Concept retained here for future revisit; no CoA accounts and no posting logic added at this stage.
 
-### 5.6 Subcontractor vs Own — every entry tagged
+### 5.6 Subcontractor vs Own — set at truck registration
 
-- Every journey log, expense, and revenue entry carries an `executor_type ∈ {own_fleet, subcontractor, sister_company}` flag (already in plan §13).
+- **Each truck is registered as either Company-Owned or Subcontractor** (with subcontractor reference). This is the truck's `owner_type` field; every trip on that truck inherits the tag.
+- Every journey log, expense, and revenue entry carries an `executor_type ∈ {own_fleet, subcontractor}` flag inherited from the truck.
+
+### 5.7 Subcontractor fees — year-end settlement
+
+- Subcontractor compensation model: **end-of-year settlement** (not per-trip payouts).
+- Rate methodology: **deferred** — Nile Valley will define the rate / share later.
+- Until then, the system tracks per-trip revenue and per-trip costs against subcontractor trucks so the year-end calc has clean inputs.
+
+### 5.8 Rate engine — destination-driven
+
+- **Customer billing rate is determined by destination.** A rate table indexed by route (origin → destination) and possibly cargo class.
+- Set by Nile Valley in the system; can be overridden per booking with reason.
+- Used to pre-fill freight revenue when a Booking is created.
+
+### 5.9 No stock-take / no inventory module
+
+- TX System is a **Transport Management System**, not a warehouse system.
+- Spares, tyres, lubricants, etc. are **expensed direct to the vehicle** when purchased (via Job Card or AP bill) — no on-hand inventory tracked.
+- Inventory CoA accounts (110100/110200/110300) **dropped**.
+- "Physical vs System Stock Rec" schedule **removed** from the Monthly Management Pack.
+
+### 5.10 HR module — confirmed full
+
+- Full HR module per §5.3: payroll, statutory, employee appraisal, salaries & loans, RBAC.
+- **Appraisal cycle = annual** (chosen as the default sensible cadence; can be augmented with quarterly check-ins later if Nile Valley wants).
 
 ### 5.7 Module mapping — Pumas → TX System
 
@@ -184,4 +209,9 @@ System generates a **P&L per truck**:
 | 3 | RBAC role catalogue | **Deferred** — design just before Phase 0 auth wiring. |
 | 4 | Workshop scope | **Resolved** — internal only, cost-side only, no AR. |
 | 5 | Employee loans | Still open: source (petty cash / bank / M-Pesa) and typical repayment term. |
-| 6 | Appraisal cycle | Still open: cadence (quarterly / half-year / annual) and KPIs. |
+| 6 | Appraisal cycle | **Resolved** — annual (default sensible cadence). Quarterly check-ins can be added later if needed. KPIs to be defined during HR build. |
+| 7 | Inventory / stock-take | **Resolved** — not in scope. Spares expensed direct to vehicle. Inventory CoA accounts dropped. |
+| 8 | Subcontractor fees | **Resolved (model)** — year-end settlement. Rate methodology deferred. |
+| 9 | Rate engine | **Resolved** — destination-driven rate table set by Nile Valley. |
+| 10 | Truck registration | **Resolved** — `owner_type` field at registration: Company-Owned or Subcontractor (with sub reference). |
+| 11 | Annual budget | **Deferred** — Nile Valley will define later. Budget framework exists in Finance module but starts empty. |
