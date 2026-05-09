@@ -12,7 +12,6 @@ import {
 } from "lucide-react";
 import { listContracts, listDepartments, listEmployees } from "@/server/actions/hr";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { PageHeader } from "@/components/layout/page-header";
 
@@ -85,12 +84,18 @@ export default async function HrIndexPage() {
       count: undefined,
     },
     {
-      href: "/hr/permissions",
-      label: "Job-Description Permissions",
+      href: "/hr/job-descriptions",
+      label: "Job Descriptions",
       icon: KeyRound,
-      desc: "JD-driven RBAC — each role activates specific screens.",
+      desc: "JD catalogue with per-screen permissions. Each employee gets one JD.",
       count: undefined,
-      soon: true,
+    },
+    {
+      href: "/hr/permissions",
+      label: "Permission Matrix",
+      icon: KeyRound,
+      desc: "Resource × JD master matrix. Basis for future RBAC enforcement.",
+      count: undefined,
     },
   ];
 
@@ -125,43 +130,31 @@ export default async function HrIndexPage() {
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {tiles.map((t) => {
           const Icon = t.icon;
-          const Wrap = ({ children }: { children: React.ReactNode }) =>
-            t.soon ? (
-              <div className="block opacity-60">{children}</div>
-            ) : (
-              <Link href={t.href} className="group block">
-                {children}
-              </Link>
-            );
           return (
-            <Wrap key={t.href}>
+            <Link key={t.href} href={t.href} className="group block">
               <Card className="transition-all group-hover:border-border-strong group-hover:shadow-soft">
                 <CardHeader>
                   <div className="flex items-start justify-between">
                     <div className="flex size-10 items-center justify-center rounded-md bg-brand-blue/10 text-brand-blue ring-1 ring-brand-blue/20">
                       <Icon className="size-5" />
                     </div>
-                    {t.soon ? (
-                      <Badge variant="neutral">Soon</Badge>
-                    ) : t.count !== undefined ? (
+                    {t.count !== undefined && (
                       <span className="font-mono tnum text-xs text-fg-tertiary">
                         {t.count}
                       </span>
-                    ) : null}
+                    )}
                   </div>
                   <CardTitle className="mt-3 group-hover:text-brand-blue">{t.label}</CardTitle>
                   <CardDescription>{t.desc}</CardDescription>
                 </CardHeader>
-                {!t.soon && (
-                  <CardContent className="pt-0">
-                    <span className="inline-flex items-center gap-1 text-xs text-fg-tertiary group-hover:text-brand-blue">
-                      Open
+                <CardContent className="pt-0">
+                  <span className="inline-flex items-center gap-1 text-xs text-fg-tertiary group-hover:text-brand-blue">
+                    Open
                       <ArrowRight className="size-3 transition-transform group-hover:translate-x-0.5" />
                     </span>
                   </CardContent>
-                )}
               </Card>
-            </Wrap>
+            </Link>
           );
         })}
       </div>

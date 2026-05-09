@@ -127,6 +127,12 @@ import type {
   CompetencyRating,
 } from "@/lib/types/appraisal";
 import { STANDARD_COMPETENCIES } from "@/lib/types/appraisal";
+import type {
+  JobDescription,
+  RbacAction,
+  RbacPermission,
+  RbacResource,
+} from "@/lib/types/rbac";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 
@@ -5489,4 +5495,300 @@ export function reviewsForEmployee(employeeId: string): AppraisalReview[] {
   return [...appraisalReviews.values()]
     .filter((r) => r.employeeId === employeeId)
     .sort((a, b) => b.cycleId.localeCompare(a.cycleId));
+}
+
+// ============================================================
+// Job-Description-driven RBAC (Phase 6F)
+// ============================================================
+const jobDescriptions = new Map<string, JobDescription>();
+/** employeeId → jdId */
+const jdAssignments = new Map<string, string>();
+
+const ALL_VIEW_ACTIONS: RbacAction[] = ["view"];
+const FULL_ACTIONS: RbacAction[] = ["view", "create", "edit", "approve", "export", "delete"];
+const FINANCE_ACTIONS: RbacAction[] = ["view", "create", "edit", "approve", "export"];
+
+function p(resource: RbacResource, actions: RbacAction[]): RbacPermission {
+  return { resource, actions };
+}
+
+const jdSeed: JobDescription[] = [
+  {
+    id: "jd-md",
+    code: "MD",
+    title: "Managing Director",
+    level: "executive",
+    summary: "Sets company strategy, signs off on key contracts, owns P&L. Full visibility, signoff on appraisals, payroll, and major transactions.",
+    responsibilities: [
+      "Set company strategy and annual budget.",
+      "Approve customer contracts, supplier agreements, and bank facilities.",
+      "Final signoff on payroll runs, appraisals, and capital expenditure.",
+      "Represent the company to banks, regulators, and major customers.",
+    ],
+    permissions: [
+      // Sees everything; can approve everything; only HR-finalises appraisals.
+      ...(["dashboard", "bookings", "trips", "trucks", "trailers", "drivers", "workshop",
+        "compliance", "rates", "customers", "suppliers", "subcontractors",
+        "expenses", "fuel", "mpesa", "accounts", "ledger", "invoices", "bills",
+        "bank", "reports", "hr_employees", "hr_leave", "hr_payroll", "hr_loans",
+        "hr_appraisals", "hr_compliance", "hr_permissions",
+        "admin_settings", "admin_users", "audit_log"] as RbacResource[]
+      ).map((r) => p(r, FULL_ACTIONS)),
+    ],
+    createdAt: new Date().toISOString(),
+  },
+  {
+    id: "jd-fm",
+    code: "FM",
+    title: "Finance Manager",
+    level: "manager",
+    summary: "Owns the books, AR/AP, treasury, and statutory filings. Approves journals, posts invoices, runs payroll inputs.",
+    responsibilities: [
+      "Maintain Chart of Accounts, post and approve GL journals.",
+      "Manage AR (invoices, collections, aging) and AP (bills, payments).",
+      "Reconcile bank accounts and treasury balances.",
+      "Prepare monthly management pack and statutory returns (VAT, PAYE).",
+      "Review and approve payroll inputs prior to MD signoff.",
+    ],
+    permissions: [
+      p("dashboard", ALL_VIEW_ACTIONS),
+      p("trips", ["view"]),
+      p("expenses", FINANCE_ACTIONS),
+      p("fuel", ["view"]),
+      p("mpesa", FINANCE_ACTIONS),
+      p("accounts", FULL_ACTIONS),
+      p("ledger", FINANCE_ACTIONS),
+      p("invoices", FINANCE_ACTIONS),
+      p("bills", FINANCE_ACTIONS),
+      p("bank", FINANCE_ACTIONS),
+      p("reports", ["view", "export"]),
+      p("customers", ["view", "edit"]),
+      p("suppliers", ["view", "edit"]),
+      p("hr_payroll", ["view", "edit", "approve", "export"]),
+      p("hr_loans", FINANCE_ACTIONS),
+      p("hr_employees", ["view"]),
+      p("compliance", ["view"]),
+      p("audit_log", ["view"]),
+    ],
+    createdAt: new Date().toISOString(),
+  },
+  {
+    id: "jd-om",
+    code: "OM",
+    title: "Operations Manager",
+    level: "manager",
+    summary: "Plans trips, dispatches drivers, owns fleet utilisation and on-time performance. Approves expenses and reconciles trips.",
+    responsibilities: [
+      "Plan trips and assign trucks/drivers.",
+      "Monitor border crossings and ETAs end-to-end.",
+      "Approve trip expense claims and driver advances.",
+      "Reconcile closed trips before invoicing.",
+      "Manage subcontractor relationships and rate negotiations.",
+    ],
+    permissions: [
+      p("dashboard", ALL_VIEW_ACTIONS),
+      p("bookings", FULL_ACTIONS),
+      p("trips", FULL_ACTIONS),
+      p("trucks", ["view", "edit"]),
+      p("trailers", ["view", "edit"]),
+      p("drivers", ["view", "edit"]),
+      p("workshop", ["view"]),
+      p("compliance", ["view"]),
+      p("rates", ["view", "edit"]),
+      p("customers", ["view", "create", "edit"]),
+      p("subcontractors", ["view", "create", "edit"]),
+      p("suppliers", ["view"]),
+      p("expenses", ["view", "approve", "export"]),
+      p("fuel", ["view", "create", "edit"]),
+      p("mpesa", ["view"]),
+      p("invoices", ["view", "create"]),
+      p("reports", ["view", "export"]),
+    ],
+    createdAt: new Date().toISOString(),
+  },
+  {
+    id: "jd-hrm",
+    code: "HRM",
+    title: "HR Manager",
+    level: "manager",
+    summary: "Owns the employee lifecycle: recruitment, contracts, leave, payroll inputs, appraisals, compliance.",
+    responsibilities: [
+      "Maintain the employee register and contracts.",
+      "Approve leave requests; resolve conflicts with operations.",
+      "Prepare monthly payroll inputs; approve loan disbursements.",
+      "Run the annual appraisal cycle from open to HR-finalised.",
+      "Ensure all licences/medicals/passports stay valid.",
+    ],
+    permissions: [
+      p("dashboard", ALL_VIEW_ACTIONS),
+      p("hr_employees", FULL_ACTIONS),
+      p("hr_leave", FULL_ACTIONS),
+      p("hr_payroll", ["view", "create", "edit", "export"]),
+      p("hr_loans", ["view", "create", "edit"]),
+      p("hr_appraisals", FULL_ACTIONS),
+      p("hr_compliance", FULL_ACTIONS),
+      p("hr_permissions", ["view", "edit"]),
+      p("compliance", ["view"]),
+      p("drivers", ["view", "edit"]),
+      p("audit_log", ["view"]),
+    ],
+    createdAt: new Date().toISOString(),
+  },
+  {
+    id: "jd-frm",
+    code: "FRM",
+    title: "Workshop Foreman",
+    level: "supervisor",
+    summary: "Runs the workshop. Owns job cards, spares, mechanic schedules, and truck availability.",
+    responsibilities: [
+      "Open and close job cards; review mechanic analysis.",
+      "Source and approve spares from suppliers.",
+      "Schedule preventive maintenance to keep trucks available.",
+      "Track tyre and parts inventory expensed to each truck.",
+    ],
+    permissions: [
+      p("dashboard", ALL_VIEW_ACTIONS),
+      p("workshop", FULL_ACTIONS),
+      p("trucks", ["view", "edit"]),
+      p("trailers", ["view"]),
+      p("suppliers", ["view", "edit"]),
+      p("compliance", ["view"]),
+      p("expenses", ["view", "create"]),
+      p("bills", ["view", "create"]),
+    ],
+    createdAt: new Date().toISOString(),
+  },
+  {
+    id: "jd-mec",
+    code: "MEC",
+    title: "Mechanic",
+    level: "operator",
+    summary: "Performs servicing and repairs under the foreman's direction. Updates job cards as work progresses.",
+    responsibilities: [
+      "Diagnose vehicle faults; record findings on the job card.",
+      "Carry out repairs and servicing per work order.",
+      "Request spares from stores; record consumption per truck.",
+      "Hand over completed work to the foreman for closeout.",
+    ],
+    permissions: [
+      p("dashboard", ALL_VIEW_ACTIONS),
+      p("workshop", ["view", "edit"]),
+      p("trucks", ["view"]),
+      p("compliance", ["view"]),
+    ],
+    createdAt: new Date().toISOString(),
+  },
+  {
+    id: "jd-dsp",
+    code: "DSP",
+    title: "Dispatcher",
+    level: "officer",
+    summary: "Day-to-day trip execution. Updates trip status, captures border crossings, processes driver requests.",
+    responsibilities: [
+      "Confirm bookings; activate planned trips.",
+      "Update trip status timestamps as drivers report in.",
+      "Capture border crossing events and POD uploads.",
+      "Triage driver questions and route changes.",
+    ],
+    permissions: [
+      p("dashboard", ALL_VIEW_ACTIONS),
+      p("bookings", ["view", "create", "edit"]),
+      p("trips", ["view", "create", "edit"]),
+      p("trucks", ["view"]),
+      p("drivers", ["view"]),
+      p("expenses", ["view"]),
+      p("fuel", ["view", "create"]),
+      p("compliance", ["view"]),
+    ],
+    createdAt: new Date().toISOString(),
+  },
+  {
+    id: "jd-drv",
+    code: "DRV",
+    title: "Driver",
+    level: "operator",
+    summary: "Drives the truck. Submits POD, expense receipts, and trip updates from the driver PWA. Doesn't access the office app.",
+    responsibilities: [
+      "Operate the truck safely and complete the trip on time.",
+      "Capture odometer at start/end and at each fuel stop.",
+      "Photograph and submit expense receipts and POD documents.",
+      "Update trip status (loaded / departed / at border / arrived).",
+    ],
+    permissions: [
+      // Driver PWA is a separate app; here we simply restrict their
+      // visibility on the office side to the trips they're on.
+      p("trips", ["view"]),
+      p("expenses", ["view", "create"]),
+      p("fuel", ["view", "create"]),
+    ],
+    createdAt: new Date().toISOString(),
+  },
+];
+for (const jd of jdSeed) jobDescriptions.set(jd.id, jd);
+
+// Default assignments: map office staff + drivers to their JD
+const defaultAssignments: Array<[string, string]> = [
+  ["emp-001", "jd-md"],
+  ["emp-002", "jd-fm"],
+  ["emp-003", "jd-om"],
+  ["emp-004", "jd-hrm"],
+  ["emp-005", "jd-frm"],
+  ["emp-006", "jd-dsp"],
+  ["emp-007", "jd-mec"],
+];
+for (const [eid, jid] of defaultAssignments) {
+  if (employees.has(eid) && jobDescriptions.has(jid)) {
+    jdAssignments.set(eid, jid);
+  }
+}
+for (const e of employees.values()) {
+  if (e.driverId && !jdAssignments.has(e.id)) {
+    jdAssignments.set(e.id, "jd-drv");
+  }
+}
+
+export function listJobDescriptions(): JobDescription[] {
+  const list = [...jobDescriptions.values()].map((jd) => {
+    let count = 0;
+    for (const v of jdAssignments.values()) if (v === jd.id) count++;
+    return { ...jd, assignedCount: count };
+  });
+  return list.sort((a, b) => a.code.localeCompare(b.code));
+}
+
+export function getJobDescription(id: string): JobDescription | undefined {
+  const jd = jobDescriptions.get(id);
+  if (!jd) return undefined;
+  let count = 0;
+  for (const v of jdAssignments.values()) if (v === id) count++;
+  return { ...jd, assignedCount: count };
+}
+
+export function jobDescriptionForEmployee(employeeId: string): JobDescription | undefined {
+  const jdId = jdAssignments.get(employeeId);
+  return jdId ? getJobDescription(jdId) : undefined;
+}
+
+export function employeesAssignedToJd(jdId: string): Employee[] {
+  const out: Employee[] = [];
+  for (const [eid, j] of jdAssignments.entries()) {
+    if (j !== jdId) continue;
+    const e = employees.get(eid);
+    if (e) out.push(e);
+  }
+  return out;
+}
+
+export function assignJobDescription(
+  employeeId: string,
+  jdId: string,
+): { ok: true } | { ok: false; error: string } {
+  if (!employees.has(employeeId)) return { ok: false, error: "Employee not found" };
+  if (!jobDescriptions.has(jdId)) return { ok: false, error: "Job description not found" };
+  jdAssignments.set(employeeId, jdId);
+  return { ok: true };
+}
+
+export function clearJobDescription(employeeId: string): boolean {
+  return jdAssignments.delete(employeeId);
 }

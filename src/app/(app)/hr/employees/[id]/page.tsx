@@ -6,7 +6,6 @@ import {
   Building2,
   CalendarDays,
   CreditCard,
-  FileText,
   IdCard,
   Mail,
   Phone,
@@ -22,6 +21,7 @@ import { EmployeeComplianceCard } from "@/components/hr/employee-compliance-card
 import { EmployeeLeaveCard } from "@/components/hr/employee-leave-card";
 import { EmployeePayrollCard } from "@/components/hr/employee-payroll-card";
 import { EmployeeAppraisalCard } from "@/components/hr/employee-appraisal-card";
+import { EmployeeJdCard } from "@/components/hr/employee-jd-card";
 
 export default async function EmployeeDetailPage({
   params,
@@ -276,19 +276,8 @@ export default async function EmployeeDetailPage({
       {/* Performance (Phase 6E) */}
       <EmployeeAppraisalCard employeeId={e.id} />
 
-      {/* Phase 6F placeholder */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <FileText className="size-4 text-fg-tertiary" />
-            Coming in this phase
-          </CardTitle>
-          <CardDescription>
-            Job-Description-driven permissions (Phase 6F) will land next — each role
-            will activate specific screens and actions for this employee.
-          </CardDescription>
-        </CardHeader>
-      </Card>
+      {/* JD & Permissions (Phase 6F) */}
+      <EmployeeJdCard employeeId={e.id} />
 
       {e.notes && (
         <Card>

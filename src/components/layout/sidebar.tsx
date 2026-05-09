@@ -32,6 +32,7 @@ import {
   CalendarRange,
   CalendarDays,
   GraduationCap,
+  KeyRound,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Logo } from "@/components/layout/logo";
@@ -78,6 +79,8 @@ const navGroups: { title: string; items: NavItem[] }[] = [
       { href: "/hr/payroll", label: "Payroll", icon: Wallet },
       { href: "/hr/loans", label: "Loans", icon: Wallet },
       { href: "/hr/appraisals", label: "Appraisals", icon: GraduationCap },
+      { href: "/hr/job-descriptions", label: "Job Descriptions", icon: KeyRound },
+      { href: "/hr/permissions", label: "Permission Matrix", icon: KeyRound },
     ],
   },
   {
