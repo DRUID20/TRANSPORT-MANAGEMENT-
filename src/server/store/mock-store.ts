@@ -38,6 +38,12 @@ import type {
   TripDocumentStatus,
 } from "@/lib/types/documents";
 import type { BorderCrossing, BorderStatus } from "@/lib/types/borders";
+import type {
+  Expense,
+  ExpenseCategory,
+  ExpenseStatus,
+  PaymentMethod,
+} from "@/lib/types/expenses";
 
 // Seed subcontractors
 const subcontractorSeed: Subcontractor[] = [
@@ -1839,4 +1845,201 @@ export function clearBorderCrossing(input: {
 
 export function deleteBorderCrossing(id: string): boolean {
   return borderCrossings.delete(id);
+}
+
+// ============================================================
+// Expenses (Phase 4A)
+// ============================================================
+const expenses = new Map<string, Expense>();
+let expenseCounter = 1;
+function nextExpenseNumber(): string {
+  const year = new Date().getFullYear();
+  const num = String(expenseCounter++).padStart(4, "0");
+  return `EXP-${year}-${num}`;
+}
+
+function seedExpenses() {
+  const tripList = [...trips.values()];
+  if (tripList.length === 0) return;
+  const t1 = tripList[0]!;
+  const t2 = tripList[1];
+
+  const seeds: Array<Omit<Expense, "id" | "number" | "createdAt">> = [
+    {
+      amountKes: 24_500,
+      category: "fuel",
+      description: "Diesel — Mariakani Total station",
+      location: "Mariakani",
+      countryCode: "KE",
+      incurredAt: new Date(Date.now() - 4 * 86400000).toISOString(),
+      paidBy: "advance",
+      tripId: t1.id,
+      truckId: t1.truckId,
+      driverId: t1.driverId,
+      status: "approved",
+      submittedBy: "Joseph Mwangi",
+      submittedAt: new Date(Date.now() - 4 * 86400000).toISOString(),
+      approvedBy: "Linet Wairimu",
+      approvedAt: new Date(Date.now() - 3.5 * 86400000).toISOString(),
+    },
+    {
+      amountKes: 4_800,
+      category: "border_charges",
+      description: "Malaba transit permit",
+      location: "Malaba",
+      countryCode: "UG",
+      incurredAt: new Date(Date.now() - 3 * 86400000).toISOString(),
+      paidBy: "cash",
+      tripId: t1.id,
+      truckId: t1.truckId,
+      driverId: t1.driverId,
+      status: "approved",
+      submittedBy: "Joseph Mwangi",
+      submittedAt: new Date(Date.now() - 3 * 86400000).toISOString(),
+      approvedBy: "Linet Wairimu",
+      approvedAt: new Date(Date.now() - 2.5 * 86400000).toISOString(),
+    },
+    {
+      amountKes: 2_500,
+      category: "driver_overnight",
+      description: "Overnight stop in Eldoret",
+      location: "Eldoret",
+      countryCode: "KE",
+      incurredAt: new Date(Date.now() - 2 * 86400000).toISOString(),
+      paidBy: "mpesa",
+      tripId: t1.id,
+      truckId: t1.truckId,
+      driverId: t1.driverId,
+      status: "pending",
+      submittedBy: "Joseph Mwangi",
+      submittedAt: new Date(Date.now() - 2 * 86400000).toISOString(),
+    },
+    {
+      amountKes: 1_200,
+      category: "driver_welfare",
+      description: "Lunch + water — driver",
+      location: "Mai Mahiu",
+      countryCode: "KE",
+      incurredAt: new Date(Date.now() - 1 * 86400000).toISOString(),
+      paidBy: "mpesa",
+      tripId: t1.id,
+      truckId: t1.truckId,
+      driverId: t1.driverId,
+      status: "pending",
+      submittedBy: "Joseph Mwangi",
+      submittedAt: new Date(Date.now() - 1 * 86400000).toISOString(),
+    },
+    ...(t2
+      ? [
+          {
+            amountKes: 32_000,
+            category: "fuel" as ExpenseCategory,
+            description: "Diesel — Naivasha Shell",
+            location: "Naivasha",
+            countryCode: "KE",
+            incurredAt: new Date(Date.now() - 1 * 86400000).toISOString(),
+            paidBy: "fuel_card" as PaymentMethod,
+            tripId: t2.id,
+            truckId: t2.truckId,
+            driverId: t2.driverId,
+            status: "pending" as ExpenseStatus,
+            submittedBy: "Ali Hassan",
+            submittedAt: new Date(Date.now() - 1 * 86400000).toISOString(),
+          },
+        ]
+      : []),
+  ];
+
+  seeds.forEach((s, i) => {
+    const id = `exp-${String(i + 1).padStart(3, "0")}`;
+    const num = `EXP-2026-${String(i + 1).padStart(4, "0")}`;
+    expenses.set(id, { ...s, id, number: num, createdAt: s.submittedAt });
+  });
+  expenseCounter = seeds.length + 1;
+}
+seedExpenses();
+
+export function listExpenses(filter?: {
+  status?: ExpenseStatus;
+  tripId?: string;
+  truckId?: string;
+  driverId?: string;
+}): Expense[] {
+  let all = [...expenses.values()];
+  if (filter?.status) all = all.filter((e) => e.status === filter.status);
+  if (filter?.tripId) all = all.filter((e) => e.tripId === filter.tripId);
+  if (filter?.truckId) all = all.filter((e) => e.truckId === filter.truckId);
+  if (filter?.driverId) all = all.filter((e) => e.driverId === filter.driverId);
+  return all.sort(
+    (a, b) => new Date(b.submittedAt).getTime() - new Date(a.submittedAt).getTime(),
+  );
+}
+
+export function getExpense(id: string): Expense | undefined {
+  return expenses.get(id);
+}
+
+export function expensesForTrip(tripId: string): Expense[] {
+  return listExpenses({ tripId });
+}
+
+export function createExpense(input: Omit<Expense, "id" | "number" | "createdAt" | "status" | "approvedBy" | "approvedAt" | "rejectionReason" | "reimbursedAt">): Expense {
+  const id = randomUUID();
+  const e: Expense = {
+    ...input,
+    id,
+    number: nextExpenseNumber(),
+    status: "pending",
+    createdAt: new Date().toISOString(),
+  };
+  expenses.set(id, e);
+  return e;
+}
+
+export function reviewExpense(input: {
+  expenseId: string;
+  approve: boolean;
+  reason?: string;
+  reviewedBy: string;
+  notes?: string;
+}): Expense | undefined {
+  const exp = expenses.get(input.expenseId);
+  if (!exp) return undefined;
+  const updated: Expense = {
+    ...exp,
+    status: input.approve ? "approved" : "rejected",
+    approvedBy: input.reviewedBy,
+    approvedAt: new Date().toISOString(),
+    rejectionReason: input.approve ? undefined : input.reason,
+    notes: input.notes ?? exp.notes,
+  };
+  expenses.set(exp.id, updated);
+  return updated;
+}
+
+export function markExpenseReimbursed(id: string): Expense | undefined {
+  const exp = expenses.get(id);
+  if (!exp) return undefined;
+  const updated: Expense = {
+    ...exp,
+    status: "reimbursed",
+    reimbursedAt: new Date().toISOString(),
+  };
+  expenses.set(exp.id, updated);
+  return updated;
+}
+
+export function deleteExpense(id: string): boolean {
+  return expenses.delete(id);
+}
+
+/** Sum of approved + reimbursed expenses for a trip (KES). */
+export function tripExpenseTotal(tripId: string): number {
+  return [...expenses.values()]
+    .filter(
+      (e) =>
+        e.tripId === tripId &&
+        (e.status === "approved" || e.status === "reimbursed"),
+    )
+    .reduce((sum, e) => sum + e.amountKes, 0);
 }

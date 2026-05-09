@@ -57,7 +57,7 @@ const navGroups: { title: string; items: NavItem[] }[] = [
   {
     title: "Finance",
     items: [
-      { href: "/expenses", label: "Expenses", icon: Receipt, badge: "soon" },
+      { href: "/expenses", label: "Expenses", icon: Receipt },
       { href: "/finance", label: "Finance", icon: Wallet, badge: "soon" },
       { href: "/reports", label: "Reports", icon: BarChart3, badge: "soon" },
     ],

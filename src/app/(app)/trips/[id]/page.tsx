@@ -21,6 +21,7 @@ import { TripStatusUpdate } from "@/components/trips/trip-status-update";
 import { TripDocuments } from "@/components/trips/trip-documents";
 import { TripBorders } from "@/components/trips/trip-borders";
 import { TripReconciliation } from "@/components/trips/trip-reconciliation";
+import { TripExpensesCard } from "@/components/trips/trip-expenses-card";
 import { Badge } from "@/components/ui/badge";
 
 export default async function TripDetailPage({ params }: { params: Promise<{ id: string }> }) {
@@ -162,6 +163,9 @@ export default async function TripDetailPage({ params }: { params: Promise<{ id:
 
       {/* Cross-border crossings */}
       <TripBorders tripId={trip.id} borders={borders} />
+
+      {/* Expenses */}
+      <TripExpensesCard tripId={trip.id} />
 
       {/* Reconciliation panel (only when delivered) */}
       <TripReconciliation
