@@ -13,6 +13,7 @@ import {
   BarChart3,
   Settings,
   Wallet,
+  Handshake,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Logo } from "@/components/layout/logo";
@@ -30,8 +31,15 @@ const navGroups: { title: string; items: NavItem[] }[] = [
     items: [
       { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
       { href: "/trips", label: "Trips", icon: Route, badge: "soon" },
-      { href: "/trucks", label: "Trucks", icon: Truck, badge: "soon" },
+      { href: "/trucks", label: "Trucks", icon: Truck },
       { href: "/workshop", label: "Workshop", icon: Wrench, badge: "soon" },
+    ],
+  },
+  {
+    title: "Partners",
+    items: [
+      { href: "/customers", label: "Customers", icon: Building2, badge: "soon" },
+      { href: "/subcontractors", label: "Subcontractors", icon: Handshake },
     ],
   },
   {
@@ -45,7 +53,6 @@ const navGroups: { title: string; items: NavItem[] }[] = [
   {
     title: "Admin",
     items: [
-      { href: "/customers", label: "Customers", icon: Building2, badge: "soon" },
       { href: "/hr", label: "HR & Staff", icon: Users, badge: "soon" },
       { href: "/settings", label: "Settings", icon: Settings, badge: "soon" },
     ],
@@ -71,7 +78,9 @@ export function Sidebar() {
             </div>
             <div className="flex flex-col gap-0.5">
               {group.items.map((item) => {
-                const active = pathname === item.href;
+                const active =
+                  pathname === item.href ||
+                  (item.href !== "/dashboard" && pathname.startsWith(item.href + "/"));
                 const Icon = item.icon;
                 return (
                   <Link

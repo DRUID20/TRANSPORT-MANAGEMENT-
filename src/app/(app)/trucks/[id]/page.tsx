@@ -1,0 +1,208 @@
+import Link from "next/link";
+import { notFound } from "next/navigation";
+import { Calendar, FileText, Fuel, Gauge, Layers, Truck as TruckIcon } from "lucide-react";
+import { getTruck } from "@/server/actions/trucks";
+import { getSubcontractorById } from "@/server/actions/subcontractors";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Separator } from "@/components/ui/separator";
+import { PageHeader } from "@/components/layout/page-header";
+import { OwnerPill } from "@/components/fleet/owner-pill";
+import { TruckStatusPill } from "@/components/fleet/truck-status-pill";
+import { ExpiryChip } from "@/components/fleet/expiry-chip";
+
+export default async function TruckDetailPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
+  const truck = await getTruck(id);
+  if (!truck) notFound();
+
+  const sub = truck.subcontractorId
+    ? await getSubcontractorById(truck.subcontractorId)
+    : undefined;
+
+  return (
+    <div className="flex flex-col gap-6">
+      <PageHeader
+        breadcrumbs={[
+          { label: "Trucks", href: "/trucks" },
+          { label: truck.registration },
+        ]}
+        eyebrow="Asset Register"
+        title={truck.registration}
+        description={`${truck.make} ${truck.model} · ${truck.year} · ${truck.capacityTonnes}t`}
+        actions={
+          <>
+            <OwnerPill ownerType={truck.ownerType} />
+            <TruckStatusPill status={truck.status} />
+          </>
+        }
+      />
+
+      {/* Hero */}
+      <Card className="overflow-hidden">
+        <div className="grid gap-0 md:grid-cols-[260px_1fr]">
+          <div className="flex items-center justify-center bg-gradient-to-br from-brand-navy to-bg-base p-8">
+            <div className="text-center">
+              <TruckIcon className="mx-auto size-16 text-white/80" />
+              <div className="mt-3 font-mono text-lg font-semibold tracking-wider text-white">
+                {truck.registration}
+              </div>
+              <div className="font-mono text-[10px] uppercase tracking-[0.18em] text-white/60">
+                {truck.make} · {truck.year}
+              </div>
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-px bg-border md:grid-cols-4">
+            <Stat icon={Layers} label="Capacity" value={`${truck.capacityTonnes}t`} />
+            <Stat icon={Gauge} label="Axles" value={String(truck.axles)} />
+            <Stat icon={Fuel} label="Fuel" value={truck.fuelType === "diesel" ? "Diesel" : "Petrol"} />
+            <Stat icon={Calendar} label="Year" value={String(truck.year)} />
+          </div>
+        </div>
+      </Card>
+
+      <div className="grid gap-4 lg:grid-cols-3">
+        {/* Compliance */}
+        <Card className="lg:col-span-2">
+          <CardHeader>
+            <CardTitle>Compliance & expiries</CardTitle>
+            <CardDescription>Surfaced on the dashboard 'Needs Attention' panel</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <ExpiryRow label="Insurance" date={truck.insuranceExpiry} />
+              <ExpiryRow label="NTSA Inspection" date={truck.ntsaInspectionExpiry} />
+              <ExpiryRow label="COMESA Permit" date={truck.comesaPermitExpiry} />
+              <ExpiryRow label="Transit Permit" date={truck.transitPermitExpiry} />
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Owner */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Ownership</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {truck.ownerType === "company_owned" ? (
+              <div className="text-sm text-fg-primary">
+                Company-Owned by{" "}
+                <span className="font-semibold">Nile Valley Logistics</span>.
+              </div>
+            ) : sub ? (
+              <div className="flex flex-col gap-2">
+                <Link
+                  href={`/subcontractors/${sub.id}`}
+                  className="text-base font-semibold text-fg-primary hover:text-brand-blue"
+                >
+                  {sub.name}
+                </Link>
+                <div className="text-xs text-fg-tertiary">{sub.contactPerson}</div>
+                <div className="font-mono text-xs text-fg-secondary">{sub.phone}</div>
+                <Separator className="my-2" />
+                <div className="text-[10px] uppercase tracking-wider text-fg-tertiary">
+                  Other trucks from this subcontractor
+                </div>
+                <div className="flex flex-wrap gap-1.5">
+                  {sub.trucks
+                    .filter((t) => t.id !== truck.id)
+                    .map((t) => (
+                      <Link
+                        key={t.id}
+                        href={`/trucks/${t.id}`}
+                        className="rounded-md border border-border bg-bg-base px-2 py-1 font-mono text-[11px] text-fg-secondary hover:border-border-strong hover:text-fg-primary"
+                      >
+                        {t.registration}
+                      </Link>
+                    ))}
+                  {sub.trucks.filter((t) => t.id !== truck.id).length === 0 && (
+                    <span className="text-xs text-fg-tertiary">None</span>
+                  )}
+                </div>
+              </div>
+            ) : (
+              <span className="text-sm text-fg-tertiary">Subcontractor not found.</span>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+
+      {truck.notes && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Notes</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-sm text-fg-secondary">{truck.notes}</p>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Placeholders for Phase 2+ */}
+      <div className="grid gap-4 lg:grid-cols-2">
+        <Card>
+          <CardHeader>
+            <CardTitle>Recent trips</CardTitle>
+            <CardDescription>Phase 2 — Trips module</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <EmptyHint icon={FileText} text="Trip history will appear here once Trips ship." />
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader>
+            <CardTitle>Service & Job Cards</CardTitle>
+            <CardDescription>Phase 1C — Workshop module</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <EmptyHint icon={Gauge} text="Job cards posted to this truck will appear here." />
+          </CardContent>
+        </Card>
+      </div>
+    </div>
+  );
+}
+
+function Stat({
+  icon: Icon,
+  label,
+  value,
+}: {
+  icon: React.ComponentType<{ className?: string }>;
+  label: string;
+  value: string;
+}) {
+  return (
+    <div className="bg-bg-elevated p-4">
+      <div className="flex items-center gap-1.5 text-xs uppercase tracking-wider text-fg-tertiary">
+        <Icon className="size-3" /> {label}
+      </div>
+      <div className="mt-1 font-mono text-xl font-medium text-fg-primary">{value}</div>
+    </div>
+  );
+}
+
+function ExpiryRow({ label, date }: { label: string; date?: string }) {
+  return (
+    <div className="rounded-md border border-border bg-bg-base p-3">
+      <div className="text-[10px] uppercase tracking-wider text-fg-tertiary">{label}</div>
+      <div className="mt-1.5">
+        <ExpiryChip date={date} />
+      </div>
+    </div>
+  );
+}
+
+function EmptyHint({
+  icon: Icon,
+  text,
+}: {
+  icon: React.ComponentType<{ className?: string }>;
+  text: string;
+}) {
+  return (
+    <div className="flex flex-col items-center justify-center gap-2 py-8 text-center text-fg-tertiary">
+      <Icon className="size-6" />
+      <span className="text-xs">{text}</span>
+    </div>
+  );
+}
