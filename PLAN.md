@@ -50,7 +50,7 @@ Last updated: 2026-05-09
 3. **Trips & Cross-border** — trip lifecycle (planned → loaded → in-transit → border → delivered → closed), customs documents (manifest, T1/SAD where applicable), border-post timestamps, axle-load/weighbridge slips, transit permits, country-specific fuel logs.
 4. **Loading & Documents** — manifest, weighbridge, POD. Driver scans on phone; Claude extracts fields; manager approves. All originals stored in Supabase Storage.
 5. **Goods Tracking** — cargo per trip, milestones, status timestamps.
-6. **Customer Portal** — customer login or shareable link, cargo status, ETA, POD download.
+6. ~~**Customer Portal**~~ — *deferred (2026-05-10). Will be developed in the future.*
 7. **Expenses & Fuel** — driver submits receipt photo → AI extracts amount/vendor/date → manager approves → optional M-Pesa reimbursement. Fuel logs tie to truck for L/100km analytics, by country/currency.
 8. **Finance / Accounting** — Chart of Accounts, General Ledger, AP (supplier bills), AR (customer invoices), bank reconciliation, multi-currency (KES base + USD/UGX/TZS/RWF), FX gain/loss, profit per trip / per truck / per customer / per route.
 9. **HR** — staff, contracts, licence/medical/passport expiry, leave, attendance, payroll inputs (export to your payroll provider).
@@ -118,7 +118,7 @@ Postgres with **row-level security** so each org only sees its own data. Multi-c
 | **0 — Foundation** | Repo, CI/CD, auth, roles, multi-currency primitives, Sentry, deployment, **themed design system + dashboard skeleton (Fleet Command Centre, dark/light)** | 2–3 wks |
 | **1 — Asset Register + Fleet + Workshop/Job Cards** | Assets, trucks, drivers, expiry alerts, **Job Card workflow (mechanic analysis, services, spares posted to truck, supplier AP statement)** | 2–3 wks |
 | **2 — Trips + Cross-border + Driver PWA + Doc scan** | Trip lifecycle, customs docs, driver phone app, camera + AI extract, POD | 3 wks |
-| **3 — Customer Portal + Tracking** | Customer login / shareable link, status, ETA, POD download | 1 wk |
+| ~~**3 — Customer Portal + Tracking**~~ | *Deferred 2026-05-10 — will be developed in the future.* | — |
 | **4 — Expenses + Fuel + M-Pesa** | Receipt scan, approval, fuel logs, reimbursement | 2 wks |
 | **5 — Finance / Accounting** | CoA, GL, AP, AR, bank rec, multi-currency, FX, **Budget framework**, **Cost-centre dimension**, **FAR + auto-depreciation**, **inventory (spares/tyres)** | 4–5 wks |
 | **6 — HR** | Contracts, leave, expiries, payroll inputs | 1–2 wks |
@@ -169,6 +169,7 @@ Total ≈ **16–20 weeks** to full MVP, but Phase 1 is usable in production aro
 - GPS device integration (deferred — abstraction is in the data model).
 - ~~Workshop / jobcards / tyre & parts inventory~~ → **NOW IN SCOPE** (added 2026-05-09 from Nile Valley notes — Workshop & Job Cards module).
 - Payroll calculation engine (we export inputs to an external payroll provider).
+- **Customer Portal** — *deferred 2026-05-10. Will be developed in the future.*
 
 ---
 
@@ -237,3 +238,4 @@ Total ≈ **16–20 weeks** to full MVP, but Phase 1 is usable in production aro
   - **RBAC design deferred** until just before Phase 0 auth wiring (Nile Valley wants distinct roles per system area; catalogue to be defined together at that point).
   - **HR module extended**: payroll, statutory deductions per employee, employee appraisal/performance, salaries & loans, **job-description-driven RBAC** (each employee's screens are activated by job description, stricter than standard RBAC).
   - **Subcontractor vs Own** tagging confirmed as a first-class dimension on every entry.
+- 2026-05-10: **Customer Portal removed from current scope** — deferred to a future round. Phase 3 cleared. Section 1, Section 8 (phasing table), and Section 9 (out of scope) updated to reflect this. The remaining feature work (cargo status, ETA, POD download) will continue to live inside the office app for internal users; we're only deferring the external customer-facing surface.
