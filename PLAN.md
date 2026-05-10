@@ -33,7 +33,7 @@ Last updated: 2026-05-09
 | AI | **Claude (Anthropic API)** | OCR/extraction, anomaly detection, NL report Q&A, weekly summaries. |
 | Mobile money | **M-Pesa Daraja** | Driver advances, expense reimbursements. |
 | FX rates | **Central Bank of Kenya (CBK) — primary**, **Frankfurter.app — fallback** | CBK = official Kenyan rate (KRA-aligned, audit-acceptable). Frankfurter (ECB-sourced, free, REST) covers gaps + weekends. See [`docs/finance/fx-rate-strategy.md`](./docs/finance/fx-rate-strategy.md). |
-| Notifications | **Africa's Talking** (WhatsApp + SMS) + transactional email | Regional coverage for Kenya/EAC. |
+| Notifications | **Africa's Talking** (SMS) + transactional email + in-app | Regional coverage for Kenya/EAC. WhatsApp deferred 2026-05-10. |
 | Error monitoring | **Sentry** | Catches production bugs as they happen. |
 | Testing | **Vitest** (unit) + **Playwright** (E2E) | Targets the "no critical bugs" bar. |
 
@@ -55,7 +55,7 @@ Last updated: 2026-05-09
 8. **Finance / Accounting** — Chart of Accounts, General Ledger, AP (supplier bills), AR (customer invoices), bank reconciliation, multi-currency (KES base + USD/UGX/TZS/RWF), FX gain/loss, profit per trip / per truck / per customer / per route.
 9. **HR** — staff, contracts, licence/medical/passport expiry, leave, attendance, payroll inputs (export to your payroll provider).
 10. **Reports & AI** — dashboards, exports (PDF/Excel), natural-language Q&A on a read-only reporting view, weekly fleet summary email.
-11. **Notifications** — WhatsApp + SMS (Africa's Talking) + in-app + email for trip events, expiries, customer ETAs, driver alerts.
+11. **Notifications** — SMS (Africa's Talking) + email + in-app for trip events, expiries, customer ETAs, driver alerts. *WhatsApp deferred 2026-05-10.*
 12. **Admin** — users, roles (Admin / Finance / Ops Manager / Dispatcher / Driver / Customer), audit log, org settings.
 13. **Truck Performance Tracker** — analytics layer over Fleet + Trips + Fuel + Maintenance + HR data. Per-truck KPIs and rankings (extended after studying the Fleet Logistics monthly pack — see [`docs/finance/management-pack-reference.md`](./docs/finance/management-pack-reference.md)):
     - **Volume KPIs (top of P&L)**: trips completed, tonnes hauled, TEUs moved, total km, laden km, deadhead km %, active truck-days
@@ -122,7 +122,7 @@ Postgres with **row-level security** so each org only sees its own data. Multi-c
 | **4 — Expenses + Fuel + M-Pesa** | Receipt scan, approval, fuel logs, reimbursement | 2 wks |
 | **5 — Finance / Accounting** | CoA, GL, AP, AR, bank rec, multi-currency, FX, **Budget framework**, **Cost-centre dimension**, **FAR + auto-depreciation**, **inventory (spares/tyres)** | 4–5 wks |
 | **6 — HR** | Contracts, leave, expiries, payroll inputs | 1–2 wks |
-| **7 — Notifications** | WhatsApp + SMS via Africa's Talking, email, in-app | 1 wk |
+| **7 — Notifications** | SMS via Africa's Talking + email + in-app (WhatsApp deferred) | 1 wk |
 | **8 — Reports + AI assistant** | Dashboards, exports, NL Q&A, weekly summary email | 1–2 wks |
 | **8b — Truck Performance Tracker** | KPI engine + leaderboard + per-truck profit, fuel efficiency, tyre cost, downtime, compliance, idle-truck list, customer × route volume matrix, fleet-vs-subcontractor split | 1–2 wks (built on top of Phase 8) |
 | **9 — Monthly Management Pack** | Auto-generated monthly close pack: narrative, IS, SFP, SCF, TB, OPEX, AR/AP aging, bank rec, FAR, disposals, intercompany, FX, inventory, sign-off workflow | 2 wks |
@@ -155,7 +155,7 @@ Total ≈ **16–20 weeks** to full MVP, but Phase 1 is usable in production aro
 | Supabase | $0 (Free) → $25 (Pro) when storage/DB grows |
 | Sentry | Free tier |
 | Anthropic API | ~$10–40 (depends on doc-scan volume) |
-| Africa's Talking | Pay-per-message (WhatsApp + SMS) |
+| Africa's Talking | Pay-per-message (SMS only — WhatsApp deferred) |
 | M-Pesa Daraja | Per-transaction |
 | Domain | ~$12/year |
 | **Total** | **≈ $0–85 / month** to start |
@@ -239,3 +239,4 @@ Total ≈ **16–20 weeks** to full MVP, but Phase 1 is usable in production aro
   - **HR module extended**: payroll, statutory deductions per employee, employee appraisal/performance, salaries & loans, **job-description-driven RBAC** (each employee's screens are activated by job description, stricter than standard RBAC).
   - **Subcontractor vs Own** tagging confirmed as a first-class dimension on every entry.
 - 2026-05-10: **Customer Portal removed from current scope** — deferred to a future round. Phase 3 cleared. Section 1, Section 8 (phasing table), and Section 9 (out of scope) updated to reflect this. The remaining feature work (cargo status, ETA, POD download) will continue to live inside the office app for internal users; we're only deferring the external customer-facing surface.
+- 2026-05-10: **WhatsApp deferred from Phase 7** — only Email + SMS + in-app channels in current scope. Africa's Talking remains the SMS provider. WhatsApp can be added later as a third channel without rework — the provider abstraction is channel-pluggable.

@@ -33,6 +33,9 @@ import {
   CalendarDays,
   GraduationCap,
   KeyRound,
+  Bell,
+  Sliders,
+  FileEdit,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Logo } from "@/components/layout/logo";
@@ -98,6 +101,15 @@ const navGroups: { title: string; items: NavItem[] }[] = [
       { href: "/bills/aged", label: "Aged AP", icon: Hourglass },
       { href: "/bank", label: "Bank Reconciliation", icon: Banknote },
       { href: "/reports", label: "Reports", icon: BarChart3 },
+    ],
+  },
+  {
+    title: "Communications",
+    items: [
+      { href: "/notifications", label: "Notifications", icon: Bell },
+      { href: "/notifications/log", label: "Outbound log", icon: ScrollText },
+      { href: "/notifications/templates", label: "Templates", icon: FileEdit },
+      { href: "/notifications/preferences", label: "Preferences", icon: Sliders },
     ],
   },
   {
