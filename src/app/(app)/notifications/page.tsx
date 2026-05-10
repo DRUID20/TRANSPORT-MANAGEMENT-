@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Bell, FileEdit, ListChecks, Mail, ScrollText, Smartphone, Sliders } from "lucide-react";
+import { Bell, FileEdit, Inbox, ListChecks, Mail, ScrollText, Smartphone, Sliders } from "lucide-react";
 import {
   listNotifications,
   totals,
@@ -8,6 +8,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { PageHeader } from "@/components/layout/page-header";
 import { ChannelPill, StatusPill } from "@/components/notifications/channel-pill";
 import { CATEGORY_LABELS } from "@/lib/types/notifications";
+import { JobsPanel } from "./jobs-panel";
 
 export default async function NotificationsHubPage() {
   const t = await totals();
@@ -37,26 +38,34 @@ export default async function NotificationsHubPage() {
         <Stat icon={ListChecks} label="Failed" value={t.failed} tone="danger" />
       </div>
 
-      <div className="grid gap-4 md:grid-cols-3">
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+        <NavCard
+          href="/notifications/inbox"
+          icon={Inbox}
+          title="Your inbox"
+          desc="Unread in-app notifications addressed to the current user."
+        />
         <NavCard
           href="/notifications/log"
           icon={ScrollText}
           title="Outbound log"
-          desc="Every email + SMS + in-app entry the system has dispatched, with delivery status."
+          desc="Every email + SMS + in-app entry the system has dispatched."
         />
         <NavCard
           href="/notifications/templates"
           icon={FileEdit}
           title="Templates"
-          desc="Per-category email/SMS/in-app templates with {{placeholders}} for event data."
+          desc="Per-category email/SMS/in-app with {{placeholders}}."
         />
         <NavCard
           href="/notifications/preferences"
           icon={Sliders}
           title="Preferences"
-          desc="Per-employee channel preferences for each notification category."
+          desc="Per-employee channel preferences for each category."
         />
       </div>
+
+      <JobsPanel />
 
       <Card>
         <CardContent className="!p-0">

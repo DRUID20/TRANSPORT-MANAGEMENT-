@@ -17,6 +17,7 @@ import {
   updatePayrollInput as storeUpdateInput,
 } from "@/server/store/mock-store";
 import type { LoanStatus, PayrollPeriodStatus } from "@/lib/types/payroll";
+import { notify } from "@/server/notifications/service";
 import {
   loanCreateSchema,
   payrollInputUpdateSchema,
@@ -64,6 +65,30 @@ export async function setPayrollPeriodStatus(
   revalidatePath("/hr/payroll");
   revalidatePath(`/hr/payroll/${id}`);
   revalidatePath("/hr/loans");
+
+  if (status === "paid") {
+    // Fan out per-employee payslip notification
+    const inputs = storeListInputs(id);
+    for (const inp of inputs) {
+      const emp = getEmployee(inp.employeeId);
+      const bankOrMpesa = emp?.bankAccountNo
+        ? `${emp.bankName ?? "Bank"} ****${emp.bankAccountNo.slice(-4)}`
+        : `M-Pesa ${emp?.mpesaPhone ?? ""}`;
+      await notify({
+        category: "payroll_period_paid",
+        recipientId: inp.employeeId,
+        payload: {
+          period: r.yearMonth,
+          grossPay: inp.grossPay.toLocaleString(),
+          deductions: inp.totalDeductions.toLocaleString(),
+          netPay: inp.netPay.toLocaleString(),
+          bankOrMpesa,
+        },
+        href: `/hr/payroll/${id}/${inp.employeeId}`,
+        priority: "high",
+      });
+    }
+  }
   return { ok: true, id: r.id };
 }
 
@@ -98,6 +123,18 @@ export async function createLoan(input: LoanCreateInput): Promise<ActionResult> 
   if ("error" in r) return { ok: false, error: r.error };
   revalidatePath("/hr/loans");
   revalidatePath(`/hr/employees/${parsed.data.employeeId}`);
+
+  await notify({
+    category: "loan_disbursed",
+    recipientId: r.employeeId,
+    payload: {
+      number: r.number,
+      principal: r.principal.toLocaleString(),
+      monthlyRecovery: r.monthlyRecovery.toLocaleString(),
+      termMonths: String(r.termMonths),
+    },
+    href: `/hr/loans/${r.id}`,
+  });
   return { ok: true, id: r.id };
 }
 export async function cancelLoan(id: string): Promise<ActionResult> {

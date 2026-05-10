@@ -36,6 +36,7 @@ import {
   Bell,
   Sliders,
   FileEdit,
+  Inbox,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Logo } from "@/components/layout/logo";
@@ -107,6 +108,7 @@ const navGroups: { title: string; items: NavItem[] }[] = [
     title: "Communications",
     items: [
       { href: "/notifications", label: "Notifications", icon: Bell },
+      { href: "/notifications/inbox", label: "Inbox", icon: Inbox },
       { href: "/notifications/log", label: "Outbound log", icon: ScrollText },
       { href: "/notifications/templates", label: "Templates", icon: FileEdit },
       { href: "/notifications/preferences", label: "Preferences", icon: Sliders },

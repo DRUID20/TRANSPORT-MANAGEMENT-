@@ -1,17 +1,17 @@
-"use client";
-
-import { Bell, Command, Search } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { Command, Search } from "lucide-react";
 import { ThemeToggle } from "@/components/layout/theme-toggle";
-import { useEffect, useState } from "react";
+import { TopbarClock } from "@/components/layout/topbar-clock";
+import { NotificationBell } from "@/components/layout/notification-bell";
+import { listNotifications } from "@/server/actions/notifications";
+import { CURRENT_USER_EMPLOYEE_ID } from "@/server/auth/current-user";
 
-export function Topbar() {
-  const [now, setNow] = useState<Date>(() => new Date());
-
-  useEffect(() => {
-    const id = setInterval(() => setNow(new Date()), 1000);
-    return () => clearInterval(id);
-  }, []);
+export async function Topbar() {
+  // Latest 12 in-app entries for the bell drawer
+  const items = await listNotifications({
+    recipientId: CURRENT_USER_EMPLOYEE_ID,
+    channel: "in_app",
+    limit: 12,
+  });
 
   return (
     <header className="sticky top-0 z-30 flex h-14 items-center gap-3 border-b border-border bg-bg-base/80 px-4 backdrop-blur-xl">
@@ -28,20 +28,9 @@ export function Topbar() {
       </button>
 
       <div className="ml-auto flex items-center gap-2">
-        {/* Live clock — JetBrains Mono, SpaceX-control feel */}
-        <div className="hidden items-center gap-2 rounded-md border border-border bg-bg-elevated px-2.5 py-1.5 lg:flex">
-          <span className="size-1.5 rounded-full bg-status-success animate-pulse" />
-          <span className="font-mono text-xs tnum text-fg-secondary">
-            {now.toUTCString().slice(17, 25)} UTC
-          </span>
-        </div>
-
+        <TopbarClock />
         <ThemeToggle />
-
-        <Button variant="ghost" size="icon" aria-label="Notifications" className="relative">
-          <Bell className="size-4" />
-          <span className="absolute right-2 top-2 size-1.5 rounded-full bg-status-danger" />
-        </Button>
+        <NotificationBell initialItems={items} />
 
         {/* Avatar (placeholder) */}
         <div className="flex size-9 items-center justify-center rounded-full bg-bg-elevated text-xs font-medium text-fg-secondary ring-1 ring-border">
