@@ -141,6 +141,11 @@ import type {
   NotificationStatus,
   NotificationTemplate,
 } from "@/lib/types/notifications";
+import type {
+  ManagementPack,
+  ManagementPackStatus,
+} from "@/lib/types/management-pack";
+import { STATUS_ORDER as PACK_STATUS_ORDER } from "@/lib/types/management-pack";
 import { ageBucket as computeAgeBucket } from "@/lib/types/ar";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
@@ -7088,4 +7093,137 @@ export function notificationTotals(): {
     if (n.channel === "sms") sms++;
   }
   return { total: notifications.size, sent, delivered, failed, inApp, email, sms };
+}
+
+// ============================================================
+// Phase 9 — Monthly Management Pack
+// ============================================================
+const managementPacks = new Map<string, ManagementPack>();
+
+function ymBounds(yearMonth: string): { startDate: string; endDate: string } {
+  const [y, m] = yearMonth.split("-").map(Number);
+  const startDate = `${yearMonth}-01`;
+  const lastDay = new Date(y!, m!, 0).getDate();
+  const endDate = `${yearMonth}-${String(lastDay).padStart(2, "0")}`;
+  return { startDate, endDate };
+}
+
+function seedManagementPacks() {
+  const now = new Date();
+  // Prior month — signed-off
+  const prior = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+  const priorYm = `${prior.getFullYear()}-${String(prior.getMonth() + 1).padStart(2, "0")}`;
+  const priorBounds = ymBounds(priorYm);
+  managementPacks.set(`mpk-${priorYm}`, {
+    id: `mpk-${priorYm}`,
+    yearMonth: priorYm,
+    startDate: priorBounds.startDate,
+    endDate: priorBounds.endDate,
+    status: "signed_off",
+    narrative:
+      "Operationally solid month. Revenue ahead of plan driven by Northern Corridor volume; gross margin held within target band. Workshop spend dipped after the engine overhaul programme wrapped in mid-March.",
+    highlights:
+      "• Mombasa→Kampala lane revenue up vs prior month\n• Two new long-haul contracts signed with Bidco and Unilever\n• Zero RTA incidents and 100% POD compliance",
+    risks:
+      "• Two driver licences expire within the next 60 days — renewal scheduled\n• Ageing AR concentrated in one customer (90+ bucket needs escalation)\n• Diesel pump price up 4% — to be passed through to Q3 contracts",
+    preparedById: "emp-002",
+    preparedAt: new Date(prior.getTime() + 25 * 86400_000).toISOString(),
+    reviewedById: "emp-003",
+    reviewedAt: new Date(prior.getTime() + 27 * 86400_000).toISOString(),
+    signedOffById: "emp-001",
+    signedOffAt: new Date(prior.getTime() + 29 * 86400_000).toISOString(),
+    createdAt: new Date(prior.getTime() + 24 * 86400_000).toISOString(),
+  });
+
+  // Current month — draft
+  const currentYm = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+  const currentBounds = ymBounds(currentYm);
+  managementPacks.set(`mpk-${currentYm}`, {
+    id: `mpk-${currentYm}`,
+    yearMonth: currentYm,
+    startDate: currentBounds.startDate,
+    endDate: currentBounds.endDate,
+    status: "draft",
+    narrative: "",
+    highlights: "",
+    risks: "",
+    createdAt: new Date().toISOString(),
+  });
+}
+seedManagementPacks();
+
+export function listManagementPacks(): ManagementPack[] {
+  return [...managementPacks.values()].sort((a, b) => b.yearMonth.localeCompare(a.yearMonth));
+}
+export function getManagementPack(id: string): ManagementPack | undefined {
+  return managementPacks.get(id);
+}
+export function createManagementPack(yearMonth: string): ManagementPack | { error: string } {
+  if (!/^\d{4}-\d{2}$/.test(yearMonth)) return { error: "yearMonth must be YYYY-MM" };
+  const id = `mpk-${yearMonth}`;
+  if (managementPacks.has(id)) return { error: "Pack for that month already exists" };
+  const { startDate, endDate } = ymBounds(yearMonth);
+  const pack: ManagementPack = {
+    id,
+    yearMonth,
+    startDate,
+    endDate,
+    status: "draft",
+    narrative: "",
+    highlights: "",
+    risks: "",
+    createdAt: new Date().toISOString(),
+  };
+  managementPacks.set(id, pack);
+  return pack;
+}
+export function updateManagementPackNarrative(input: {
+  id: string;
+  narrative: string;
+  highlights: string;
+  risks: string;
+}): ManagementPack | { error: string } {
+  const pack = managementPacks.get(input.id);
+  if (!pack) return { error: "Pack not found" };
+  if (pack.status === "signed_off" || pack.status === "published") {
+    return { error: `Pack is ${pack.status} — locked` };
+  }
+  const updated: ManagementPack = {
+    ...pack,
+    narrative: input.narrative,
+    highlights: input.highlights,
+    risks: input.risks,
+  };
+  managementPacks.set(input.id, updated);
+  return updated;
+}
+export function advanceManagementPack(
+  id: string,
+  to: ManagementPackStatus,
+  actorId: string,
+): ManagementPack | { error: string } {
+  const pack = managementPacks.get(id);
+  if (!pack) return { error: "Pack not found" };
+  if (PACK_STATUS_ORDER.indexOf(to) <= PACK_STATUS_ORDER.indexOf(pack.status)) {
+    return { error: `Cannot move from ${pack.status} back to ${to}` };
+  }
+  const now = new Date().toISOString();
+  const updated: ManagementPack = {
+    ...pack,
+    status: to,
+    preparedById:
+      to === "in_review" && !pack.preparedById ? actorId : pack.preparedById,
+    preparedAt:
+      to === "in_review" && !pack.preparedAt ? now : pack.preparedAt,
+    reviewedById:
+      to === "signed_off" || (to === "in_review" && pack.preparedById)
+        ? to === "signed_off" ? actorId : pack.reviewedById
+        : pack.reviewedById,
+    reviewedAt: to === "signed_off" && !pack.reviewedAt ? now : pack.reviewedAt,
+    signedOffById: to === "signed_off" ? actorId : pack.signedOffById,
+    signedOffAt: to === "signed_off" ? now : pack.signedOffAt,
+    publishedAt: to === "published" ? now : pack.publishedAt,
+  };
+  managementPacks.set(id, updated);
+  return updated;
 }

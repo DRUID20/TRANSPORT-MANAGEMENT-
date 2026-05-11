@@ -41,6 +41,7 @@ import {
   Trophy,
   Pause,
   Grid3X3,
+  FileBarChart,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Logo } from "@/components/layout/logo";
@@ -106,6 +107,7 @@ const navGroups: { title: string; items: NavItem[] }[] = [
       { href: "/bills/aged", label: "Aged AP", icon: Hourglass },
       { href: "/bank", label: "Bank Reconciliation", icon: Banknote },
       { href: "/reports", label: "Reports", icon: BarChart3 },
+      { href: "/management-pack", label: "Management Pack", icon: FileBarChart },
     ],
   },
   {
