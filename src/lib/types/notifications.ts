@@ -42,7 +42,8 @@ export type NotificationCategory =
   // Performance
   | "appraisal_advanced"
   // System
-  | "digest_daily";
+  | "digest_daily"
+  | "digest_weekly";
 
 export type NotificationStatus =
   | "queued"
@@ -110,7 +111,7 @@ export const CATEGORY_GROUPS: Array<{ label: string; categories: NotificationCat
   { label: "Compliance", categories: ["compliance_expiring", "compliance_expired"] },
   { label: "Workshop", categories: ["jobcard_opened", "jobcard_completed"] },
   { label: "Performance", categories: ["appraisal_advanced"] },
-  { label: "Digest", categories: ["digest_daily"] },
+  { label: "Digest", categories: ["digest_daily", "digest_weekly"] },
 ];
 
 export const CATEGORY_LABELS: Record<NotificationCategory, string> = {
@@ -138,6 +139,7 @@ export const CATEGORY_LABELS: Record<NotificationCategory, string> = {
   jobcard_completed: "Job card completed",
   appraisal_advanced: "Appraisal advanced",
   digest_daily: "Daily digest",
+  digest_weekly: "Weekly summary",
 };
 
 export const CHANNEL_LABELS: Record<NotificationChannel, string> = {

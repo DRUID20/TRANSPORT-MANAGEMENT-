@@ -27,6 +27,7 @@ const categoryEnum = z.enum([
   "jobcard_completed",
   "appraisal_advanced",
   "digest_daily",
+  "digest_weekly",
 ]);
 
 export const templateUpdateSchema = z.object({

@@ -5,6 +5,12 @@ import { listComplianceRecords } from "@/server/actions/hr-compliance";
 import { listEmployees } from "@/server/actions/hr";
 import { listLeaveRequests, listAttendance } from "@/server/actions/leave";
 import { listNotifications } from "@/server/actions/notifications";
+import {
+  arAgingByCustomer,
+  fleetUtilisation,
+  profitAndLoss,
+} from "@/server/actions/reports";
+import { listTrips } from "@/server/store/mock-store";
 import { notify } from "@/server/notifications/service";
 import {
   KIND_LABELS,
@@ -14,6 +20,9 @@ import {
 import { CURRENT_USER_EMPLOYEE_ID } from "@/server/auth/current-user";
 
 const HR_MANAGER_ID = "emp-004";
+
+/** Recipients of the weekly summary: MD, FM, OM, HRM. */
+const WEEKLY_DIGEST_RECIPIENTS = ["emp-001", "emp-002", "emp-003", "emp-004"];
 
 export type JobResult = { ok: true; sent: number } | { ok: false; error: string };
 
@@ -97,4 +106,90 @@ export async function runDailyDigest(): Promise<JobResult> {
   });
   revalidatePath("/notifications");
   return { ok: true, sent: result.succeeded };
+}
+
+/**
+ * Builds this week's executive summary and dispatches it to the management
+ * recipient list (MD, FM, OM, HRM).
+ *
+ * In production this is a Vercel Cron Friday at 17:00 EAT.
+ */
+export async function runWeeklyDigest(): Promise<JobResult> {
+  const now = new Date();
+  const today = now.toISOString().slice(0, 10);
+  // Week = last 7 days inclusive
+  const weekStart = new Date(now.getTime() - 6 * 86400_000);
+  const weekStartIso = weekStart.toISOString().slice(0, 10);
+  const weekLabel = `${weekStartIso} → ${today}`;
+
+  // Operational counts
+  const tripsAll = listTrips();
+  const tripsThisWeek = tripsAll.filter((t) => {
+    const ref = t.actualDeliveryAt ?? t.actualDepartureAt ?? t.plannedDepartureDate ?? t.createdAt;
+    return ref >= weekStartIso && ref <= today;
+  });
+  const tripsClosed = tripsThisWeek.filter((t) => t.status === "closed").length;
+  const tripsActive = tripsAll.filter(
+    (t) => t.status !== "closed" && t.status !== "cancelled",
+  ).length;
+
+  // Finance
+  const pnl = await profitAndLoss({ fromDate: weekStartIso, toDate: today });
+  const revenue = pnl.income.total;
+  const profit = pnl.netProfit;
+
+  const arRows = await arAgingByCustomer(today);
+  const overdueAr = arRows.reduce(
+    (s, r) => s + r.d1to30 + r.d31to60 + r.d61to90 + r.d90plus,
+    0,
+  );
+
+  // Fleet — top 3 trucks by week profit
+  const fleet = await fleetUtilisation({ fromDate: weekStartIso, toDate: today });
+  const top3 = fleet.slice(0, 3);
+
+  // Compliance
+  const records = await listComplianceRecords();
+  const flagged = records.filter((r) => {
+    const s = complianceStatus(r.expiryDate);
+    return s === "expired" || s === "expiring_soon";
+  }).length;
+
+  // HR
+  const pendingLeave = (await listLeaveRequests({ status: "pending" })).length;
+
+  const kes = (n: number) => `KSh ${Math.round(n).toLocaleString()}`;
+  const summary = [
+    `${tripsClosed} trips closed (${tripsActive} active)`,
+    `revenue ${kes(revenue)}`,
+    `profit ${kes(profit)}`,
+    `overdue AR ${kes(overdueAr)}`,
+    `${pendingLeave} leave pending`,
+    flagged > 0 ? `${flagged} compliance flags` : null,
+  ].filter(Boolean).join(" · ");
+
+  const highlights = top3.length === 0
+    ? "(no truck activity this week)"
+    : top3
+      .map((t, i) => `${i + 1}. ${t.registration} — ${kes(t.grossProfitKes)} (${t.tripCount} trips)`)
+      .join("\n");
+
+  let totalSent = 0;
+  for (const recipientId of WEEKLY_DIGEST_RECIPIENTS) {
+    const result = await notify({
+      category: "digest_weekly",
+      recipientId,
+      payload: {
+        date: today,
+        weekLabel,
+        summary,
+        highlights,
+      },
+      href: "/dashboard",
+      priority: "low",
+    });
+    totalSent += result.succeeded;
+  }
+  revalidatePath("/notifications");
+  return { ok: true, sent: totalSent };
 }

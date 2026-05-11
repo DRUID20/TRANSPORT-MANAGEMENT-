@@ -6359,6 +6359,15 @@ const TEMPLATE_SEEDS: TemplateSeed[] = [
     sms: { body: "TX daily {{date}}: {{summary}}" },
     inApp: { subject: "Daily digest", body: "{{summary}}" },
   },
+  {
+    category: "digest_weekly",
+    email: {
+      subject: "TX weekly summary — {{weekLabel}}",
+      body: "Week ending {{date}}:\n\n{{summary}}\n\nHighlights:\n{{highlights}}\n\nOpen the dashboard: {{href}}",
+    },
+    sms: { body: "TX week {{date}}: {{summary}}" },
+    inApp: { subject: "Weekly summary", body: "{{summary}}" },
+  },
 ];
 
 function seedNotificationTemplates() {
@@ -6423,6 +6432,7 @@ const DEFAULT_CHANNELS_BY_CATEGORY: Record<NotificationCategory, NotificationCha
   jobcard_completed:   ["in_app", "email"],
   appraisal_advanced:  ["in_app", "email"],
   digest_daily:        ["email"],
+  digest_weekly:       ["email", "in_app"],
 };
 
 function seedNotificationPreferences() {
