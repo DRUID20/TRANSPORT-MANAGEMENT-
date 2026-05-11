@@ -38,6 +38,9 @@ import {
   FileEdit,
   Inbox,
   Sparkles,
+  Trophy,
+  Pause,
+  Grid3X3,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Logo } from "@/components/layout/logo";
@@ -113,6 +116,14 @@ const navGroups: { title: string; items: NavItem[] }[] = [
       { href: "/notifications/log", label: "Outbound log", icon: ScrollText },
       { href: "/notifications/templates", label: "Templates", icon: FileEdit },
       { href: "/notifications/preferences", label: "Preferences", icon: Sliders },
+    ],
+  },
+  {
+    title: "Performance",
+    items: [
+      { href: "/tracker", label: "Truck tracker", icon: Trophy },
+      { href: "/tracker/idle", label: "Idle trucks", icon: Pause },
+      { href: "/tracker/matrix", label: "Customer × route", icon: Grid3X3 },
     ],
   },
   {

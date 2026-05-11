@@ -4116,6 +4116,344 @@ export function expenseBreakdown(opts: {
 }
 
 // ============================================================
+// Phase 8b — Truck Performance Tracker
+// Per-truck scorecards, leaderboard, idle list, customer x route matrix
+// ============================================================
+export interface TruckScorecard {
+  truckId: string;
+  registration: string;
+  status: string;
+  tripCount: number;
+  /** Total km driven (from fuel odometers in range). */
+  kmDriven: number;
+  revenueKes: number;
+  fuelKes: number;
+  expensesKes: number;
+  workshopKes: number;
+  tyreKes: number;
+  totalCostsKes: number;
+  grossProfitKes: number;
+  marginPct: number | null;
+  /** L/100km (tank-to-tank). */
+  litresPer100km: number | null;
+  kesPerKm: number | null;
+  /** Days in the range the truck was on a job card (computed from open/close). */
+  downtimeDays: number;
+  downtimePct: number;
+  /** Compliance documents valid / total. */
+  complianceTotal: number;
+  complianceValid: number;
+  complianceExpiring: number;
+  complianceExpired: number;
+  /** Days since last trip end (or planned departure if no trips). null = no trips on record. */
+  daysSinceLastTrip: number | null;
+  /** Composite 0-100 score. */
+  score: number;
+}
+
+function rangeBounds(range?: { fromDate?: string; toDate?: string }) {
+  const from = range?.fromDate ? new Date(range.fromDate) : new Date(0);
+  const to = range?.toDate ? new Date(range.toDate) : new Date(8640000000000000);
+  return { from, to };
+}
+
+function truckScorecardInternal(
+  truckId: string,
+  range?: { fromDate?: string; toDate?: string },
+  today = new Date(),
+): TruckScorecard | undefined {
+  const truck = trucks.get(truckId);
+  if (!truck) return undefined;
+  const { from, to } = rangeBounds(range);
+  const inRange = (iso?: string) => {
+    if (!iso) return false;
+    const d = new Date(iso);
+    return d >= from && d <= to;
+  };
+
+  // Trips for this truck in range
+  const truckTrips = [...trips.values()].filter((t) => {
+    const ref = t.actualDepartureAt ?? t.plannedDepartureDate ?? t.createdAt;
+    return t.truckId === truck.id && inRange(ref);
+  });
+  const tripIds = new Set(truckTrips.map((t) => t.id));
+
+  const revenueKes = [...invoices.values()]
+    .filter(
+      (inv) =>
+        inv.tripId &&
+        tripIds.has(inv.tripId) &&
+        inv.status !== "draft" &&
+        inv.status !== "cancelled",
+    )
+    .reduce((s, inv) => s + inv.total * inv.fxRate, 0);
+
+  const fuelLogsForTruck = [...fuelLogs.values()].filter(
+    (f) => f.truckId === truck.id && inRange(f.datetime),
+  );
+  const fuelKes = fuelLogsForTruck.reduce((s, f) => s + f.costKes, 0);
+
+  // KM driven (first vs last odometer)
+  const odoSorted = [...fuelLogsForTruck].sort((a, b) => a.odometerKm - b.odometerKm);
+  const kmDriven =
+    odoSorted.length >= 2
+      ? odoSorted[odoSorted.length - 1]!.odometerKm - odoSorted[0]!.odometerKm
+      : 0;
+  // L/100km using tank-to-tank (litres after first fill / km between first & last)
+  const litresAfterFirst = odoSorted.slice(1).reduce((s, f) => s + f.litres, 0);
+  const litresPer100km = kmDriven > 0 ? (litresAfterFirst / kmDriven) * 100 : null;
+  const kesPerKm = kmDriven > 0 ? fuelKes / kmDriven : null;
+
+  // Trip expenses
+  const expensesKes = [...expenses.values()]
+    .filter(
+      (e) =>
+        e.tripId &&
+        tripIds.has(e.tripId) &&
+        (e.status === "approved" || e.status === "reimbursed") &&
+        e.paidBy !== "advance",
+    )
+    .reduce((s, e) => s + e.amountKes, 0);
+
+  // Workshop cost: closed job cards for this truck in range, with tyre split
+  let workshopKes = 0;
+  let tyreKes = 0;
+  let downtimeDays = 0;
+  for (const jc of jobCards.values()) {
+    if (jc.truckId !== truck.id) continue;
+    if (!inRange(jc.openedAt) && !inRange(jc.closedAt ?? jc.openedAt)) continue;
+    workshopKes += jc.totalKes ?? 0;
+
+    // Tyre spend by description match
+    const spares = [...jobCardSpares.values()].filter((s) => s.jobCardId === jc.id);
+    for (const s of spares) {
+      if (/tyre|tire|tread/i.test(s.description)) tyreKes += s.totalCostKes;
+    }
+
+    // Downtime: days between openedAt and closedAt (clamped to range)
+    const opened = new Date(jc.openedAt);
+    const closed = jc.closedAt ? new Date(jc.closedAt) : today;
+    const start = opened < from ? from : opened;
+    const end = closed > to ? to : closed;
+    if (end > start) {
+      const diffDays = Math.ceil((end.getTime() - start.getTime()) / 86_400_000);
+      downtimeDays += diffDays;
+    }
+  }
+  const totalRangeDays = Math.max(
+    1,
+    Math.ceil(
+      (Math.min(to.getTime(), today.getTime()) - from.getTime()) / 86_400_000,
+    ),
+  );
+  const downtimePct = Math.min(100, (downtimeDays / totalRangeDays) * 100);
+
+  const totalCostsKes = fuelKes + expensesKes + workshopKes;
+  const grossProfitKes = revenueKes - totalCostsKes;
+  const marginPct = revenueKes > 0 ? grossProfitKes / revenueKes : null;
+
+  // Compliance per linked driver (truck's default driver) is the closest proxy
+  // for "operational compliance attached to the truck".
+  let complianceTotal = 0;
+  let complianceValid = 0;
+  let complianceExpiring = 0;
+  let complianceExpired = 0;
+  for (const e of employees.values()) {
+    if (e.driverId !== truck.currentDriverId) continue;
+    for (const r of complianceRecords.values()) {
+      if (r.employeeId !== e.id) continue;
+      complianceTotal++;
+      const days = r.expiryDate
+        ? Math.floor((new Date(r.expiryDate).getTime() - today.getTime()) / 86_400_000)
+        : null;
+      if (days === null) complianceExpired++;
+      else if (days < 0) complianceExpired++;
+      else if (days <= 30) complianceExpiring++;
+      else complianceValid++;
+    }
+  }
+
+  // Days since last trip
+  const lastTripRef = truckTrips
+    .map((t) => t.actualDeliveryAt ?? t.actualDepartureAt ?? t.plannedDepartureDate ?? t.createdAt)
+    .filter((x): x is string => Boolean(x))
+    .sort()
+    .pop();
+  const daysSinceLastTrip = lastTripRef
+    ? Math.floor((today.getTime() - new Date(lastTripRef).getTime()) / 86_400_000)
+    : null;
+
+  // Composite score (0-100). Weights:
+  //  40 margin (mapped 0% -> 0, 30%+ -> 40)
+  //  25 fuel  (35 L/100km -> 25, 50 -> 0)
+  //  15 downtime (0% -> 15, 30%+ -> 0)
+  //  10 compliance (valid/total)
+  //  10 utilisation (3+ trips in range -> 10)
+  const marginScore = marginPct === null
+    ? 0
+    : Math.max(0, Math.min(40, (marginPct / 0.3) * 40));
+  const fuelScore = litresPer100km === null
+    ? 12   // partial credit when no fuel data
+    : Math.max(0, Math.min(25, 25 - ((litresPer100km - 35) / 15) * 25));
+  const downtimeScore = Math.max(0, 15 - (downtimePct / 30) * 15);
+  const complianceScore =
+    complianceTotal === 0 ? 6 : (complianceValid / complianceTotal) * 10;
+  const utilScore = Math.min(10, (truckTrips.length / 3) * 10);
+  const score = Math.round(marginScore + fuelScore + downtimeScore + complianceScore + utilScore);
+
+  return {
+    truckId: truck.id,
+    registration: truck.registration,
+    status: truck.status,
+    tripCount: truckTrips.length,
+    kmDriven,
+    revenueKes,
+    fuelKes,
+    expensesKes,
+    workshopKes,
+    tyreKes,
+    totalCostsKes,
+    grossProfitKes,
+    marginPct,
+    litresPer100km,
+    kesPerKm,
+    downtimeDays,
+    downtimePct,
+    complianceTotal,
+    complianceValid,
+    complianceExpiring,
+    complianceExpired,
+    daysSinceLastTrip,
+    score,
+  };
+}
+
+export function truckScorecard(
+  truckId: string,
+  range?: { fromDate?: string; toDate?: string },
+): TruckScorecard | undefined {
+  return truckScorecardInternal(truckId, range);
+}
+
+export function truckLeaderboard(range?: {
+  fromDate?: string;
+  toDate?: string;
+}): TruckScorecard[] {
+  const today = new Date();
+  const rows: TruckScorecard[] = [];
+  for (const t of trucks.values()) {
+    const card = truckScorecardInternal(t.id, range, today);
+    if (card) rows.push(card);
+  }
+  return rows.sort((a, b) => b.score - a.score);
+}
+
+export interface IdleTruckRow {
+  truckId: string;
+  registration: string;
+  status: string;
+  daysIdle: number | null;
+  lastTripNumber: string | null;
+  lastTripDate: string | null;
+  defaultDriverName: string | null;
+}
+
+/** Trucks with no trip activity in the last `withinDays` (or never seen). */
+export function idleTrucks(withinDays = 14): IdleTruckRow[] {
+  const today = new Date();
+  const out: IdleTruckRow[] = [];
+  for (const t of trucks.values()) {
+    const truckTrips = [...trips.values()].filter((trip) => trip.truckId === t.id);
+    let lastDate: string | null = null;
+    let lastNumber: string | null = null;
+    for (const trip of truckTrips) {
+      const ref = trip.actualDeliveryAt ?? trip.actualDepartureAt ?? trip.plannedDepartureDate ?? trip.createdAt;
+      if (!lastDate || ref > lastDate) {
+        lastDate = ref;
+        lastNumber = trip.number;
+      }
+    }
+    const daysIdle = lastDate
+      ? Math.floor((today.getTime() - new Date(lastDate).getTime()) / 86_400_000)
+      : null;
+    if (daysIdle === null || daysIdle >= withinDays) {
+      const driver = t.currentDriverId ? drivers.get(t.currentDriverId) : undefined;
+      out.push({
+        truckId: t.id,
+        registration: t.registration,
+        status: t.status,
+        daysIdle,
+        lastTripNumber: lastNumber,
+        lastTripDate: lastDate ? lastDate.slice(0, 10) : null,
+        defaultDriverName: driver?.fullName ?? null,
+      });
+    }
+  }
+  return out.sort((a, b) => {
+    if (a.daysIdle === null) return -1;
+    if (b.daysIdle === null) return 1;
+    return b.daysIdle - a.daysIdle;
+  });
+}
+
+export interface CustomerRouteCell {
+  customerId: string;
+  customerName: string;
+  route: string;        // "Mombasa → Kampala"
+  origin: string;
+  destination: string;
+  tripCount: number;
+  revenueKes: number;
+}
+
+/** Customer x route pivot for the given range. */
+export function customerRouteMatrix(range?: {
+  fromDate?: string;
+  toDate?: string;
+}): CustomerRouteCell[] {
+  const { from, to } = rangeBounds(range);
+  const inRange = (iso?: string) => {
+    if (!iso) return false;
+    const d = new Date(iso);
+    return d >= from && d <= to;
+  };
+  const cells = new Map<string, CustomerRouteCell>();
+  for (const trip of trips.values()) {
+    const ref = trip.actualDeliveryAt ?? trip.actualDepartureAt ?? trip.plannedDepartureDate ?? trip.createdAt;
+    if (!inRange(ref)) continue;
+    const booking = bookings.get(trip.bookingId);
+    if (!booking) continue;
+    const cust = customers.get(booking.customerId);
+    if (!cust) continue;
+    const route = `${trip.origin} → ${trip.destination}`;
+    const key = `${cust.id}|${route}`;
+    if (!cells.has(key)) {
+      cells.set(key, {
+        customerId: cust.id,
+        customerName: cust.name,
+        route,
+        origin: trip.origin,
+        destination: trip.destination,
+        tripCount: 0,
+        revenueKes: 0,
+      });
+    }
+    const cell = cells.get(key)!;
+    cell.tripCount++;
+    const tripRevenue = [...invoices.values()]
+      .filter(
+        (inv) =>
+          inv.tripId === trip.id &&
+          inv.status !== "draft" &&
+          inv.status !== "cancelled",
+      )
+      .reduce((s, inv) => s + inv.total * inv.fxRate, 0);
+    cell.revenueKes += tripRevenue;
+  }
+  return [...cells.values()].sort((a, b) => b.revenueKes - a.revenueKes);
+}
+
+// ============================================================
 // HR (Phase 6A): Departments, Employees, Contracts
 // ============================================================
 const departmentSeed: Department[] = [
