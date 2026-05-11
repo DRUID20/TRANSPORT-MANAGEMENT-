@@ -68,10 +68,38 @@ export default async function TruckDetailPage({ params }: { params: Promise<{ id
             </div>
           </div>
           <div className="grid grid-cols-2 gap-px bg-border md:grid-cols-4">
-            <Stat icon={Layers} label="Capacity" value={`${truck.capacityTonnes}t`} />
-            <Stat icon={Gauge} label="Axles" value={String(truck.axles)} />
-            <Stat icon={Fuel} label="Fuel" value={truck.fuelType === "diesel" ? "Diesel" : "Petrol"} />
-            <Stat icon={Calendar} label="Year" value={String(truck.year)} />
+            <Stat
+              icon={Layers}
+              label={truck.tankCapacityLitres ? "Tank capacity" : "Capacity"}
+              value={
+                truck.tankCapacityLitres
+                  ? `${truck.tankCapacityLitres.toLocaleString()} L`
+                  : `${truck.capacityTonnes}t`
+              }
+            />
+            <Stat
+              icon={Gauge}
+              label={truck.compartmentCount ? "Compartments" : "Axles"}
+              value={
+                truck.compartmentCount
+                  ? String(truck.compartmentCount)
+                  : String(truck.axles)
+              }
+            />
+            <Stat icon={Fuel} label="Engine fuel" value={truck.fuelType === "diesel" ? "Diesel" : "Petrol"} />
+            <Stat
+              icon={Calendar}
+              label={
+                truck.permittedProducts && truck.permittedProducts.length > 0
+                  ? "Carries"
+                  : "Year"
+              }
+              value={
+                truck.permittedProducts && truck.permittedProducts.length > 0
+                  ? truck.permittedProducts.join(" · ")
+                  : String(truck.year)
+              }
+            />
           </div>
         </div>
       </Card>
@@ -86,7 +114,19 @@ export default async function TruckDetailPage({ params }: { params: Promise<{ id
           <CardContent>
             <div className="grid gap-4 sm:grid-cols-2">
               <ExpiryRow label="Insurance" date={truck.insuranceExpiry} />
+              <ExpiryRow
+                label="Petroleum carriers' liability"
+                date={truck.petroleumLiabilityExpiry}
+              />
               <ExpiryRow label="NTSA Inspection" date={truck.ntsaInspectionExpiry} />
+              <ExpiryRow
+                label="EPRA transit licence"
+                date={truck.epraTransitLicenceExpiry}
+              />
+              <ExpiryRow
+                label="Tank calibration"
+                date={truck.calibrationDueDate}
+              />
               <ExpiryRow label="COMESA Permit" date={truck.comesaPermitExpiry} />
               <ExpiryRow label="Transit Permit" date={truck.transitPermitExpiry} />
             </div>

@@ -5,11 +5,15 @@ import {
   Building2,
   Calendar,
   Container,
+  Droplet,
+  Fuel as FuelIcon,
   IdCard as IdCardIcon,
   Package,
+  Thermometer,
   Truck as TruckIcon,
   Wallet,
 } from "lucide-react";
+import { correctVolumeTo20C, ullageVariancePct, ULLAGE_ALERT_THRESHOLD_PCT } from "@/lib/types/trips";
 import { getTripById } from "@/server/actions/trips";
 import { listTripDocuments } from "@/server/actions/documents";
 import { listBorderCrossingsForTrip } from "@/server/actions/borders";
@@ -68,8 +72,12 @@ export default async function TripDetailPage({ params }: { params: Promise<{ id:
           <div className="grid grid-cols-2 gap-px bg-border md:grid-cols-4">
             <Stat
               icon={Package}
-              label="Cargo"
-              value={`${trip.cargoQuantity} ${trip.cargoUnit}`}
+              label={trip.product ?? "Cargo"}
+              value={
+                trip.cargoUnit === "litres"
+                  ? `${trip.cargoQuantity.toLocaleString()} L`
+                  : `${trip.cargoQuantity} ${trip.cargoUnit}`
+              }
               valueClassName="font-mono tnum"
             />
             <Stat
@@ -127,6 +135,9 @@ export default async function TripDetailPage({ params }: { params: Promise<{ id:
           mono
         />
       </div>
+
+      {/* Fuel cargo — loading + discharge observations */}
+      <FuelCargoCard trip={trip} />
 
       <div className="grid gap-4 lg:grid-cols-2">
         <LinkedCard
@@ -372,5 +383,225 @@ function LinkedCard({
         )}
       </CardContent>
     </Card>
+  );
+}
+
+type TripForFuelCard = {
+  product?: "PMS" | "AGO";
+  cargoQuantity: number;
+  cargoUnit: string;
+  loadedLitres?: number;
+  loadingTempC?: number;
+  density15C?: number;
+  loadedLitres20C?: number;
+  loadingSealNumbers?: string;
+  dischargedLitres?: number;
+  dischargeTempC?: number;
+  dischargedLitres20C?: number;
+  dischargeSealNumbers?: string;
+  ullagePct?: number;
+};
+
+function FuelCargoCard({ trip }: { trip: TripForFuelCard }) {
+  const hasLoading = trip.loadedLitres !== undefined;
+  const hasDischarge = trip.dischargedLitres !== undefined;
+
+  // Compute corrected litres / ullage on the fly if needed
+  const loaded20C =
+    trip.loadedLitres20C ??
+    (trip.loadedLitres !== undefined &&
+    trip.loadingTempC !== undefined &&
+    (trip.product === "PMS" || trip.product === "AGO")
+      ? correctVolumeTo20C(trip.product, trip.loadedLitres, trip.loadingTempC)
+      : undefined);
+  const discharged20C =
+    trip.dischargedLitres20C ??
+    (trip.dischargedLitres !== undefined &&
+    trip.dischargeTempC !== undefined &&
+    (trip.product === "PMS" || trip.product === "AGO")
+      ? correctVolumeTo20C(trip.product, trip.dischargedLitres, trip.dischargeTempC)
+      : undefined);
+  const ullage =
+    trip.ullagePct ??
+    (loaded20C !== undefined && discharged20C !== undefined
+      ? ullageVariancePct(loaded20C, discharged20C)
+      : undefined);
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2">
+          <FuelIcon className="size-4 text-fg-tertiary" />
+          Fuel cargo
+        </CardTitle>
+        <CardDescription>
+          {trip.product
+            ? `Product: ${trip.product} · agreed ${trip.cargoQuantity.toLocaleString()} L`
+            : `${trip.cargoQuantity} ${trip.cargoUnit}`}
+          {!hasLoading && trip.product
+            ? " · loading sheet not yet captured (F-4)"
+            : ""}
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="grid gap-4 md:grid-cols-3">
+        <FuelBlock title="Depot loading">
+          <KV
+            icon={Droplet}
+            label="Observed litres"
+            value={trip.loadedLitres === undefined ? "—" : `${trip.loadedLitres.toLocaleString()} L`}
+          />
+          <KV
+            icon={Thermometer}
+            label="Loading temp"
+            value={trip.loadingTempC === undefined ? "—" : `${trip.loadingTempC.toFixed(1)} °C`}
+          />
+          <KV
+            icon={Droplet}
+            label="Density (15 °C)"
+            value={trip.density15C === undefined ? "—" : `${trip.density15C.toFixed(3)} kg/L`}
+          />
+          <KV
+            icon={Droplet}
+            label="@ 20 °C corrected"
+            value={loaded20C === undefined ? "—" : `${loaded20C.toLocaleString()} L`}
+            highlight
+          />
+          <KV
+            icon={IdCardIcon}
+            label="Seal numbers"
+            value={trip.loadingSealNumbers ?? "—"}
+            mono
+          />
+        </FuelBlock>
+
+        <FuelBlock title="Customer discharge">
+          <KV
+            icon={Droplet}
+            label="Observed litres"
+            value={
+              trip.dischargedLitres === undefined
+                ? "—"
+                : `${trip.dischargedLitres.toLocaleString()} L`
+            }
+          />
+          <KV
+            icon={Thermometer}
+            label="Discharge temp"
+            value={
+              trip.dischargeTempC === undefined ? "—" : `${trip.dischargeTempC.toFixed(1)} °C`
+            }
+          />
+          <KV
+            icon={Droplet}
+            label="@ 20 °C corrected"
+            value={discharged20C === undefined ? "—" : `${discharged20C.toLocaleString()} L`}
+            highlight
+          />
+          <KV
+            icon={IdCardIcon}
+            label="Seal numbers"
+            value={trip.dischargeSealNumbers ?? "—"}
+            mono
+          />
+          {!hasDischarge && hasLoading && (
+            <div className="rounded-md border border-dashed border-border bg-bg-base/40 p-3 text-[11px] text-fg-tertiary">
+              Capture the discharge dipstick + temperature at delivery to compute
+              ullage variance.
+            </div>
+          )}
+        </FuelBlock>
+
+        <FuelBlock title="Variance">
+          {ullage === undefined ? (
+            <div className="rounded-md border border-dashed border-border bg-bg-base/40 p-3 text-[11px] text-fg-tertiary">
+              Awaiting both loading and discharge observations.
+            </div>
+          ) : (
+            <>
+              <KV
+                icon={Droplet}
+                label="Ullage"
+                value={`${ullage >= 0 ? "" : "+"}${(-ullage).toFixed(2)} %`}
+                highlight
+                tone={
+                  Math.abs(ullage) <= ULLAGE_ALERT_THRESHOLD_PCT
+                    ? "success"
+                    : "danger"
+                }
+              />
+              <KV
+                icon={Droplet}
+                label="Net delivered"
+                value={
+                  loaded20C !== undefined && discharged20C !== undefined
+                    ? `${discharged20C.toLocaleString()} L (of ${loaded20C.toLocaleString()})`
+                    : "—"
+                }
+              />
+              {Math.abs(ullage) > ULLAGE_ALERT_THRESHOLD_PCT && (
+                <div className="rounded-md border border-status-danger/30 bg-status-danger/10 p-3 text-[11px] text-status-danger">
+                  Variance exceeds the {ULLAGE_ALERT_THRESHOLD_PCT.toFixed(1)}% threshold —
+                  triggers ullage investigation.
+                </div>
+              )}
+            </>
+          )}
+        </FuelBlock>
+      </CardContent>
+    </Card>
+  );
+}
+
+function FuelBlock({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
+    <div className="rounded-md border border-border bg-bg-base/40 p-4">
+      <div className="mb-2 text-[10px] font-semibold uppercase tracking-wider text-fg-tertiary">
+        {title}
+      </div>
+      <div className="flex flex-col gap-2">{children}</div>
+    </div>
+  );
+}
+
+function KV({
+  icon: Icon,
+  label,
+  value,
+  highlight = false,
+  mono = false,
+  tone = "default",
+}: {
+  icon: React.ComponentType<{ className?: string }>;
+  label: string;
+  value: string;
+  highlight?: boolean;
+  mono?: boolean;
+  tone?: "default" | "success" | "danger";
+}) {
+  const colour =
+    tone === "success"
+      ? "text-status-success"
+      : tone === "danger"
+        ? "text-status-danger"
+        : highlight
+          ? "text-fg-primary"
+          : "text-fg-secondary";
+  return (
+    <div className="flex items-baseline justify-between gap-2">
+      <span className="inline-flex items-center gap-1.5 text-[11px] text-fg-tertiary">
+        <Icon className="size-3" />
+        {label}
+      </span>
+      <span
+        className={
+          (mono ? "font-mono " : "") +
+          (highlight ? "font-semibold " : "") +
+          "text-xs tnum " +
+          colour
+        }
+      >
+        {value}
+      </span>
+    </div>
   );
 }

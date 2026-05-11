@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
-import { Loader2, Save, Sparkles } from "lucide-react";
+import { Droplet, Fuel, Loader2, Save, Sparkles } from "lucide-react";
 import { createBooking } from "@/server/actions/bookings";
 import { lookupRate } from "@/server/actions/rates";
 import { Button } from "@/components/ui/button";
@@ -11,9 +11,22 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import type { RateBasis } from "@/lib/types/trips";
+import { FUEL_DEPOTS, FUEL_PRODUCT_LABELS, type FuelProduct, type RateBasis } from "@/lib/types/trips";
 
 type Cus = { id: string; name: string; billingCurrency: "KES" | "USD" };
+
+const DEFAULT_DESTINATIONS = [
+  "Nairobi",
+  "Kisumu",
+  "Eldoret",
+  "Nakuru",
+  "Kampala",
+  "Kigali",
+  "Bujumbura",
+  "Juba",
+  "Goma",
+  "Other (specify)",
+];
 
 export function BookingCreateForm({
   customers,
@@ -27,33 +40,36 @@ export function BookingCreateForm({
   const [error, setError] = useState<string | null>(null);
 
   const [customerId, setCustomerId] = useState(preselectCustomerId ?? "");
-  const [origin, setOrigin] = useState("");
-  const [destination, setDestination] = useState("");
+  const [product, setProduct] = useState<FuelProduct>("AGO");
+  const [origin, setOrigin] = useState<string>(FUEL_DEPOTS[0]);
+  const [destination, setDestination] = useState<string>(DEFAULT_DESTINATIONS[0]!);
+  const [destinationOther, setDestinationOther] = useState("");
   const [agreedAmount, setAgreedAmount] = useState("");
-  const [agreedBasis, setAgreedBasis] = useState<RateBasis>("per_tonne");
-  const [agreedCurrency, setAgreedCurrency] = useState<"KES" | "USD" | "UGX" | "TZS" | "RWF">("USD");
+  const [agreedBasis, setAgreedBasis] = useState<RateBasis>("per_litre");
+  const [agreedCurrency, setAgreedCurrency] = useState<"KES" | "USD" | "UGX" | "TZS" | "RWF">("KES");
   const [rateHint, setRateHint] = useState<string | null>(null);
   const [lookingUp, startLookup] = useTransition();
+
+  const finalDestination =
+    destination === "Other (specify)" ? destinationOther.trim() : destination;
 
   function onLookupRate() {
     setRateHint(null);
     startLookup(async () => {
       const rate = await lookupRate({
         origin,
-        destination,
+        destination: finalDestination,
         customerId: customerId || undefined,
       });
       if (!rate) {
-        setRateHint(`No rate found for ${origin} → ${destination}. Add one in /rates.`);
+        setRateHint(`No rate found for ${origin} → ${finalDestination}. Add one in /rates.`);
         return;
       }
       setAgreedAmount(String(rate.amount));
       setAgreedBasis(rate.basis);
       setAgreedCurrency(rate.currency);
       setRateHint(
-        rate.customerId
-          ? `Customer-specific rate applied.`
-          : `Default rate applied.`,
+        rate.customerId ? "Customer-specific rate applied." : "Default rate applied.",
       );
     });
   }
@@ -61,15 +77,19 @@ export function BookingCreateForm({
   async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setError(null);
+    if (destination === "Other (specify)" && !destinationOther.trim()) {
+      setError("Specify the destination");
+      return;
+    }
     setLoading(true);
     const fd = new FormData(e.currentTarget);
     const result = await createBooking({
       customerId,
       origin,
-      destination,
-      cargoType: String(fd.get("cargoType") ?? ""),
+      destination: finalDestination,
+      product,
       cargoQuantity: Number(fd.get("cargoQuantity") ?? 0),
-      cargoUnit: String(fd.get("cargoUnit") ?? "tonnes") as never,
+      cargoUnit: "litres",
       requestedDate: String(fd.get("requestedDate") ?? ""),
       agreedAmount: Number(agreedAmount),
       agreedBasis,
@@ -95,6 +115,9 @@ export function BookingCreateForm({
       <Card>
         <CardHeader>
           <CardTitle>Customer & route</CardTitle>
+          <CardDescription>
+            Pick the depot for loading and the offtake point for delivery.
+          </CardDescription>
         </CardHeader>
         <CardContent className="grid gap-4 sm:grid-cols-2">
           <Field label="Customer" className="sm:col-span-2">
@@ -109,36 +132,82 @@ export function BookingCreateForm({
               ))}
             </Select>
           </Field>
-          <Field label="Origin">
-            <Input value={origin} onChange={(e) => setOrigin(e.currentTarget.value)} required placeholder="Mombasa" />
+          <Field label="Origin (depot)">
+            <Select value={origin} onChange={(e) => setOrigin(e.currentTarget.value)} required>
+              {FUEL_DEPOTS.map((d) => (
+                <option key={d} value={d}>{d}</option>
+              ))}
+            </Select>
           </Field>
           <Field label="Destination">
-            <Input value={destination} onChange={(e) => setDestination(e.currentTarget.value)} required placeholder="Kampala" />
+            <Select
+              value={destination}
+              onChange={(e) => setDestination(e.currentTarget.value)}
+              required
+            >
+              {DEFAULT_DESTINATIONS.map((d) => (
+                <option key={d} value={d}>{d}</option>
+              ))}
+            </Select>
           </Field>
+          {destination === "Other (specify)" && (
+            <Field label="Destination name" className="sm:col-span-2">
+              <Input
+                value={destinationOther}
+                onChange={(e) => setDestinationOther(e.currentTarget.value)}
+                placeholder="e.g. Lokichogio, Mtwapa, Mwanza…"
+                required
+              />
+            </Field>
+          )}
         </CardContent>
       </Card>
 
       <Card>
         <CardHeader>
-          <CardTitle>Cargo</CardTitle>
+          <CardTitle className="flex items-center gap-2">
+            <Fuel className="size-4 text-fg-tertiary" />
+            Product & volume
+          </CardTitle>
+          <CardDescription>
+            Loading observations (temperature, density, dipstick) are captured
+            later from the depot loading sheet.
+          </CardDescription>
         </CardHeader>
         <CardContent className="grid gap-4 sm:grid-cols-3">
-          <Field label="Cargo type" className="sm:col-span-3">
-            <Input name="cargoType" required placeholder="Coffee beans (bagged)" />
+          <Field label="Product" className="sm:col-span-1">
+            <div className="grid grid-cols-2 gap-2">
+              {(Object.keys(FUEL_PRODUCT_LABELS) as FuelProduct[]).map((p) => (
+                <button
+                  key={p}
+                  type="button"
+                  onClick={() => setProduct(p)}
+                  className={
+                    "inline-flex items-center justify-center gap-1.5 rounded-md border px-3 py-2 text-sm font-medium transition-all " +
+                    (product === p
+                      ? "border-brand-blue bg-brand-blue/10 text-brand-blue ring-1 ring-brand-blue/30"
+                      : "border-border bg-bg-elevated text-fg-secondary hover:border-border-strong hover:text-fg-primary")
+                  }
+                >
+                  <Droplet className="size-3.5" />
+                  {p}
+                </button>
+              ))}
+            </div>
           </Field>
-          <Field label="Quantity">
-            <Input name="cargoQuantity" type="number" required min={0} step="0.01" className="font-mono tnum" />
-          </Field>
-          <Field label="Unit">
-            <Select name="cargoUnit" defaultValue="tonnes">
-              <option value="tonnes">Tonnes</option>
-              <option value="TEUs">TEUs (containers)</option>
-              <option value="units">Units</option>
-              <option value="litres">Litres</option>
-            </Select>
+          <Field label="Quantity (litres)">
+            <Input
+              name="cargoQuantity"
+              type="number"
+              required
+              min={1}
+              step="1"
+              className="font-mono tnum"
+              placeholder="40000"
+            />
           </Field>
           <Field label="Requested date">
-            <Input name="requestedDate" type="date" required />
+            <Input name="requestedDate" type="date" required className="font-mono tnum" />
           </Field>
         </CardContent>
       </Card>
@@ -148,14 +217,17 @@ export function BookingCreateForm({
           <div className="flex items-center justify-between">
             <div>
               <CardTitle>Rate</CardTitle>
-              <CardDescription>Pulled from the rate table; you can override.</CardDescription>
+              <CardDescription>
+                Pulled from the rate table; you can override. Per-litre or
+                per-litre-per-km is typical for fuel haul.
+              </CardDescription>
             </div>
             <Button
               type="button"
               variant="secondary"
               size="sm"
               onClick={onLookupRate}
-              disabled={lookingUp || !origin || !destination}
+              disabled={lookingUp || !origin || !finalDestination}
             >
               {lookingUp ? (
                 <Loader2 className="size-3.5 animate-spin" />
@@ -181,17 +253,17 @@ export function BookingCreateForm({
             />
           </Field>
           <Field label="Basis">
-            <Select value={agreedBasis} onChange={(e) => setAgreedBasis(e.currentTarget.value as never)}>
-              <option value="per_tonne">Per tonne</option>
-              <option value="per_container">Per container</option>
-              <option value="per_trip">Per trip</option>
+            <Select value={agreedBasis} onChange={(e) => setAgreedBasis(e.currentTarget.value as RateBasis)}>
+              <option value="per_litre">Per litre</option>
+              <option value="per_litre_per_km">Per litre per km</option>
+              <option value="per_trip">Per trip (flat)</option>
               <option value="per_km">Per km</option>
             </Select>
           </Field>
           <Field label="Currency">
             <Select value={agreedCurrency} onChange={(e) => setAgreedCurrency(e.currentTarget.value as never)}>
-              <option value="USD">USD</option>
               <option value="KES">KES</option>
+              <option value="USD">USD</option>
               <option value="UGX">UGX</option>
               <option value="TZS">TZS</option>
               <option value="RWF">RWF</option>
@@ -205,7 +277,7 @@ export function BookingCreateForm({
 
       <Card>
         <CardHeader><CardTitle>Notes</CardTitle></CardHeader>
-        <CardContent><Textarea name="notes" rows={3} /></CardContent>
+        <CardContent><Textarea name="notes" rows={3} placeholder="Customer release reference, special instructions, etc." /></CardContent>
       </Card>
 
       <div className="flex items-center justify-end gap-2">

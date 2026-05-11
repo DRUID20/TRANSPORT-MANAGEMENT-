@@ -36,10 +36,22 @@ export function TruckCreateForm({ subcontractors }: { subcontractors: Sub[] }) {
       capacityTonnes: Number(fd.get("capacityTonnes") ?? 0),
       axles: Number(fd.get("axles") ?? 3),
       status: "active" as const,
+      // Tanker spec
+      tankCapacityLitres: Number(fd.get("tankCapacityLitres") ?? 0) || undefined,
+      compartmentCount: Number(fd.get("compartmentCount") ?? 0) || undefined,
+      lastCalibrationDate: String(fd.get("lastCalibrationDate") ?? "") || undefined,
+      calibrationDueDate: String(fd.get("calibrationDueDate") ?? "") || undefined,
+      permittedProducts: (fd.getAll("permittedProducts") as string[]).filter(
+        (p): p is "PMS" | "AGO" => p === "PMS" || p === "AGO",
+      ),
       insuranceExpiry: String(fd.get("insuranceExpiry") ?? "") || undefined,
       ntsaInspectionExpiry: String(fd.get("ntsaInspectionExpiry") ?? "") || undefined,
       comesaPermitExpiry: String(fd.get("comesaPermitExpiry") ?? "") || undefined,
       transitPermitExpiry: String(fd.get("transitPermitExpiry") ?? "") || undefined,
+      epraTransitLicenceExpiry:
+        String(fd.get("epraTransitLicenceExpiry") ?? "") || undefined,
+      petroleumLiabilityExpiry:
+        String(fd.get("petroleumLiabilityExpiry") ?? "") || undefined,
       notes: String(fd.get("notes") ?? "") || undefined,
     };
     const result = await createTruck(input);
@@ -145,14 +157,66 @@ export function TruckCreateForm({ subcontractors }: { subcontractors: Sub[] }) {
 
       <Card>
         <CardHeader>
+          <CardTitle>Tanker spec</CardTitle>
+        </CardHeader>
+        <CardContent className="grid gap-4 sm:grid-cols-2">
+          <Field label="Tank capacity (litres)" hint="Sum of all compartments">
+            <Input
+              name="tankCapacityLitres"
+              type="number"
+              min={1000}
+              step={100}
+              placeholder="40000"
+              className="font-mono tnum"
+            />
+          </Field>
+          <Field label="Compartments" hint="Typically 4 to 7">
+            <Input
+              name="compartmentCount"
+              type="number"
+              min={1}
+              max={10}
+              placeholder="5"
+              className="font-mono tnum"
+            />
+          </Field>
+          <Field label="Last calibration date" hint="EPRA cert; valid 2 years">
+            <Input name="lastCalibrationDate" type="date" />
+          </Field>
+          <Field label="Calibration due">
+            <Input name="calibrationDueDate" type="date" />
+          </Field>
+          <Field label="Permitted products" className="sm:col-span-2">
+            <div className="flex flex-wrap gap-3">
+              <label className="inline-flex items-center gap-2 rounded-md border border-border bg-bg-elevated px-3 py-2 text-sm">
+                <input type="checkbox" name="permittedProducts" value="PMS" defaultChecked />
+                <span>PMS (petrol)</span>
+              </label>
+              <label className="inline-flex items-center gap-2 rounded-md border border-border bg-bg-elevated px-3 py-2 text-sm">
+                <input type="checkbox" name="permittedProducts" value="AGO" defaultChecked />
+                <span>AGO (diesel)</span>
+              </label>
+            </div>
+          </Field>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
           <CardTitle>Compliance & expiries</CardTitle>
         </CardHeader>
         <CardContent className="grid gap-4 sm:grid-cols-2">
           <Field label="Insurance expiry" hint="GIT + comprehensive">
             <Input name="insuranceExpiry" type="date" />
           </Field>
+          <Field label="Petroleum carriers' liability" hint="Required for fuel haul">
+            <Input name="petroleumLiabilityExpiry" type="date" />
+          </Field>
           <Field label="NTSA inspection expiry">
             <Input name="ntsaInspectionExpiry" type="date" />
+          </Field>
+          <Field label="EPRA transit licence">
+            <Input name="epraTransitLicenceExpiry" type="date" />
           </Field>
           <Field label="COMESA permit expiry">
             <Input name="comesaPermitExpiry" type="date" />
