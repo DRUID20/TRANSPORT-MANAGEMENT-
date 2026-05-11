@@ -14,8 +14,10 @@ import { TripPlanForm } from "./trip-plan-form";
 
 const basisLabel = {
   per_trip: "per trip",
-  per_tonne: "per tonne",
+  per_litre: "per litre",
+  per_litre_per_km: "per litre per km",
   per_km: "per km",
+  per_tonne: "per tonne",
   per_container: "per container",
 } as const;
 

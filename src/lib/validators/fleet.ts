@@ -20,10 +20,19 @@ export const truckCreateSchema = z
     capacityTonnes: z.coerce.number().positive(),
     axles: z.coerce.number().int().min(2).max(7),
     status: z.enum(["active", "in_service", "in_workshop", "idle", "retired"]).default("active"),
+    // Tanker spec
+    tankCapacityLitres: z.coerce.number().positive().optional(),
+    compartmentCount: z.coerce.number().int().min(1).max(10).optional(),
+    compartmentCapacitiesLitres: z.array(z.coerce.number().positive()).optional(),
+    lastCalibrationDate: z.string().optional(),
+    calibrationDueDate: z.string().optional(),
+    permittedProducts: z.array(z.enum(["PMS", "AGO"])).optional(),
     insuranceExpiry: z.string().optional(),
     ntsaInspectionExpiry: z.string().optional(),
     comesaPermitExpiry: z.string().optional(),
     transitPermitExpiry: z.string().optional(),
+    epraTransitLicenceExpiry: z.string().optional(),
+    petroleumLiabilityExpiry: z.string().optional(),
     notes: z.string().optional(),
   })
   .refine(

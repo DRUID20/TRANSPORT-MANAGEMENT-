@@ -11,6 +11,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import type { RateBasis } from "@/lib/types/trips";
 
 type Cus = { id: string; name: string; billingCurrency: "KES" | "USD" };
 
@@ -29,7 +30,7 @@ export function BookingCreateForm({
   const [origin, setOrigin] = useState("");
   const [destination, setDestination] = useState("");
   const [agreedAmount, setAgreedAmount] = useState("");
-  const [agreedBasis, setAgreedBasis] = useState<"per_trip" | "per_tonne" | "per_km" | "per_container">("per_tonne");
+  const [agreedBasis, setAgreedBasis] = useState<RateBasis>("per_tonne");
   const [agreedCurrency, setAgreedCurrency] = useState<"KES" | "USD" | "UGX" | "TZS" | "RWF">("USD");
   const [rateHint, setRateHint] = useState<string | null>(null);
   const [lookingUp, startLookup] = useTransition();

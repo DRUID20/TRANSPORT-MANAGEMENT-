@@ -16,6 +16,7 @@ export type FuelType = "diesel" | "petrol";
 
 /**
  * A truck. Identified by Kenyan registration plate (e.g. "KCB 421R").
+ * Fuel-only TMS: every truck is a tanker.
  * If owned by a subcontractor, `subcontractorId` is set.
  */
 export interface Truck {
@@ -26,17 +27,34 @@ export interface Truck {
   make: string;                    // e.g. "Mercedes-Benz"
   model: string;                   // e.g. "Actros 2545"
   year: number;
-  fuelType: FuelType;
-  capacityTonnes: number;          // payload capacity
+  fuelType: FuelType;              // truck's own engine fuel (diesel)
+  capacityTonnes: number;          // legacy payload capacity — kept for non-tanker rigs (Phase 1)
   axles: number;
   status: TruckStatus;
   currentDriverId?: string;
   notes?: string;
+  // ── Tanker specification (fuel-only TMS) ────────────────────
+  /** Total tank capacity in litres (sum of compartments). */
+  tankCapacityLitres?: number;
+  /** Number of compartments — usually 4 to 7 for road tankers. */
+  compartmentCount?: number;
+  /** Per-compartment capacity in litres, in order. */
+  compartmentCapacitiesLitres?: number[];
+  /** Last EPRA tank-calibration certificate date. Cert valid for 2 years. */
+  lastCalibrationDate?: string;
+  /** Next calibration due date. */
+  calibrationDueDate?: string;
+  /** Permitted products this tanker is rated to carry. */
+  permittedProducts?: ("PMS" | "AGO")[];
   // Compliance / expiry dates
   insuranceExpiry?: string;        // ISO date
   ntsaInspectionExpiry?: string;
   comesaPermitExpiry?: string;
   transitPermitExpiry?: string;
+  /** EPRA / Kenya Pipeline transit licence. */
+  epraTransitLicenceExpiry?: string;
+  /** Petroleum carriers' liability insurance. */
+  petroleumLiabilityExpiry?: string;
   createdAt: string;               // ISO datetime
 }
 

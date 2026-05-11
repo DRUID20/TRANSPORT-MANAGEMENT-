@@ -9,6 +9,7 @@ import {
   updateBookingStatus as storeUpdateStatus,
 } from "@/server/store/mock-store";
 import type { BookingStatus } from "@/lib/types/trips";
+import { FUEL_PRODUCT_LABELS } from "@/lib/types/trips";
 import { bookingCreateSchema, type BookingCreateInput } from "@/lib/validators/trips";
 
 export async function listBookings(filterStatus?: BookingStatus) {
@@ -29,11 +30,16 @@ export async function createBooking(input: BookingCreateInput): Promise<ActionRe
   if (!parsed.success) {
     return { ok: false, error: parsed.error.errors.map((e) => e.message).join("; ") };
   }
+  // Fuel-only TMS — default to AGO when the caller hasn't specified yet.
+  // F-2 rewrites the booking form to make product an explicit pick.
+  const product = parsed.data.product ?? "AGO";
+  const cargoType = parsed.data.cargoType ?? FUEL_PRODUCT_LABELS[product];
   const created = storeCreate({
     customerId: parsed.data.customerId,
     origin: parsed.data.origin,
     destination: parsed.data.destination,
-    cargoType: parsed.data.cargoType,
+    product,
+    cargoType,
     cargoQuantity: parsed.data.cargoQuantity,
     cargoUnit: parsed.data.cargoUnit,
     requestedDate: parsed.data.requestedDate,

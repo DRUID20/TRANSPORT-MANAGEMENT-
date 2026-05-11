@@ -1,11 +1,47 @@
 /**
  * Trips domain types — Phase 2.
  * Customers, Rate Table, Bookings, Trips.
+ *
+ * Fuel-only TMS (2026-05-11). Cargo is exclusively PMS (petrol) or AGO
+ * (diesel). Volume is in litres; loaded vs delivered litres are
+ * temperature-corrected to 20°C using captured density. Trucks are
+ * tankers with calibrated compartments.
  */
 
 // ============================================================
-// Customers (export shippers)
+// Fuel products in scope
 // ============================================================
+export type FuelProduct = "PMS" | "AGO";
+
+export const FUEL_PRODUCT_LABELS: Record<FuelProduct, string> = {
+  PMS: "PMS (petrol)",
+  AGO: "AGO (diesel)",
+};
+
+/** Typical density at 15°C in kg/L. Captured per consignment in production. */
+export const FUEL_TYPICAL_DENSITY: Record<FuelProduct, number> = {
+  PMS: 0.745,
+  AGO: 0.840,
+};
+
+/** Kenyan fuel depots — used as origin / loading point for trips. */
+export const FUEL_DEPOTS = [
+  "KPC Mombasa",
+  "KPC Nairobi",
+  "KPRL Mombasa",
+  "KPC Eldoret",
+  "KPC Kisumu",
+  "KPC Nakuru",
+] as const;
+
+// ============================================================
+// Customers (fuel offtakers)
+// ============================================================
+export type CustomerType =
+  | "service_station"
+  | "industrial"
+  | "transporter"
+  | "other";
 export interface Customer {
   id: string;
   name: string;
@@ -13,6 +49,10 @@ export interface Customer {
   phone: string;
   email?: string;
   kraPin?: string;
+  /** Service station vs industrial vs transporter (resale). */
+  customerType?: CustomerType;
+  /** EPRA marketer / dealer licence number, if applicable. */
+  epraLicenceNumber?: string;
   /** Where to send invoices and statements. */
   billingAddress?: string;
   /** Currency the customer is billed in (KES base; USD common for exports). */
@@ -26,7 +66,15 @@ export interface Customer {
 // ============================================================
 // Rate table (destination-driven rate engine)
 // ============================================================
-export type RateBasis = "per_trip" | "per_tonne" | "per_km" | "per_container";
+export type RateBasis =
+  | "per_trip"
+  | "per_litre"
+  | "per_litre_per_km"
+  | "per_km"
+  // Legacy / general-cargo basis values — kept so existing rate seeds remain
+  // valid. New rate cards for fuel should use one of the basis values above.
+  | "per_tonne"
+  | "per_container";
 export type Currency = "KES" | "USD" | "UGX" | "TZS" | "RWF";
 
 export interface Rate {
@@ -54,10 +102,15 @@ export interface Booking {
   id: string;
   number: string;          // e.g. "BK-2026-0042"
   customerId: string;
-  origin: string;
+  origin: string;          // depot, e.g. "KPC Mombasa"
   destination: string;
-  cargoType: string;       // free-text e.g. "General cargo", "Coffee beans"
+  /** Fuel product. Free-text cargoType is preserved for legacy seeds but
+   *  every new booking now sets `product` instead. */
+  product?: FuelProduct;
+  cargoType: string;       // legacy free-text — equal to FUEL_PRODUCT_LABELS[product] for new rows
+  /** Volume agreed at booking time. */
   cargoQuantity: number;
+  /** Always "litres" for new fuel bookings; legacy seeds may use other units. */
   cargoUnit: CargoUnit;
   /** Required pick-up date. */
   requestedDate: string;   // ISO date
@@ -128,11 +181,32 @@ export interface Trip {
   driverId: string;
   status: TripStatus;
   /** Snapshot of route + cargo at planning time. */
-  origin: string;
+  origin: string;          // depot, e.g. "KPC Mombasa"
   destination: string;
+  /** Fuel product. New trips always set this; legacy rows keep cargoType only. */
+  product?: FuelProduct;
   cargoType: string;
   cargoQuantity: number;
   cargoUnit: CargoUnit;
+  /** Loading observations at the depot. */
+  loadedLitres?: number;
+  loadingTempC?: number;
+  /** Product density at 15°C in kg/L from the product certificate. */
+  density15C?: number;
+  /** Loaded volume corrected to 20°C using captured density. */
+  loadedLitres20C?: number;
+  /** Seal numbers fitted at the depot (top + bottom or per compartment). */
+  loadingSealNumbers?: string;
+  /** Discharge observations at the customer. */
+  dischargedLitres?: number;
+  dischargeTempC?: number;
+  dischargedLitres20C?: number;
+  dischargeSealNumbers?: string;
+  /** Ullage variance % = (loaded20C - discharged20C) / loaded20C * 100.
+   *  Threshold typically 0.5%; anything higher triggers an investigation. */
+  ullagePct?: number;
+  /** Optional transit-bond reference for cross-border loads. */
+  transitBondNumber?: string;
   /** Snapshot of agreed revenue. */
   revenueAmount: number;
   revenueCurrency: Currency;
@@ -156,3 +230,44 @@ export interface Trip {
   notes?: string;
   createdAt: string;
 }
+
+// ============================================================
+// Fuel volume helpers
+// ============================================================
+
+/**
+ * Convert an observed (ambient-temperature) volume to its 20°C-corrected
+ * equivalent using a simplified Volume Correction Factor (VCF). Petroleum
+ * tables (ASTM D1250) give a precise factor per product + density; the
+ * approximation here uses the cubical expansion coefficient β (per °C):
+ *   AGO (diesel): β ≈ 0.00084 /°C
+ *   PMS (petrol): β ≈ 0.00120 /°C
+ * VCF = 1 / (1 + β × (T − 20)).
+ *
+ * Accurate enough for operational ullage reporting; the authoritative
+ * temperature-correction at month-end still uses ASTM tables.
+ */
+export function correctVolumeTo20C(
+  product: FuelProduct,
+  observedLitres: number,
+  tempC: number,
+): number {
+  const beta = product === "PMS" ? 0.0012 : 0.00084;
+  const vcf = 1 / (1 + beta * (tempC - 20));
+  return Math.round(observedLitres * vcf);
+}
+
+/**
+ * Compute the ullage variance (%): positive = loss, negative = gain.
+ * Both inputs are 20°C-corrected litres.
+ */
+export function ullageVariancePct(
+  loadedLitres20C: number,
+  dischargedLitres20C: number,
+): number {
+  if (loadedLitres20C <= 0) return 0;
+  return ((loadedLitres20C - dischargedLitres20C) / loadedLitres20C) * 100;
+}
+
+/** Threshold above which an ullage variance should trigger an alert. */
+export const ULLAGE_ALERT_THRESHOLD_PCT = 0.5;

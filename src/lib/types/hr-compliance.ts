@@ -14,6 +14,10 @@ export type ComplianceKind =
   | "work_permit"
   | "contract"
   | "training_certificate"
+  // Fuel-only TMS — petroleum-carrier specific
+  | "hazmat_endorsement"
+  | "epra_dangerous_goods"
+  | "puc_certificate"
   | "other";
 
 export type ComplianceStatus = "valid" | "expiring_soon" | "expired" | "missing";
@@ -60,5 +64,8 @@ export const KIND_LABELS: Record<ComplianceKind, string> = {
   work_permit: "Work permit",
   contract: "Contract",
   training_certificate: "Training certificate",
+  hazmat_endorsement: "Hazardous-goods (HazMat) endorsement",
+  epra_dangerous_goods: "EPRA dangerous-goods permit",
+  puc_certificate: "Pollution Under Control (PUC) cert",
   other: "Other",
 };

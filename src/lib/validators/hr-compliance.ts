@@ -10,6 +10,10 @@ const kindEnum = z.enum([
   "work_permit",
   "contract",
   "training_certificate",
+  // Fuel-only TMS
+  "hazmat_endorsement",
+  "epra_dangerous_goods",
+  "puc_certificate",
   "other",
 ]);
 
