@@ -141,6 +141,7 @@ import type {
   NotificationStatus,
   NotificationTemplate,
 } from "@/lib/types/notifications";
+import { ageBucket as computeAgeBucket } from "@/lib/types/ar";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 
@@ -3796,6 +3797,322 @@ export function bankReconSummary(accountCode: string) {
     unmatchedStatementCount,
     unmatchedGlCount,
   };
+}
+
+// ============================================================
+// Phase 8A — Reports library aggregations
+// AR/AP aging, fleet utilisation, fuel efficiency, expense breakdown
+// ============================================================
+
+export interface ArAgingRow {
+  customerId: string;
+  customerName: string;
+  current: number;
+  d1to30: number;
+  d31to60: number;
+  d61to90: number;
+  d90plus: number;
+  total: number;
+  /** Number of open invoices. */
+  invoiceCount: number;
+}
+
+/** Aged AR per customer, in KES (using each invoice's captured FX rate). */
+export function arAgingByCustomer(asOf = new Date()): ArAgingRow[] {
+  const byCustomer = new Map<string, ArAgingRow>();
+  for (const inv of invoices.values()) {
+    if (inv.status === "draft" || inv.status === "cancelled" || inv.status === "paid") continue;
+    const balanceKes = inv.balance * inv.fxRate;
+    if (balanceKes <= 0) continue;
+    const bucket = computeAgeBucket(inv.dueDate, asOf);
+
+    if (!byCustomer.has(inv.customerId)) {
+      const cust = customers.get(inv.customerId);
+      byCustomer.set(inv.customerId, {
+        customerId: inv.customerId,
+        customerName: cust?.name ?? "Unknown",
+        current: 0,
+        d1to30: 0,
+        d31to60: 0,
+        d61to90: 0,
+        d90plus: 0,
+        total: 0,
+        invoiceCount: 0,
+      });
+    }
+    const row = byCustomer.get(inv.customerId)!;
+    if (bucket === "current") row.current += balanceKes;
+    else if (bucket === "1-30") row.d1to30 += balanceKes;
+    else if (bucket === "31-60") row.d31to60 += balanceKes;
+    else if (bucket === "61-90") row.d61to90 += balanceKes;
+    else row.d90plus += balanceKes;
+    row.total += balanceKes;
+    row.invoiceCount++;
+  }
+  return [...byCustomer.values()].sort((a, b) => b.total - a.total);
+}
+
+export interface ApAgingRow {
+  supplierId: string;
+  supplierName: string;
+  current: number;
+  d1to30: number;
+  d31to60: number;
+  d61to90: number;
+  d90plus: number;
+  total: number;
+  billCount: number;
+}
+
+/** Aged AP per supplier, in KES. Mirror of arAgingByCustomer. */
+export function apAgingBySupplier(asOf = new Date()): ApAgingRow[] {
+  const bySupplier = new Map<string, ApAgingRow>();
+  for (const bill of bills.values()) {
+    if (bill.status === "draft" || bill.status === "cancelled" || bill.status === "paid") continue;
+    const balanceKes = bill.balance * bill.fxRate;
+    if (balanceKes <= 0) continue;
+    const bucket = computeAgeBucket(bill.dueDate, asOf);
+
+    if (!bySupplier.has(bill.supplierId)) {
+      const sup = suppliers.get(bill.supplierId);
+      bySupplier.set(bill.supplierId, {
+        supplierId: bill.supplierId,
+        supplierName: sup?.name ?? "Unknown",
+        current: 0,
+        d1to30: 0,
+        d31to60: 0,
+        d61to90: 0,
+        d90plus: 0,
+        total: 0,
+        billCount: 0,
+      });
+    }
+    const row = bySupplier.get(bill.supplierId)!;
+    if (bucket === "current") row.current += balanceKes;
+    else if (bucket === "1-30") row.d1to30 += balanceKes;
+    else if (bucket === "31-60") row.d31to60 += balanceKes;
+    else if (bucket === "61-90") row.d61to90 += balanceKes;
+    else row.d90plus += balanceKes;
+    row.total += balanceKes;
+    row.billCount++;
+  }
+  return [...bySupplier.values()].sort((a, b) => b.total - a.total);
+}
+
+export interface FleetUtilisationRow {
+  truckId: string;
+  registration: string;
+  status: string;
+  /** Distinct trips this truck appeared on in the range. */
+  tripCount: number;
+  /** Total km driven (last odometer - first odometer per truck/range, or sum from fuel logs). */
+  kmDriven: number;
+  /** Total revenue from invoices on this truck's trips (KES). */
+  revenueKes: number;
+  /** Total fuel cost (KES). */
+  fuelKes: number;
+  /** Total expenses (KES). */
+  expensesKes: number;
+  /** Gross profit. */
+  grossProfitKes: number;
+  /** Margin %. */
+  marginPct: number | null;
+}
+
+export function fleetUtilisation(range?: {
+  fromDate?: string;
+  toDate?: string;
+}): FleetUtilisationRow[] {
+  const from = range?.fromDate ? new Date(range.fromDate) : new Date(0);
+  const to = range?.toDate ? new Date(range.toDate) : new Date(8640000000000000);
+
+  const inRange = (iso?: string) => {
+    if (!iso) return false;
+    const d = new Date(iso);
+    return d >= from && d <= to;
+  };
+
+  const rows: FleetUtilisationRow[] = [];
+  for (const truck of trucks.values()) {
+    const tripIds = new Set<string>();
+    for (const t of trips.values()) {
+      const ref = t.actualDepartureAt ?? t.plannedDepartureDate ?? t.createdAt;
+      if (t.truckId === truck.id && inRange(ref)) {
+        tripIds.add(t.id);
+      }
+    }
+
+    const revenueKes = [...invoices.values()]
+      .filter(
+        (inv) =>
+          inv.tripId &&
+          tripIds.has(inv.tripId) &&
+          inv.status !== "draft" &&
+          inv.status !== "cancelled",
+      )
+      .reduce((s, inv) => s + inv.total * inv.fxRate, 0);
+
+    const fuelLogsForTruck = [...fuelLogs.values()].filter(
+      (f) => f.truckId === truck.id && inRange(f.datetime),
+    );
+    const fuelKes = fuelLogsForTruck.reduce((s, f) => s + f.costKes, 0);
+    const odometers = fuelLogsForTruck.map((f) => f.odometerKm).sort((a, b) => a - b);
+    const kmDriven = odometers.length >= 2 ? odometers[odometers.length - 1]! - odometers[0]! : 0;
+
+    const expensesKes = [...expenses.values()]
+      .filter(
+        (e) =>
+          e.tripId &&
+          tripIds.has(e.tripId) &&
+          (e.status === "approved" || e.status === "reimbursed") &&
+          e.paidBy !== "advance",
+      )
+      .reduce((s, e) => s + e.amountKes, 0);
+
+    const grossProfitKes = revenueKes - fuelKes - expensesKes;
+    const marginPct = revenueKes > 0 ? grossProfitKes / revenueKes : null;
+
+    rows.push({
+      truckId: truck.id,
+      registration: truck.registration,
+      status: truck.status,
+      tripCount: tripIds.size,
+      kmDriven,
+      revenueKes,
+      fuelKes,
+      expensesKes,
+      grossProfitKes,
+      marginPct,
+    });
+  }
+  return rows.sort((a, b) => b.grossProfitKes - a.grossProfitKes);
+}
+
+export interface FuelEfficiencyRow {
+  truckId: string;
+  registration: string;
+  fills: number;
+  totalLitres: number;
+  totalKes: number;
+  /** First-to-last odometer span. */
+  kmCovered: number;
+  /** L/100km. */
+  litresPer100km: number | null;
+  /** KES per km. */
+  kesPerKm: number | null;
+  /** Average price per litre across this period. */
+  avgPricePerLitre: number | null;
+}
+
+export function fuelEfficiencyByTruck(range?: {
+  fromDate?: string;
+  toDate?: string;
+}): FuelEfficiencyRow[] {
+  const from = range?.fromDate ? new Date(range.fromDate) : new Date(0);
+  const to = range?.toDate ? new Date(range.toDate) : new Date(8640000000000000);
+
+  const rows: FuelEfficiencyRow[] = [];
+  for (const truck of trucks.values()) {
+    const fills = [...fuelLogs.values()]
+      .filter((f) => f.truckId === truck.id)
+      .filter((f) => {
+        const d = new Date(f.datetime);
+        return d >= from && d <= to;
+      })
+      .sort((a, b) => a.odometerKm - b.odometerKm);
+
+    if (fills.length === 0) {
+      rows.push({
+        truckId: truck.id,
+        registration: truck.registration,
+        fills: 0,
+        totalLitres: 0,
+        totalKes: 0,
+        kmCovered: 0,
+        litresPer100km: null,
+        kesPerKm: null,
+        avgPricePerLitre: null,
+      });
+      continue;
+    }
+
+    const totalLitres = fills.reduce((s, f) => s + f.litres, 0);
+    const totalKes = fills.reduce((s, f) => s + f.costKes, 0);
+    const kmCovered =
+      fills.length >= 2 ? fills[fills.length - 1]!.odometerKm - fills[0]!.odometerKm : 0;
+    // L/100km uses all-but-first fill's litres against the km covered between
+    // first and last odometers (tank-to-tank method)
+    const litresAfterFirst = fills.slice(1).reduce((s, f) => s + f.litres, 0);
+    const litresPer100km = kmCovered > 0 ? (litresAfterFirst / kmCovered) * 100 : null;
+    const kesPerKm = kmCovered > 0 ? totalKes / kmCovered : null;
+    const avgPricePerLitre = totalLitres > 0 ? totalKes / totalLitres : null;
+
+    rows.push({
+      truckId: truck.id,
+      registration: truck.registration,
+      fills: fills.length,
+      totalLitres,
+      totalKes,
+      kmCovered,
+      litresPer100km,
+      kesPerKm,
+      avgPricePerLitre,
+    });
+  }
+  return rows.sort((a, b) => {
+    if (a.litresPer100km === null) return 1;
+    if (b.litresPer100km === null) return -1;
+    return a.litresPer100km - b.litresPer100km;
+  });
+}
+
+export interface ExpenseBreakdownRow {
+  key: string;
+  label: string;
+  amountKes: number;
+  count: number;
+}
+
+/** Expense breakdown by category or truck within an optional date range. */
+export function expenseBreakdown(opts: {
+  dimension: "category" | "truck" | "currency";
+  fromDate?: string;
+  toDate?: string;
+}): ExpenseBreakdownRow[] {
+  const from = opts.fromDate ? new Date(opts.fromDate) : new Date(0);
+  const to = opts.toDate ? new Date(opts.toDate) : new Date(8640000000000000);
+
+  const bucket = new Map<string, ExpenseBreakdownRow>();
+  for (const e of expenses.values()) {
+    if (e.status !== "approved" && e.status !== "reimbursed") continue;
+    const created = new Date(e.createdAt);
+    if (created < from || created > to) continue;
+
+    let key: string;
+    let label: string;
+    if (opts.dimension === "category") {
+      key = e.category;
+      label = e.category;
+    } else if (opts.dimension === "truck") {
+      const trip = e.tripId ? trips.get(e.tripId) : undefined;
+      const truck = trip?.truckId ? trucks.get(trip.truckId) : undefined;
+      key = truck?.id ?? "__unallocated__";
+      label = truck?.registration ?? "Unallocated";
+    } else {
+      const c = e.originalCurrency ?? "KES";
+      key = c;
+      label = c;
+    }
+
+    if (!bucket.has(key)) {
+      bucket.set(key, { key, label, amountKes: 0, count: 0 });
+    }
+    const row = bucket.get(key)!;
+    row.amountKes += e.amountKes;
+    row.count++;
+  }
+
+  return [...bucket.values()].sort((a, b) => b.amountKes - a.amountKes);
 }
 
 // ============================================================
