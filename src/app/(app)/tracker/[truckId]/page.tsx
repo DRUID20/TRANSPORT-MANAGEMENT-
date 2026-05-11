@@ -202,7 +202,18 @@ export default async function TruckScorecardPage({
         </CardContent>
       </Card>
 
-      <div className="grid gap-3 md:grid-cols-3">
+      <div className="grid gap-3 md:grid-cols-4">
+        <Link
+          href={`/reports/profit-per-truck/${truckId}?from=${fromDate}&to=${toDate}`}
+          className="group block rounded-lg border border-border bg-bg-elevated p-4 transition-all hover:border-border-strong"
+        >
+          <div className="flex items-center gap-2 text-sm font-semibold text-fg-primary group-hover:text-brand-blue">
+            <Banknote className="size-3.5" /> Full P&L statement
+          </div>
+          <div className="text-[11px] text-fg-secondary">
+            Direct + indirect cost breakdown.
+          </div>
+        </Link>
         <Link
           href={`/trucks/${truckId}`}
           className="group block rounded-lg border border-border bg-bg-elevated p-4 transition-all hover:border-border-strong"

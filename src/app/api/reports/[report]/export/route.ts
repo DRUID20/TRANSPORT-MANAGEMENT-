@@ -3,8 +3,10 @@ import {
   apAgingBySupplier,
   arAgingByCustomer,
   expenseBreakdown,
+  fleetProfitAndLoss,
   fleetUtilisation,
   fuelEfficiencyByTruck,
+  truckProfitAndLoss,
 } from "@/server/store/mock-store";
 
 type Row = Record<string, string | number | null>;
@@ -128,6 +130,67 @@ export async function GET(
         amount_kes: Math.round(r.amountKes),
       }));
       filename = `expenses-${dim}-${fromDate ?? "ytd"}-${toDate ?? "today"}.csv`;
+      break;
+    }
+    case "truck-pnl": {
+      const truckParam = url.searchParams.get("truck") ?? undefined;
+      const data = truckParam
+        ? (() => {
+            const single = truckProfitAndLoss(truckParam, { fromDate, toDate });
+            return single ? [single] : [];
+          })()
+        : fleetProfitAndLoss({ fromDate, toDate });
+      headers = [
+        "truck_id",
+        "registration",
+        "status",
+        "trip_count",
+        "km_driven",
+        "revenue_kes",
+        "fuel_kes",
+        "border_kes",
+        "advance_used_kes",
+        "trip_expenses_kes",
+        "direct_cost_total",
+        "gross_profit",
+        "gross_margin_pct",
+        "workshop_kes",
+        "tyre_kes",
+        "indirect_cost_total",
+        "operating_profit",
+        "operating_margin_pct",
+        "revenue_per_km",
+        "cost_per_km",
+        "profit_per_km",
+      ];
+      rows = data.map((r) => ({
+        truck_id: r.truckId,
+        registration: r.registration,
+        status: r.status,
+        trip_count: r.tripCount,
+        km_driven: r.kmDriven,
+        revenue_kes: Math.round(r.revenueKes),
+        fuel_kes: Math.round(r.fuelKes),
+        border_kes: Math.round(r.borderChargesKes),
+        advance_used_kes: Math.round(r.driverAdvanceUsedKes),
+        trip_expenses_kes: Math.round(r.tripExpensesKes),
+        direct_cost_total: Math.round(r.directCostTotal),
+        gross_profit: Math.round(r.grossProfit),
+        gross_margin_pct:
+          r.grossMarginPct === null ? null : Number((r.grossMarginPct * 100).toFixed(2)),
+        workshop_kes: Math.round(r.workshopKes),
+        tyre_kes: Math.round(r.tyreKes),
+        indirect_cost_total: Math.round(r.indirectCostTotal),
+        operating_profit: Math.round(r.operatingProfit),
+        operating_margin_pct:
+          r.operatingMarginPct === null ? null : Number((r.operatingMarginPct * 100).toFixed(2)),
+        revenue_per_km: r.revenuePerKm === null ? null : Math.round(r.revenuePerKm),
+        cost_per_km: r.costPerKm === null ? null : Math.round(r.costPerKm),
+        profit_per_km: r.profitPerKm === null ? null : Math.round(r.profitPerKm),
+      }));
+      filename = truckParam
+        ? `truck-pnl-${truckParam}-${fromDate ?? "ytd"}-${toDate ?? "today"}.csv`
+        : `truck-pnl-${fromDate ?? "ytd"}-${toDate ?? "today"}.csv`;
       break;
     }
     default:

@@ -4,11 +4,13 @@ import {
   apAgingBySupplier as storeApAging,
   arAgingByCustomer as storeArAging,
   expenseBreakdown as storeExpenseBreakdown,
+  fleetProfitAndLoss as storeFleetPnL,
   fleetUtilisation as storeFleetUtil,
   fuelEfficiencyByTruck as storeFuelEff,
   profitAndLoss as storePnL,
   statementOfFinancialPosition as storeSfp,
   tripProfitability as storeTripProfit,
+  truckProfitAndLoss as storeTruckPnL,
 } from "@/server/store/mock-store";
 
 export async function profitAndLoss(range?: { fromDate?: string; toDate?: string }) {
@@ -45,4 +47,15 @@ export async function expenseBreakdown(opts: {
   toDate?: string;
 }) {
   return storeExpenseBreakdown(opts);
+}
+
+export async function fleetProfitAndLoss(range?: { fromDate?: string; toDate?: string }) {
+  return storeFleetPnL(range);
+}
+
+export async function truckProfitAndLoss(
+  truckId: string,
+  range?: { fromDate?: string; toDate?: string },
+) {
+  return storeTruckPnL(truckId, range);
 }

@@ -87,6 +87,14 @@ const reports: Report[] = [
     group: "Operations",
   },
   {
+    href: "/reports/profit-per-truck",
+    title: "P&L per Truck",
+    desc: "Income statement per truck: revenue, direct costs, gross profit, indirect costs, operating profit.",
+    icon: Truck,
+    ready: true,
+    group: "Operations",
+  },
+  {
     href: "/reports/fleet-utilisation",
     title: "Fleet Utilisation",
     desc: "Per-truck trips, KM, revenue, costs and gross profit. Drives the Truck Performance Tracker.",

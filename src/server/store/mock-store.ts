@@ -4459,6 +4459,174 @@ export function customerRouteMatrix(range?: {
 }
 
 // ============================================================
+// P&L per truck — proper income-statement structure (Phase 8b+)
+//   Revenue
+//   – Direct costs (fuel, border, advance used, trip expenses)
+//   = Gross profit
+//   – Indirect costs (workshop incl. tyres)
+//   = Operating profit
+// All amounts in KES. Tyres are split out of workshop for visibility but
+// included in the indirect-cost total.
+// ============================================================
+export interface TruckPnL {
+  truckId: string;
+  registration: string;
+  status: string;
+  // Activity
+  tripCount: number;
+  kmDriven: number;
+  // Revenue
+  revenueKes: number;
+  invoiceCount: number;
+  // Direct costs
+  fuelKes: number;
+  borderChargesKes: number;
+  driverAdvanceUsedKes: number;
+  tripExpensesKes: number;
+  directCostTotal: number;
+  // Gross
+  grossProfit: number;
+  grossMarginPct: number | null;
+  // Indirect
+  workshopKes: number;
+  tyreKes: number;
+  indirectCostTotal: number;
+  // Operating
+  operatingProfit: number;
+  operatingMarginPct: number | null;
+  // Unit economics
+  revenuePerKm: number | null;
+  costPerKm: number | null;
+  profitPerKm: number | null;
+}
+
+export function truckProfitAndLoss(
+  truckId: string,
+  range?: { fromDate?: string; toDate?: string },
+): TruckPnL | undefined {
+  const truck = trucks.get(truckId);
+  if (!truck) return undefined;
+  const { from, to } = rangeBounds(range);
+  const inRange = (iso?: string) => {
+    if (!iso) return false;
+    const d = new Date(iso);
+    return d >= from && d <= to;
+  };
+
+  // Trips for this truck in range
+  const truckTrips = [...trips.values()].filter((t) => {
+    const ref = t.actualDepartureAt ?? t.plannedDepartureDate ?? t.createdAt;
+    return t.truckId === truck.id && inRange(ref);
+  });
+  const tripIds = new Set(truckTrips.map((t) => t.id));
+
+  // Revenue
+  const revenueInvoices = [...invoices.values()].filter(
+    (inv) =>
+      inv.tripId &&
+      tripIds.has(inv.tripId) &&
+      inv.status !== "draft" &&
+      inv.status !== "cancelled",
+  );
+  const revenueKes = revenueInvoices.reduce((s, inv) => s + inv.total * inv.fxRate, 0);
+
+  // Direct: fuel
+  const fuelLogsForTruck = [...fuelLogs.values()].filter(
+    (f) => f.truckId === truck.id && inRange(f.datetime),
+  );
+  const fuelKes = fuelLogsForTruck.reduce((s, f) => s + f.costKes, 0);
+  const odoSorted = [...fuelLogsForTruck].sort((a, b) => a.odometerKm - b.odometerKm);
+  const kmDriven =
+    odoSorted.length >= 2
+      ? odoSorted[odoSorted.length - 1]!.odometerKm - odoSorted[0]!.odometerKm
+      : 0;
+
+  // Direct: border charges
+  const borderChargesKes = [...borderCrossings.values()]
+    .filter((b) => b.tripId && tripIds.has(b.tripId))
+    .reduce((s, b) => s + (b.chargesKes ?? 0), 0);
+
+  // Direct: driver advance used (sum across trips)
+  const driverAdvanceUsedKes = truckTrips.reduce(
+    (s, t) => s + (t.driverAdvanceUsedKes ?? 0),
+    0,
+  );
+
+  // Direct: approved/reimbursed expenses (excluding advance-paid to avoid double-count)
+  const tripExpensesKes = [...expenses.values()]
+    .filter(
+      (e) =>
+        e.tripId &&
+        tripIds.has(e.tripId) &&
+        (e.status === "approved" || e.status === "reimbursed") &&
+        e.paidBy !== "advance",
+    )
+    .reduce((s, e) => s + e.amountKes, 0);
+
+  const directCostTotal = fuelKes + borderChargesKes + driverAdvanceUsedKes + tripExpensesKes;
+  const grossProfit = revenueKes - directCostTotal;
+  const grossMarginPct = revenueKes > 0 ? grossProfit / revenueKes : null;
+
+  // Indirect: workshop (closed or completed job cards in range; tyres split out)
+  let workshopKes = 0;
+  let tyreKes = 0;
+  for (const jc of jobCards.values()) {
+    if (jc.truckId !== truck.id) continue;
+    if (!inRange(jc.openedAt) && !inRange(jc.closedAt ?? jc.openedAt)) continue;
+    workshopKes += jc.totalKes ?? 0;
+    const spares = [...jobCardSpares.values()].filter((s) => s.jobCardId === jc.id);
+    for (const s of spares) {
+      if (/tyre|tire|tread/i.test(s.description)) tyreKes += s.totalCostKes;
+    }
+  }
+
+  const indirectCostTotal = workshopKes;
+  const operatingProfit = grossProfit - indirectCostTotal;
+  const operatingMarginPct = revenueKes > 0 ? operatingProfit / revenueKes : null;
+
+  const revenuePerKm = kmDriven > 0 ? revenueKes / kmDriven : null;
+  const costPerKm = kmDriven > 0 ? (directCostTotal + indirectCostTotal) / kmDriven : null;
+  const profitPerKm = kmDriven > 0 ? operatingProfit / kmDriven : null;
+
+  return {
+    truckId: truck.id,
+    registration: truck.registration,
+    status: truck.status,
+    tripCount: truckTrips.length,
+    kmDriven,
+    revenueKes,
+    invoiceCount: revenueInvoices.length,
+    fuelKes,
+    borderChargesKes,
+    driverAdvanceUsedKes,
+    tripExpensesKes,
+    directCostTotal,
+    grossProfit,
+    grossMarginPct,
+    workshopKes,
+    tyreKes,
+    indirectCostTotal,
+    operatingProfit,
+    operatingMarginPct,
+    revenuePerKm,
+    costPerKm,
+    profitPerKm,
+  };
+}
+
+export function fleetProfitAndLoss(range?: {
+  fromDate?: string;
+  toDate?: string;
+}): TruckPnL[] {
+  const out: TruckPnL[] = [];
+  for (const t of trucks.values()) {
+    const pl = truckProfitAndLoss(t.id, range);
+    if (pl) out.push(pl);
+  }
+  return out.sort((a, b) => b.operatingProfit - a.operatingProfit);
+}
+
+// ============================================================
 // HR (Phase 6A): Departments, Employees, Contracts
 // ============================================================
 const departmentSeed: Department[] = [
