@@ -37,6 +37,7 @@ import {
   Sliders,
   FileEdit,
   Inbox,
+  Sparkles,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Logo } from "@/components/layout/logo";
@@ -112,6 +113,12 @@ const navGroups: { title: string; items: NavItem[] }[] = [
       { href: "/notifications/log", label: "Outbound log", icon: ScrollText },
       { href: "/notifications/templates", label: "Templates", icon: FileEdit },
       { href: "/notifications/preferences", label: "Preferences", icon: Sliders },
+    ],
+  },
+  {
+    title: "AI",
+    items: [
+      { href: "/assistant", label: "Assistant", icon: Sparkles },
     ],
   },
   {
