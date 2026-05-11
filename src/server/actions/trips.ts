@@ -16,13 +16,22 @@ import {
   tripBorderCharges as storeBorderCharges,
   tripsForDriver as storeForDriver,
   tripsForTruck as storeForTruck,
+  updateTrip as storeUpdateTrip,
 } from "@/server/store/mock-store";
-import type { TripStatus } from "@/lib/types/trips";
+import {
+  correctVolumeTo20C,
+  ullageVariancePct,
+  type TripStatus,
+} from "@/lib/types/trips";
 import {
   tripPlanSchema,
   tripReconcileSchema,
+  tripLoadingSchema,
+  tripDischargeSchema,
   type TripPlanInput,
   type TripReconcileInput,
+  type TripLoadingInput,
+  type TripDischargeInput,
 } from "@/lib/validators/trips";
 
 export async function listTrips(filterStatus?: TripStatus) {
@@ -101,4 +110,97 @@ export async function planTrip(input: TripPlanInput): Promise<ActionResult> {
   revalidatePath("/trips");
   revalidatePath(`/trips/${trip.id}`);
   return { ok: true, id: trip.id };
+}
+
+/**
+ * Capture depot loading observations on a trip.
+ *
+ * Computes the @20°C-corrected volume on the server using the product's
+ * cubical-expansion coefficient so the canonical figure isn't a client
+ * preview. Authoritative monthly correction still re-runs against ASTM
+ * D1250 tables in the volumetric accountant's spreadsheet.
+ */
+export async function captureTripLoading(
+  tripId: string,
+  input: TripLoadingInput,
+): Promise<ActionResult> {
+  const parsed = tripLoadingSchema.safeParse(input);
+  if (!parsed.success) {
+    return { ok: false, error: parsed.error.errors.map((e) => e.message).join("; ") };
+  }
+  const trip = getTrip(tripId);
+  if (!trip) return { ok: false, error: "Trip not found." };
+  if (!trip.product) {
+    return {
+      ok: false,
+      error: "Trip is missing a fuel product. Set it on the booking before capturing loading.",
+    };
+  }
+  const loaded20C = correctVolumeTo20C(
+    trip.product,
+    parsed.data.loadedLitres,
+    parsed.data.loadingTempC,
+  );
+  // Recompute ullage if discharge is already captured.
+  const ullage =
+    trip.dischargedLitres20C !== undefined
+      ? ullageVariancePct(loaded20C, trip.dischargedLitres20C)
+      : trip.ullagePct;
+
+  storeUpdateTrip(tripId, {
+    loadedLitres: parsed.data.loadedLitres,
+    loadingTempC: parsed.data.loadingTempC,
+    density15C: parsed.data.density15C,
+    loadedLitres20C: loaded20C,
+    loadingSealNumbers: parsed.data.loadingSealNumbers,
+    transitBondNumber: parsed.data.transitBondNumber ?? trip.transitBondNumber,
+    ullagePct: ullage,
+  });
+  revalidatePath(`/trips/${tripId}`);
+  return { ok: true, id: tripId };
+}
+
+/**
+ * Capture customer-side discharge observations. Once discharge is in,
+ * ullage variance is computed and persisted so the dashboard alert can
+ * pick it up without rerunning the math.
+ */
+export async function captureTripDischarge(
+  tripId: string,
+  input: TripDischargeInput,
+): Promise<ActionResult> {
+  const parsed = tripDischargeSchema.safeParse(input);
+  if (!parsed.success) {
+    return { ok: false, error: parsed.error.errors.map((e) => e.message).join("; ") };
+  }
+  const trip = getTrip(tripId);
+  if (!trip) return { ok: false, error: "Trip not found." };
+  if (!trip.product) {
+    return {
+      ok: false,
+      error: "Trip is missing a fuel product. Capture loading first.",
+    };
+  }
+  if (trip.loadedLitres20C === undefined) {
+    return {
+      ok: false,
+      error: "Capture depot loading observations before discharge.",
+    };
+  }
+  const discharged20C = correctVolumeTo20C(
+    trip.product,
+    parsed.data.dischargedLitres,
+    parsed.data.dischargeTempC,
+  );
+  const ullage = ullageVariancePct(trip.loadedLitres20C, discharged20C);
+
+  storeUpdateTrip(tripId, {
+    dischargedLitres: parsed.data.dischargedLitres,
+    dischargeTempC: parsed.data.dischargeTempC,
+    dischargedLitres20C: discharged20C,
+    dischargeSealNumbers: parsed.data.dischargeSealNumbers,
+    ullagePct: ullage,
+  });
+  revalidatePath(`/trips/${tripId}`);
+  return { ok: true, id: tripId };
 }

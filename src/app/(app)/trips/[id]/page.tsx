@@ -14,6 +14,7 @@ import {
   Wallet,
 } from "lucide-react";
 import { correctVolumeTo20C, ullageVariancePct, ULLAGE_ALERT_THRESHOLD_PCT } from "@/lib/types/trips";
+import { CaptureDischargeButton, CaptureLoadingButton } from "@/components/trips/fuel-capture";
 import { getTripById } from "@/server/actions/trips";
 import { listTripDocuments } from "@/server/actions/documents";
 import { listBorderCrossingsForTrip } from "@/server/actions/borders";
@@ -387,6 +388,7 @@ function LinkedCard({
 }
 
 type TripForFuelCard = {
+  id: string;
   product?: "PMS" | "AGO";
   cargoQuantity: number;
   cargoUnit: string;
@@ -439,7 +441,7 @@ function FuelCargoCard({ trip }: { trip: TripForFuelCard }) {
             ? `Product: ${trip.product} · agreed ${trip.cargoQuantity.toLocaleString()} L`
             : `${trip.cargoQuantity} ${trip.cargoUnit}`}
           {!hasLoading && trip.product
-            ? " · loading sheet not yet captured (F-4)"
+            ? " · capture loading observations from the depot loading sheet"
             : ""}
         </CardDescription>
       </CardHeader>
@@ -472,6 +474,14 @@ function FuelCargoCard({ trip }: { trip: TripForFuelCard }) {
             value={trip.loadingSealNumbers ?? "—"}
             mono
           />
+          {trip.product && (
+            <CaptureLoadingButton
+              tripId={trip.id}
+              product={trip.product}
+              initialLitres={trip.loadedLitres}
+              hasExisting={hasLoading}
+            />
+          )}
         </FuelBlock>
 
         <FuelBlock title="Customer discharge">
@@ -503,11 +513,14 @@ function FuelCargoCard({ trip }: { trip: TripForFuelCard }) {
             value={trip.dischargeSealNumbers ?? "—"}
             mono
           />
-          {!hasDischarge && hasLoading && (
-            <div className="rounded-md border border-dashed border-border bg-bg-base/40 p-3 text-[11px] text-fg-tertiary">
-              Capture the discharge dipstick + temperature at delivery to compute
-              ullage variance.
-            </div>
+          {trip.product && (
+            <CaptureDischargeButton
+              tripId={trip.id}
+              product={trip.product}
+              hasLoading={hasLoading}
+              hasExisting={hasDischarge}
+              initialLitres={trip.dischargedLitres}
+            />
           )}
         </FuelBlock>
 

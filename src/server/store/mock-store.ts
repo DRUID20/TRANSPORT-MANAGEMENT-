@@ -1468,6 +1468,16 @@ export function tripsForDriver(driverId: string): Trip[] {
   return listTrips().filter((t) => t.driverId === driverId);
 }
 
+/** Generic patch — used by F-4 loading/discharge capture and any future
+ *  trip-edit flow that doesn't fit one of the workflow transitions. */
+export function updateTrip(id: string, patch: Partial<Trip>): Trip | undefined {
+  const existing = trips.get(id);
+  if (!existing) return undefined;
+  const updated: Trip = { ...existing, ...patch };
+  trips.set(id, updated);
+  return updated;
+}
+
 export function planTrip(input: {
   bookingId: string;
   truckId: string;

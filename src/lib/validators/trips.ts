@@ -63,23 +63,25 @@ export const bookingCreateSchema = z.object({
 });
 export type BookingCreateInput = z.infer<typeof bookingCreateSchema>;
 
-/** Schema for capturing depot loading observations at the start of a trip. */
+/**
+ * Schema for capturing depot loading observations at the start of a trip.
+ * Trip id + product are passed positionally by the server action — they
+ * come from the trip record, not from the operator's form.
+ */
 export const tripLoadingSchema = z.object({
-  tripId: z.string().min(1),
-  product: productEnum,
   loadedLitres: z.coerce.number().positive(),
   loadingTempC: z.coerce.number().min(-10).max(60),
   density15C: z.coerce.number().min(0.6).max(1.0),
-  loadingSealNumbers: z.string().optional(),
+  loadingSealNumbers: z.string().min(1, "Seal numbers are required"),
+  transitBondNumber: z.string().optional(),
 });
 export type TripLoadingInput = z.infer<typeof tripLoadingSchema>;
 
 /** Schema for capturing customer-side discharge readings at delivery. */
 export const tripDischargeSchema = z.object({
-  tripId: z.string().min(1),
   dischargedLitres: z.coerce.number().positive(),
   dischargeTempC: z.coerce.number().min(-10).max(60),
-  dischargeSealNumbers: z.string().optional(),
+  dischargeSealNumbers: z.string().min(1, "Seal numbers are required"),
 });
 export type TripDischargeInput = z.infer<typeof tripDischargeSchema>;
 
