@@ -3,11 +3,20 @@ import { ArrowRightLeft, Plus, ScrollText } from "lucide-react";
 import { listInvoices } from "@/server/actions/ar";
 import { listCustomers } from "@/server/actions/customers";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
+import { EmptyState } from "@/components/ui/empty-state";
+import {
+  DataTable,
+  DataTableBody,
+  DataTableCell,
+  DataTableHead,
+  DataTableHeaderCell,
+  DataTableRow,
+} from "@/components/ui/data-table";
 import { PageHeader } from "@/components/layout/page-header";
 import { InvoiceStatusPill } from "@/components/finance/invoice-status-pill";
 import { InvoicesFilters } from "./invoices-filters";
 import type { InvoiceStatus } from "@/lib/types/ar";
+import { cn } from "@/lib/utils";
 
 const VALID_STATUS: InvoiceStatus[] = [
   "draft",
@@ -28,9 +37,8 @@ export default async function InvoicesPage({
     ? (rawStatus as InvoiceStatus)
     : undefined;
 
-  const all = await listInvoices();
+  const [all, customers] = await Promise.all([listInvoices(), listCustomers()]);
   const filtered = status ? all.filter((i) => i.status === status) : all;
-  const customers = await listCustomers();
   const customerById = new Map(customers.map((c) => [c.id, c]));
 
   const counts = {
@@ -40,34 +48,39 @@ export default async function InvoicesPage({
     paid: all.filter((i) => i.status === "paid").length,
   };
   const outstanding = all
-    .filter((i) => i.status === "sent" || i.status === "partially_paid" || i.status === "overdue")
+    .filter(
+      (i) =>
+        i.status === "sent" ||
+        i.status === "partially_paid" ||
+        i.status === "overdue",
+    )
     .reduce((s, i) => s + i.balance * i.fxRate, 0);
 
   return (
     <div className="flex flex-col gap-6">
       <PageHeader
         eyebrow="Finance · AR"
-        title="Customer Invoices"
+        title="Customer invoices"
         description="Generated from closed trips. Auto-posts to AR + Revenue on send."
         actions={
           <>
-            <Button asChild variant="outline">
+            <Button asChild variant="outline" size="sm">
               <Link href="/invoices/aged">
-                <ArrowRightLeft className="size-4" />
+                <ArrowRightLeft className="size-3.5" />
                 Aged AR
               </Link>
             </Button>
             <Button asChild>
               <Link href="/invoices/new">
                 <Plus className="size-4" />
-                New Invoice
+                New invoice
               </Link>
             </Button>
           </>
         }
       />
 
-      <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
+      <div className="grid grid-cols-2 gap-3 md:grid-cols-4 md:gap-4">
         <Stat label="Sent" value={counts.sent} tone="info" />
         <Stat label="Overdue" value={counts.overdue} tone="danger" />
         <Stat label="Paid" value={counts.paid} tone="success" />
@@ -81,79 +94,103 @@ export default async function InvoicesPage({
 
       <InvoicesFilters active={status ?? "all"} />
 
-      <Card>
-        <CardContent className="!p-0">
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-border text-left text-xs uppercase tracking-wider text-fg-tertiary">
-                  <th className="px-5 py-3 font-medium">Number</th>
-                  <th className="px-5 py-3 font-medium">Customer</th>
-                  <th className="px-5 py-3 font-medium">Issue / Due</th>
-                  <th className="px-5 py-3 font-medium">Status</th>
-                  <th className="px-5 py-3 text-right font-medium">Total</th>
-                  <th className="px-5 py-3 text-right font-medium">Balance</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-border">
-                {filtered.map((inv) => {
-                  const c = customerById.get(inv.customerId);
-                  return (
-                    <tr key={inv.id} className="group transition-colors hover:bg-bg-base/40">
-                      <td className="px-5 py-2.5">
-                        <Link
-                          href={`/invoices/${inv.id}`}
-                          className="flex items-center gap-2"
-                        >
-                          <span className="flex size-7 items-center justify-center rounded-md bg-bg-base ring-1 ring-border">
-                            <ScrollText className="size-3.5 text-fg-tertiary" />
-                          </span>
-                          <span className="font-mono text-xs font-medium text-fg-primary group-hover:text-brand-blue">
-                            {inv.number}
-                          </span>
-                        </Link>
-                      </td>
-                      <td className="px-5 py-2.5">
-                        {c ? (
-                          <Link
-                            href={`/customers/${c.id}`}
-                            className="text-xs text-fg-secondary hover:text-brand-blue"
-                          >
-                            {c.name}
-                          </Link>
-                        ) : "—"}
-                      </td>
-                      <td className="px-5 py-2.5 font-mono text-[11px] tnum text-fg-tertiary">
-                        <div>{inv.issueDate}</div>
-                        <div>due {inv.dueDate}</div>
-                      </td>
-                      <td className="px-5 py-2.5">
-                        <InvoiceStatusPill status={inv.status} />
-                      </td>
-                      <td className="px-5 py-2.5 text-right font-mono tnum text-fg-primary">
-                        {inv.total.toLocaleString()} {inv.currency}
-                      </td>
-                      <td className="px-5 py-2.5 text-right font-mono tnum text-fg-primary">
-                        {inv.balance.toLocaleString()} {inv.currency}
-                      </td>
-                    </tr>
-                  );
-                })}
-                {filtered.length === 0 && (
-                  <tr>
-                    <td colSpan={6} className="px-5 py-12 text-center text-sm text-fg-tertiary">
-                      No invoices yet.{" "}
-                      <Link href="/invoices/new" className="text-brand-blue hover:underline">
-                        Create the first one →
+      {filtered.length === 0 ? (
+        <div className="surface-card">
+          <EmptyState
+            icon={ScrollText}
+            title={all.length === 0 ? "No invoices yet" : "No invoices match this filter"}
+            description={
+              all.length === 0
+                ? "Generate your first invoice from a closed, reconciled trip."
+                : "Try clearing the status filter to see all invoices."
+            }
+            action={
+              all.length === 0 ? (
+                <Button asChild>
+                  <Link href="/invoices/new">
+                    <Plus className="size-3.5" />
+                    New invoice
+                  </Link>
+                </Button>
+              ) : undefined
+            }
+          />
+        </div>
+      ) : (
+        <DataTable
+          caption={
+            <span>
+              {filtered.length} invoice{filtered.length === 1 ? "" : "s"}
+              {status ? ` · ${status}` : ""}
+            </span>
+          }
+        >
+          <DataTableHead>
+            <tr>
+              <DataTableHeaderCell>Number</DataTableHeaderCell>
+              <DataTableHeaderCell>Customer</DataTableHeaderCell>
+              <DataTableHeaderCell>Issue / Due</DataTableHeaderCell>
+              <DataTableHeaderCell>Status</DataTableHeaderCell>
+              <DataTableHeaderCell align="right">Total</DataTableHeaderCell>
+              <DataTableHeaderCell align="right">Balance</DataTableHeaderCell>
+            </tr>
+          </DataTableHead>
+          <DataTableBody>
+            {filtered.map((inv) => {
+              const c = customerById.get(inv.customerId);
+              return (
+                <DataTableRow key={inv.id} linkHref={`/invoices/${inv.id}`}>
+                  <DataTableCell>
+                    <Link href={`/invoices/${inv.id}`} className="flex items-center gap-2.5">
+                      <span className="flex size-7 items-center justify-center rounded-md border border-border bg-bg-surface">
+                        <ScrollText className="size-3.5 text-fg-tertiary" />
+                      </span>
+                      <span className="font-mono text-xs font-semibold text-fg-primary group-hover:text-brand-blue">
+                        {inv.number}
+                      </span>
+                    </Link>
+                  </DataTableCell>
+                  <DataTableCell>
+                    {c ? (
+                      <Link
+                        href={`/customers/${c.id}`}
+                        className="text-xs text-fg-secondary hover:text-brand-blue"
+                      >
+                        {c.name}
                       </Link>
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
-          </div>
-        </CardContent>
-      </Card>
+                    ) : (
+                      <span className="text-fg-tertiary">—</span>
+                    )}
+                  </DataTableCell>
+                  <DataTableCell mono className="text-[11px] text-fg-tertiary">
+                    <div className="leading-tight">{inv.issueDate}</div>
+                    <div className="leading-tight">due {inv.dueDate}</div>
+                  </DataTableCell>
+                  <DataTableCell>
+                    <InvoiceStatusPill status={inv.status} />
+                  </DataTableCell>
+                  <DataTableCell mono align="right">
+                    {inv.total.toLocaleString()} {inv.currency}
+                  </DataTableCell>
+                  <DataTableCell
+                    mono
+                    align="right"
+                    className={cn(
+                      inv.balance === 0
+                        ? "text-status-success"
+                        : inv.status === "overdue"
+                          ? "text-status-danger"
+                          : "text-fg-primary",
+                    )}
+                  >
+                    {inv.balance.toLocaleString()} {inv.currency}
+                  </DataTableCell>
+                </DataTableRow>
+              );
+            })}
+          </DataTableBody>
+        </DataTable>
+      )}
     </div>
   );
 }
@@ -170,14 +207,21 @@ function Stat({
   mono?: boolean;
 }) {
   const colour =
-    tone === "info" ? "text-brand-blue" :
-    tone === "success" ? "text-status-success" :
-    tone === "danger" ? "text-status-danger" :
-    tone === "warning" ? "text-status-warning" : "text-fg-primary";
+    tone === "info"
+      ? "text-brand-blue"
+      : tone === "success"
+        ? "text-status-success"
+        : tone === "danger"
+          ? "text-status-danger"
+          : tone === "warning"
+            ? "text-status-warning"
+            : "text-fg-primary";
   return (
-    <div className="rounded-lg border border-border bg-bg-elevated p-4">
-      <div className="text-xs uppercase tracking-wider text-fg-tertiary">{label}</div>
-      <div className={`mt-1 ${mono ? "font-mono tnum" : ""} text-2xl font-medium ${colour}`}>
+    <div className="surface-card lift-on-hover p-4">
+      <div className="text-[10px] font-semibold uppercase tracking-[0.14em] text-fg-tertiary">
+        {label}
+      </div>
+      <div className={cn("mt-1 text-2xl font-semibold", mono && "font-mono tnum", colour)}>
         {value}
       </div>
     </div>

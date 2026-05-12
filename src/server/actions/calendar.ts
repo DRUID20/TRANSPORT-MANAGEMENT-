@@ -41,6 +41,8 @@ export interface CalendarEvent {
   driverName?: string;
   customerName?: string;
   status?: string;
+  /** Fuel product carried on this trip, when relevant. */
+  product?: "PMS" | "AGO";
   /** Tone hint for the UI — maps to chip colour. */
   tone: "info" | "success" | "warning" | "danger" | "purple";
 }
@@ -99,6 +101,7 @@ export async function listCalendarEvents(window?: {
         driverName: driver?.fullName,
         customerName: customer?.name,
         status: t.status,
+        product: t.product,
         tone: isDelayed ? "danger" : "info",
       });
     }
@@ -117,6 +120,7 @@ export async function listCalendarEvents(window?: {
         driverName: driver?.fullName,
         customerName: customer?.name,
         status: t.status,
+        product: t.product,
         tone: isDelivered ? "success" : isDelayed ? "danger" : "info",
       });
     }

@@ -22,6 +22,7 @@ import { ProgressHero } from "@/components/dashboard/progress-hero";
 import { FleetDistribution } from "@/components/dashboard/fleet-distribution";
 import { NeedsAttention, type AttentionItem } from "@/components/dashboard/needs-attention";
 import { TopPerformer } from "@/components/dashboard/top-performer";
+import { TodaysDispatch } from "@/components/dashboard/todays-dispatch";
 import { FuelPanel } from "@/components/dashboard/fuel-panel";
 import { CrossBorderSnapshot } from "@/components/dashboard/cross-border-snapshot";
 import { RouteVisual } from "@/components/dashboard/route-visual";
@@ -185,6 +186,9 @@ export default function DashboardPage() {
         </div>
         <TopPerformer />
       </div>
+
+      {/* Today's dispatch — live feed from the calendar */}
+      <TodaysDispatch />
 
       {/* KPI grid */}
       <div className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-6">
