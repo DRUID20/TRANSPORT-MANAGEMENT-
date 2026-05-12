@@ -2,6 +2,7 @@ import Link from "next/link";
 import {
   BarChart3,
   Banknote,
+  Droplet,
   Fuel,
   LineChart,
   PieChart,
@@ -107,6 +108,14 @@ const reports: Report[] = [
     title: "Fuel Efficiency",
     desc: "Per-truck L/100km, KES per km, average price per litre (tank-to-tank).",
     icon: Fuel,
+    ready: true,
+    group: "Operations",
+  },
+  {
+    href: "/reports/ullage",
+    title: "Ullage report",
+    desc: "Loaded vs discharged litres (20 °C corrected) per trip. Flags variance above 0.5%.",
+    icon: Droplet,
     ready: true,
     group: "Operations",
   },

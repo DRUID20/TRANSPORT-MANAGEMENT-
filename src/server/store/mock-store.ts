@@ -1475,6 +1475,75 @@ function seedTrips() {
 }
 seedTrips();
 
+/**
+ * F-6 demo data — fuel loading + discharge observations on a few seeded
+ * trips so the Ullage report and KES-per-loaded-litre KPI have rows to
+ * render on first boot. Patches the existing planned-from-booking trips
+ * in-place; the 20 °C corrections and ullage % are computed here exactly
+ * as captureTripLoading/captureTripDischarge would on the live path, so
+ * the data is consistent with what an operator would produce.
+ */
+function seedFuelObservations() {
+  const cases: Array<{
+    tripId: string;
+    product: "PMS" | "AGO";
+    loadedLitres: number;
+    loadingTempC: number;
+    density15C: number;
+    dischargedLitres: number;
+    dischargeTempC: number;
+  }> = [
+    // Acceptable thermal-contraction loss — within 0.5% threshold
+    {
+      tripId: "trp-001",
+      product: "AGO",
+      loadedLitres: 40_000,
+      loadingTempC: 32,
+      density15C: 0.840,
+      dischargedLitres: 39_820,
+      dischargeTempC: 25,
+    },
+    // Above-threshold loss — investigate
+    {
+      tripId: "trp-002",
+      product: "PMS",
+      loadedLitres: 38_500,
+      loadingTempC: 30,
+      density15C: 0.745,
+      dischargedLitres: 38_050,
+      dischargeTempC: 26,
+    },
+  ];
+
+  for (const c of cases) {
+    const trip = trips.get(c.tripId);
+    if (!trip) continue;
+    // Inline VCF: V20 = V_obs / (1 + β · (T - 20))
+    const beta = c.product === "PMS" ? 0.0012 : 0.00084;
+    const loaded20C = Math.round(c.loadedLitres / (1 + beta * (c.loadingTempC - 20)));
+    const discharged20C = Math.round(
+      c.dischargedLitres / (1 + beta * (c.dischargeTempC - 20)),
+    );
+    const ullagePct =
+      loaded20C > 0 ? ((loaded20C - discharged20C) / loaded20C) * 100 : 0;
+    trips.set(c.tripId, {
+      ...trip,
+      product: c.product,
+      loadedLitres: c.loadedLitres,
+      loadingTempC: c.loadingTempC,
+      density15C: c.density15C,
+      loadedLitres20C: loaded20C,
+      loadingSealNumbers: "KPC 67451, 67452, 67453",
+      dischargedLitres: c.dischargedLitres,
+      dischargeTempC: c.dischargeTempC,
+      dischargedLitres20C: discharged20C,
+      dischargeSealNumbers: "KPC 67451, 67452, 67453",
+      ullagePct,
+    });
+  }
+}
+seedFuelObservations();
+
 export function listTrips(filterStatus?: TripStatus): Trip[] {
   const all = [...trips.values()].sort(
     (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
@@ -4189,6 +4258,19 @@ export interface TruckScorecard {
   daysSinceLastTrip: number | null;
   /** Composite 0-100 score. */
   score: number;
+  /**
+   * Fuel-haul KPIs (F-6). Sourced from the captured loading observations
+   * on the truck's trips in range. `loadedLitres` is the sum of 20 °C-
+   * corrected litres (falling back to observed litres for trips that
+   * weren't captured), so per-trip thermal contraction doesn't muddy the
+   * KES-per-loaded-litre figure. `avgUllagePct` averages the persisted
+   * `ullagePct` across trips that have a discharge captured (others are
+   * excluded; partial trips don't drag the figure to zero).
+   */
+  loadedLitres: number;
+  kesPerLoadedLitre: number | null;
+  avgUllagePct: number | null;
+  tripsWithUllage: number;
 }
 
 function rangeBounds(range?: { fromDate?: string; toDate?: string }) {
@@ -4292,6 +4374,22 @@ function truckScorecardInternal(
   const grossProfitKes = revenueKes - totalCostsKes;
   const marginPct = revenueKes > 0 ? grossProfitKes / revenueKes : null;
 
+  // Fuel-haul KPIs (F-6): sum loaded litres (prefer 20 °C corrected),
+  // average ullage % across trips that have a discharge captured.
+  let loadedLitres = 0;
+  let ullageSum = 0;
+  let tripsWithUllage = 0;
+  for (const t of truckTrips) {
+    const l = t.loadedLitres20C ?? t.loadedLitres;
+    if (l !== undefined) loadedLitres += l;
+    if (t.ullagePct !== undefined && t.dischargedLitres !== undefined) {
+      ullageSum += t.ullagePct;
+      tripsWithUllage++;
+    }
+  }
+  const kesPerLoadedLitre = loadedLitres > 0 ? revenueKes / loadedLitres : null;
+  const avgUllagePct = tripsWithUllage > 0 ? ullageSum / tripsWithUllage : null;
+
   // Compliance per linked driver (truck's default driver) is the closest proxy
   // for "operational compliance attached to the truck".
   let complianceTotal = 0;
@@ -4365,6 +4463,10 @@ function truckScorecardInternal(
     complianceExpired,
     daysSinceLastTrip,
     score,
+    loadedLitres,
+    kesPerLoadedLitre,
+    avgUllagePct,
+    tripsWithUllage,
   };
 }
 

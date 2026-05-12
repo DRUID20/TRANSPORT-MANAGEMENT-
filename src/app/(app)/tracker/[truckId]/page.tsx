@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import {
   Banknote,
   CheckCircle2,
+  Droplet,
   Fuel,
   Pause,
   Route,
@@ -10,6 +11,7 @@ import {
   Trophy,
   Wrench,
 } from "lucide-react";
+import { ULLAGE_ALERT_THRESHOLD_PCT } from "@/lib/types/trips";
 import { truckScorecard } from "@/server/actions/tracker";
 import { Card, CardContent } from "@/components/ui/card";
 import { PageHeader } from "@/components/layout/page-header";
@@ -117,7 +119,7 @@ export default async function TruckScorecardPage({
       </Card>
 
       {/* Operational KPIs */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
         <KpiCard
           icon={Fuel}
           label="Fuel efficiency"
@@ -182,6 +184,52 @@ export default async function TruckScorecardPage({
               : card.daysSinceLastTrip !== null && card.daysSinceLastTrip <= 7
                 ? "success"
                 : "warning"
+          }
+        />
+        <KpiCard
+          icon={Banknote}
+          label="KES per loaded litre"
+          primary={
+            card.kesPerLoadedLitre === null
+              ? "—"
+              : `KSh ${card.kesPerLoadedLitre.toFixed(2)}`
+          }
+          unit="per L"
+          secondary={
+            card.loadedLitres > 0
+              ? `${card.loadedLitres.toLocaleString()} L loaded`
+              : "no captured loadings"
+          }
+          tone={
+            card.kesPerLoadedLitre === null
+              ? "default"
+              : card.kesPerLoadedLitre >= 8
+                ? "success"
+                : card.kesPerLoadedLitre >= 6
+                  ? "warning"
+                  : "danger"
+          }
+        />
+        <KpiCard
+          icon={Droplet}
+          label="Avg ullage"
+          primary={
+            card.avgUllagePct === null
+              ? "—"
+              : `${card.avgUllagePct >= 0 ? "" : "+"}${(-card.avgUllagePct).toFixed(2)}%`
+          }
+          unit="@ 20 °C"
+          secondary={
+            card.tripsWithUllage === 0
+              ? "no discharges captured"
+              : `${card.tripsWithUllage} trip${card.tripsWithUllage === 1 ? "" : "s"} measured`
+          }
+          tone={
+            card.avgUllagePct === null
+              ? "default"
+              : Math.abs(card.avgUllagePct) <= ULLAGE_ALERT_THRESHOLD_PCT
+                ? "success"
+                : "danger"
           }
         />
       </div>
