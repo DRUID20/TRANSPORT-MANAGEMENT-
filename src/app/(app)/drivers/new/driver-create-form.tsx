@@ -2,14 +2,14 @@
 
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { Loader2, Save } from "lucide-react";
+import { Loader2, RotateCcw, Save } from "lucide-react";
 import { createDriver } from "@/server/actions/drivers";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Select } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import { FormField, FormSection } from "@/components/ui/form-section";
+import { FormFooter } from "@/components/ui/form-footer";
 
 type T = { id: string; registration: string };
 
@@ -17,6 +17,7 @@ export function DriverCreateForm({ trucks }: { trucks: T[] }) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [formKey, setFormKey] = useState(0);
 
   async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -28,7 +29,11 @@ export function DriverCreateForm({ trucks }: { trucks: T[] }) {
       phone: String(fd.get("phone") ?? ""),
       nationalId: String(fd.get("nationalId") ?? ""),
       status: "active",
-      licenceClass: String(fd.get("licenceClass") ?? "CE") as "BCE" | "CD" | "CE" | "DE",
+      licenceClass: String(fd.get("licenceClass") ?? "CE") as
+        | "BCE"
+        | "CD"
+        | "CE"
+        | "DE",
       licenceNumber: String(fd.get("licenceNumber") ?? ""),
       licenceExpiry: String(fd.get("licenceExpiry") ?? "") || undefined,
       medicalExpiry: String(fd.get("medicalExpiry") ?? "") || undefined,
@@ -49,118 +54,165 @@ export function DriverCreateForm({ trucks }: { trucks: T[] }) {
   }
 
   return (
-    <form onSubmit={onSubmit} className="flex flex-col gap-5">
+    <form key={formKey} onSubmit={onSubmit} className="flex flex-col gap-5 pb-20">
       {error && (
-        <div className="rounded-md border border-status-danger/30 bg-status-danger/10 p-3 text-sm text-status-danger">
+        <div className="surface-card animate-content-in border-status-danger/30 bg-status-danger/5 p-4 text-sm text-status-danger">
           {error}
         </div>
       )}
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Identity</CardTitle>
-        </CardHeader>
-        <CardContent className="grid gap-4 sm:grid-cols-2">
-          <Field label="Full name" className="sm:col-span-2">
-            <Input name="fullName" required placeholder="Joseph Mwangi" />
-          </Field>
-          <Field label="Phone">
-            <Input name="phone" required type="tel" placeholder="+254 722 410 220" />
-          </Field>
-          <Field label="National ID">
-            <Input name="nationalId" required placeholder="21884401" className="font-mono tnum" />
-          </Field>
-          <Field label="Hire date" hint="Optional">
-            <Input name="hireDate" type="date" />
-          </Field>
-          <Field label="Default truck" hint="Optional">
-            <Select name="defaultTruckId" defaultValue="">
-              <option value="">— None —</option>
-              {trucks.map((t) => (
-                <option key={t.id} value={t.id}>{t.registration}</option>
-              ))}
-            </Select>
-          </Field>
-        </CardContent>
-      </Card>
+      <FormSection
+        eyebrow="Step 1"
+        title="Identity"
+        description="Personal details and dispatcher's default truck assignment."
+        columns={2}
+      >
+        <FormField label="Full name" required className="sm:col-span-2">
+          <Input name="fullName" required placeholder="Joseph Mwangi" />
+        </FormField>
+        <FormField label="Phone" required>
+          <Input
+            name="phone"
+            required
+            type="tel"
+            placeholder="+254 722 410 220"
+          />
+        </FormField>
+        <FormField label="National ID" required>
+          <Input
+            name="nationalId"
+            required
+            placeholder="21884401"
+            className="font-mono tnum"
+          />
+        </FormField>
+        <FormField label="Hire date" hint="OPTIONAL">
+          <Input name="hireDate" type="date" />
+        </FormField>
+        <FormField
+          label="Default truck"
+          hint="OPTIONAL"
+          helper="Shown on the driver card; can be reassigned at dispatch."
+        >
+          <Select name="defaultTruckId" defaultValue="">
+            <option value="">— None —</option>
+            {trucks.map((t) => (
+              <option key={t.id} value={t.id}>
+                {t.registration}
+              </option>
+            ))}
+          </Select>
+        </FormField>
+      </FormSection>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Licence</CardTitle>
-        </CardHeader>
-        <CardContent className="grid gap-4 sm:grid-cols-2">
-          <Field label="Class">
-            <Select name="licenceClass" defaultValue="CE">
-              <option value="BCE">BCE</option>
-              <option value="CD">CD</option>
-              <option value="CE">CE</option>
-              <option value="DE">DE</option>
-            </Select>
-          </Field>
-          <Field label="Number">
-            <Input name="licenceNumber" required placeholder="DL/CE/0009212" className="font-mono uppercase" />
-          </Field>
-          <Field label="Licence expiry">
-            <Input name="licenceExpiry" type="date" />
-          </Field>
-          <Field label="Medical expiry">
-            <Input name="medicalExpiry" type="date" />
-          </Field>
-        </CardContent>
-      </Card>
+      <FormSection
+        eyebrow="Step 2"
+        title="Licence"
+        description="NTSA driving licence and KMC medical certificate. The dashboard alerts you 30 days before either expires."
+        columns={2}
+      >
+        <FormField label="Class" required>
+          <Select name="licenceClass" defaultValue="CE">
+            <option value="BCE">BCE</option>
+            <option value="CD">CD</option>
+            <option value="CE">CE</option>
+            <option value="DE">DE</option>
+          </Select>
+        </FormField>
+        <FormField label="Number" required>
+          <Input
+            name="licenceNumber"
+            required
+            placeholder="DL/CE/0009212"
+            className="font-mono uppercase"
+          />
+        </FormField>
+        <FormField label="Licence expiry">
+          <Input name="licenceExpiry" type="date" />
+        </FormField>
+        <FormField label="Medical expiry">
+          <Input name="medicalExpiry" type="date" />
+        </FormField>
+      </FormSection>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Cross-border</CardTitle>
-        </CardHeader>
-        <CardContent className="grid gap-4 sm:grid-cols-2">
-          <Field label="Passport number">
-            <Input name="passportNumber" placeholder="A8849921" className="font-mono uppercase" />
-          </Field>
-          <Field label="Passport expiry">
-            <Input name="passportExpiry" type="date" />
-          </Field>
-          <Field label="COMESA driver permit expiry" className="sm:col-span-2">
-            <Input name="comesaDriverPermitExpiry" type="date" />
-          </Field>
-        </CardContent>
-      </Card>
+      <FormSection
+        eyebrow="Step 3"
+        title="Cross-border"
+        description="Passport + COMESA permit are required for trips crossing into Uganda, Rwanda, Burundi, DRC, or South Sudan."
+        columns={2}
+      >
+        <FormField label="Passport number" hint="OPTIONAL">
+          <Input
+            name="passportNumber"
+            placeholder="A8849921"
+            className="font-mono uppercase"
+          />
+        </FormField>
+        <FormField label="Passport expiry">
+          <Input name="passportExpiry" type="date" />
+        </FormField>
+        <FormField
+          label="COMESA driver permit expiry"
+          className="sm:col-span-2"
+          helper="Required to drive into the COMESA bloc."
+        >
+          <Input name="comesaDriverPermitExpiry" type="date" />
+        </FormField>
+      </FormSection>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Notes</CardTitle>
-        </CardHeader>
-        <CardContent>
+      <FormSection
+        eyebrow="Optional"
+        title="Notes"
+        description="Anything that should stay on this driver's record — preferences, allergies, performance notes."
+        columns={1}
+      >
+        <FormField label="Notes" hint="OPTIONAL">
           <Textarea name="notes" rows={3} placeholder="Optional notes…" />
-        </CardContent>
-      </Card>
+        </FormField>
+      </FormSection>
 
-      <div className="flex items-center justify-end gap-2">
-        <Button type="button" variant="ghost" onClick={() => router.back()}>Cancel</Button>
-        <Button type="submit" disabled={loading}>
-          {loading ? <><Loader2 className="size-4 animate-spin" />Saving…</> : <><Save className="size-4" />Save Driver</>}
+      <FormFooter
+        meta={
+          <span>
+            Drivers default to active status and become immediately eligible for
+            dispatch.
+          </span>
+        }
+      >
+        <Button
+          type="button"
+          variant="ghost"
+          onClick={() => {
+            setFormKey((k) => k + 1);
+            setError(null);
+          }}
+          disabled={loading}
+        >
+          <RotateCcw className="size-3.5" />
+          Reset
         </Button>
-      </div>
+        <Button
+          type="button"
+          variant="secondary"
+          onClick={() => router.back()}
+          disabled={loading}
+        >
+          Cancel
+        </Button>
+        <Button type="submit" disabled={loading}>
+          {loading ? (
+            <>
+              <Loader2 className="size-4 animate-spin" />
+              Saving…
+            </>
+          ) : (
+            <>
+              <Save className="size-4" />
+              Save driver
+            </>
+          )}
+        </Button>
+      </FormFooter>
     </form>
-  );
-}
-
-function Field({
-  label,
-  hint,
-  className,
-  children,
-}: {
-  label: string;
-  hint?: string;
-  className?: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <div className={"flex flex-col gap-1.5 " + (className ?? "")}>
-      <Label>{label}</Label>
-      {children}
-      {hint && <span className="text-[11px] text-fg-tertiary">{hint}</span>}
-    </div>
   );
 }

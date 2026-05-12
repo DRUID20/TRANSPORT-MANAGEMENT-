@@ -2,6 +2,7 @@ import Link from "next/link";
 import {
   Container,
   IdCard as IdCardIcon,
+  ShieldCheck,
   Truck as TruckIcon,
 } from "lucide-react";
 import {
@@ -10,10 +11,19 @@ import {
   type ExpiryEntityKind,
   type ExpiryItem,
 } from "@/server/actions/compliance";
-import { Card, CardContent } from "@/components/ui/card";
+import { EmptyState } from "@/components/ui/empty-state";
+import {
+  DataTable,
+  DataTableBody,
+  DataTableCell,
+  DataTableHead,
+  DataTableHeaderCell,
+  DataTableRow,
+} from "@/components/ui/data-table";
 import { PageHeader } from "@/components/layout/page-header";
 import { ExpiryChip } from "@/components/fleet/expiry-chip";
 import { ComplianceFilters } from "./compliance-filters";
+import { cn } from "@/lib/utils";
 
 const entityIcon: Record<ExpiryEntityKind, React.ComponentType<{ className?: string }>> = {
   truck: TruckIcon,
@@ -100,8 +110,7 @@ export default async function CompliancePage({
         }
       />
 
-      {/* Status summary stats */}
-      <div className="grid grid-cols-2 gap-4 md:grid-cols-5">
+      <div className="grid grid-cols-2 gap-3 md:grid-cols-5 md:gap-4">
         <Stat label="Total tracked" value={summary.totalItems} />
         <Stat label="Expired" value={summary.expiredCount} tone="danger" />
         <Stat label="Critical (≤14d)" value={summary.criticalCount} tone="danger" />
@@ -111,76 +120,81 @@ export default async function CompliancePage({
 
       <ComplianceFilters active={filter} />
 
-      {/* Items table */}
-      <Card>
-        <CardContent className="!p-0">
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-border text-left text-xs uppercase tracking-wider text-fg-tertiary">
-                  <th className="px-5 py-3 font-medium">Entity</th>
-                  <th className="px-5 py-3 font-medium">Document</th>
-                  <th className="px-5 py-3 font-medium">Due</th>
-                  <th className="px-5 py-3 text-right font-medium">Days</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-border">
-                {filtered.map((it) => {
-                  const Icon = entityIcon[it.entityKind];
-                  return (
-                    <tr key={it.key} className="group transition-colors hover:bg-bg-base/40">
-                      <td className="px-5 py-3">
-                        <Link href={it.href} className="flex items-center gap-2.5">
-                          <span className="flex size-7 items-center justify-center rounded-md bg-bg-base ring-1 ring-border">
-                            <Icon className="size-3.5 text-fg-tertiary" />
-                          </span>
-                          <div className="flex flex-col leading-tight">
-                            <span className="text-sm text-fg-primary group-hover:text-brand-blue">
-                              {it.entityLabel}
-                            </span>
-                            <span className="text-[10px] uppercase tracking-wider text-fg-tertiary">
-                              {entityLabel[it.entityKind]}
-                            </span>
-                          </div>
-                        </Link>
-                      </td>
-                      <td className="px-5 py-3 text-fg-primary">{it.documentLabel}</td>
-                      <td className="px-5 py-3">
-                        <ExpiryChip date={it.dueDate} />
-                      </td>
-                      <td className="px-5 py-3 text-right">
-                        <span
-                          className={
-                            "font-mono text-xs tnum " +
-                            (it.daysUntilExpiry < 0
-                              ? "text-status-danger"
-                              : it.daysUntilExpiry <= 14
-                                ? "text-status-danger"
-                                : it.daysUntilExpiry <= 30
-                                  ? "text-status-warning"
-                                  : "text-fg-secondary")
-                          }
-                        >
-                          {it.daysUntilExpiry < 0
-                            ? `${Math.abs(it.daysUntilExpiry)}d overdue`
-                            : `${it.daysUntilExpiry}d`}
+      {filtered.length === 0 ? (
+        <div className="surface-card">
+          <EmptyState
+            icon={ShieldCheck}
+            title="Nothing matches this filter"
+            description="Try clearing filters above, or check back as expiries approach."
+          />
+        </div>
+      ) : (
+        <DataTable
+          caption={
+            <span>
+              {filtered.length} document{filtered.length === 1 ? "" : "s"} · most
+              urgent first
+            </span>
+          }
+        >
+          <DataTableHead>
+            <tr>
+              <DataTableHeaderCell>Entity</DataTableHeaderCell>
+              <DataTableHeaderCell>Document</DataTableHeaderCell>
+              <DataTableHeaderCell>Due</DataTableHeaderCell>
+              <DataTableHeaderCell align="right">Days</DataTableHeaderCell>
+            </tr>
+          </DataTableHead>
+          <DataTableBody>
+            {filtered.map((it) => {
+              const Icon = entityIcon[it.entityKind];
+              return (
+                <DataTableRow key={it.key} linkHref={it.href}>
+                  <DataTableCell>
+                    <Link href={it.href} className="flex items-center gap-2.5">
+                      <span className="flex size-7 items-center justify-center rounded-md border border-border bg-bg-surface">
+                        <Icon className="size-3.5 text-fg-tertiary" />
+                      </span>
+                      <div className="flex flex-col leading-tight">
+                        <span className="text-sm font-medium text-fg-primary group-hover:text-brand-blue">
+                          {it.entityLabel}
                         </span>
-                      </td>
-                    </tr>
-                  );
-                })}
-                {filtered.length === 0 && (
-                  <tr>
-                    <td colSpan={4} className="px-5 py-12 text-center text-sm text-fg-tertiary">
-                      Nothing matches this filter.
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
-          </div>
-        </CardContent>
-      </Card>
+                        <span className="text-[10px] uppercase tracking-wider text-fg-tertiary">
+                          {entityLabel[it.entityKind]}
+                        </span>
+                      </div>
+                    </Link>
+                  </DataTableCell>
+                  <DataTableCell className="text-fg-primary">
+                    {it.documentLabel}
+                  </DataTableCell>
+                  <DataTableCell>
+                    <ExpiryChip date={it.dueDate} />
+                  </DataTableCell>
+                  <DataTableCell align="right" mono>
+                    <span
+                      className={cn(
+                        "text-xs",
+                        it.daysUntilExpiry < 0
+                          ? "font-semibold text-status-danger"
+                          : it.daysUntilExpiry <= 14
+                            ? "font-semibold text-status-danger"
+                            : it.daysUntilExpiry <= 30
+                              ? "text-status-warning"
+                              : "text-fg-secondary",
+                      )}
+                    >
+                      {it.daysUntilExpiry < 0
+                        ? `${Math.abs(it.daysUntilExpiry)}d overdue`
+                        : `${it.daysUntilExpiry}d`}
+                    </span>
+                  </DataTableCell>
+                </DataTableRow>
+              );
+            })}
+          </DataTableBody>
+        </DataTable>
+      )}
     </div>
   );
 }
@@ -201,9 +215,13 @@ function Stat({
         ? "text-status-warning"
         : "text-fg-primary";
   return (
-    <div className="rounded-lg border border-border bg-bg-elevated p-4">
-      <div className="text-xs uppercase tracking-wider text-fg-tertiary">{label}</div>
-      <div className={`mt-1 font-mono text-2xl tnum font-medium ${colour}`}>{value}</div>
+    <div className="surface-card lift-on-hover p-4">
+      <div className="text-[10px] font-semibold uppercase tracking-[0.14em] text-fg-tertiary">
+        {label}
+      </div>
+      <div className={cn("mt-1 font-mono text-2xl tnum font-semibold", colour)}>
+        {value}
+      </div>
     </div>
   );
 }
