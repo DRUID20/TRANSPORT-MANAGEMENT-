@@ -1,20 +1,32 @@
 import Link from "next/link";
-import { ArrowRight, Truck as TruckIcon } from "lucide-react";
+import { ArrowRight, Plus, Route as RouteIcon, Truck as TruckIcon } from "lucide-react";
 import { listTrips } from "@/server/actions/trips";
 import { listTrucks } from "@/server/actions/trucks";
 import { listDrivers } from "@/server/actions/drivers";
 import { listCustomers } from "@/server/actions/customers";
 import { listBookings } from "@/server/actions/bookings";
-import { Card, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { EmptyState } from "@/components/ui/empty-state";
+import {
+  DataTable,
+  DataTableBody,
+  DataTableCell,
+  DataTableHead,
+  DataTableHeaderCell,
+  DataTableRow,
+} from "@/components/ui/data-table";
 import { PageHeader } from "@/components/layout/page-header";
 import { TripStatusPill } from "@/components/trips/trip-status-pill";
+import { cn } from "@/lib/utils";
 
 export default async function TripsPage() {
-  const trips = await listTrips();
-  const trucks = await listTrucks();
-  const drivers = await listDrivers();
-  const customers = await listCustomers();
-  const bookings = await listBookings();
+  const [trips, trucks, drivers, customers, bookings] = await Promise.all([
+    listTrips(),
+    listTrucks(),
+    listDrivers(),
+    listCustomers(),
+    listBookings(),
+  ]);
   const truckById = new Map(trucks.map((t) => [t.id, t]));
   const driverById = new Map(drivers.map((d) => [d.id, d]));
   const bookingById = new Map(bookings.map((b) => [b.id, b]));
@@ -32,95 +44,139 @@ export default async function TripsPage() {
       <PageHeader
         eyebrow="Operations"
         title="Trips"
-        description="Active and historical trips. Plan a trip from a confirmed booking."
+        description="Active and historical fuel hauls. Plan a trip from a confirmed booking."
+        actions={
+          <Button asChild size="sm">
+            <Link href="/bookings/new">
+              <Plus className="size-3.5" />
+              New booking
+            </Link>
+          </Button>
+        }
       />
 
-      <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
+      <div className="grid grid-cols-2 gap-3 md:grid-cols-4 md:gap-4">
         <Stat label="Planned" value={counts.planned} tone="info" />
-        <Stat label="In Transit" value={counts.in_transit} tone="info" />
-        <Stat label="At Border" value={counts.at_border} tone="warning" />
+        <Stat label="In transit" value={counts.in_transit} tone="info" />
+        <Stat label="At border" value={counts.at_border} tone="warning" />
         <Stat label="Delivered" value={counts.delivered} tone="success" />
       </div>
 
-      <Card>
-        <CardContent className="!p-0">
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-border text-left text-xs uppercase tracking-wider text-fg-tertiary">
-                  <th className="px-5 py-3 font-medium">Trip</th>
-                  <th className="px-5 py-3 font-medium">Customer</th>
-                  <th className="px-5 py-3 font-medium">Route</th>
-                  <th className="px-5 py-3 font-medium">Truck</th>
-                  <th className="px-5 py-3 font-medium">Driver</th>
-                  <th className="px-5 py-3 font-medium">Status</th>
-                  <th className="px-5 py-3 text-right font-medium">Revenue</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-border">
-                {trips.map((t) => {
-                  const truck = truckById.get(t.truckId);
-                  const driver = driverById.get(t.driverId);
-                  const booking = bookingById.get(t.bookingId);
-                  const customer = booking ? customerById.get(booking.customerId) : undefined;
-                  return (
-                    <tr key={t.id} className="group transition-colors hover:bg-bg-base/40">
-                      <td className="px-5 py-3">
-                        <Link href={`/trips/${t.id}`} className="font-mono text-xs font-medium text-fg-primary group-hover:text-brand-blue">
-                          {t.number}
-                        </Link>
-                      </td>
-                      <td className="px-5 py-3 text-xs text-fg-secondary">{customer?.name ?? "—"}</td>
-                      <td className="px-5 py-3">
-                        <span className="inline-flex items-center gap-1.5 text-fg-primary">
-                          {t.origin}
-                          <ArrowRight className="size-3 text-fg-tertiary" />
-                          {t.destination}
-                        </span>
-                      </td>
-                      <td className="px-5 py-3">
-                        {truck && (
-                          <span className="inline-flex items-center gap-1.5 font-mono text-xs text-fg-secondary">
-                            <TruckIcon className="size-3 text-fg-tertiary" />
-                            {truck.registration}
-                          </span>
-                        )}
-                      </td>
-                      <td className="px-5 py-3 text-xs text-fg-secondary">{driver?.fullName ?? "—"}</td>
-                      <td className="px-5 py-3">
-                        <TripStatusPill status={t.status} />
-                      </td>
-                      <td className="px-5 py-3 text-right font-mono tnum text-fg-primary">
-                        {t.revenueAmount.toLocaleString()} {t.revenueCurrency}
-                      </td>
-                    </tr>
-                  );
-                })}
-                {trips.length === 0 && (
-                  <tr>
-                    <td colSpan={7} className="px-5 py-12 text-center text-sm text-fg-tertiary">
-                      No trips yet. Plan one from a confirmed booking.
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
-          </div>
-        </CardContent>
-      </Card>
+      {trips.length === 0 ? (
+        <div className="surface-card">
+          <EmptyState
+            icon={RouteIcon}
+            title="No trips yet"
+            description="Confirm a booking and plan it onto dispatch to see your first trip here."
+            action={
+              <Button asChild>
+                <Link href="/bookings/new">
+                  <Plus className="size-3.5" />
+                  Create booking
+                </Link>
+              </Button>
+            }
+          />
+        </div>
+      ) : (
+        <DataTable
+          caption={
+            <span>
+              {trips.length} trip{trips.length === 1 ? "" : "s"} · most recent first
+            </span>
+          }
+        >
+          <DataTableHead>
+            <tr>
+              <DataTableHeaderCell>Trip</DataTableHeaderCell>
+              <DataTableHeaderCell>Customer</DataTableHeaderCell>
+              <DataTableHeaderCell>Route</DataTableHeaderCell>
+              <DataTableHeaderCell>Truck</DataTableHeaderCell>
+              <DataTableHeaderCell>Driver</DataTableHeaderCell>
+              <DataTableHeaderCell>Status</DataTableHeaderCell>
+              <DataTableHeaderCell align="right">Revenue</DataTableHeaderCell>
+            </tr>
+          </DataTableHead>
+          <DataTableBody>
+            {trips.map((t) => {
+              const truck = truckById.get(t.truckId);
+              const driver = driverById.get(t.driverId);
+              const booking = bookingById.get(t.bookingId);
+              const customer = booking ? customerById.get(booking.customerId) : undefined;
+              return (
+                <DataTableRow key={t.id} linkHref={`/trips/${t.id}`}>
+                  <DataTableCell>
+                    <Link
+                      href={`/trips/${t.id}`}
+                      className="font-mono text-xs font-semibold text-fg-primary group-hover:text-brand-blue"
+                    >
+                      {t.number}
+                    </Link>
+                  </DataTableCell>
+                  <DataTableCell className="text-xs text-fg-secondary">
+                    {customer?.name ?? "—"}
+                  </DataTableCell>
+                  <DataTableCell>
+                    <span className="inline-flex items-center gap-1.5 text-sm text-fg-primary">
+                      {t.origin}
+                      <ArrowRight className="size-3 text-fg-tertiary" />
+                      {t.destination}
+                    </span>
+                  </DataTableCell>
+                  <DataTableCell>
+                    {truck ? (
+                      <span className="inline-flex items-center gap-1.5 font-mono text-xs text-fg-secondary">
+                        <TruckIcon className="size-3 text-fg-tertiary" />
+                        {truck.registration}
+                      </span>
+                    ) : (
+                      <span className="text-xs text-fg-tertiary">—</span>
+                    )}
+                  </DataTableCell>
+                  <DataTableCell className="text-xs text-fg-secondary">
+                    {driver?.fullName ?? "—"}
+                  </DataTableCell>
+                  <DataTableCell>
+                    <TripStatusPill status={t.status} />
+                  </DataTableCell>
+                  <DataTableCell mono align="right">
+                    {t.revenueAmount.toLocaleString()} {t.revenueCurrency}
+                  </DataTableCell>
+                </DataTableRow>
+              );
+            })}
+          </DataTableBody>
+        </DataTable>
+      )}
     </div>
   );
 }
 
-function Stat({ label, value, tone }: { label: string; value: number; tone?: "info" | "warning" | "success" }) {
+function Stat({
+  label,
+  value,
+  tone,
+}: {
+  label: string;
+  value: number;
+  tone?: "info" | "warning" | "success";
+}) {
   const colour =
-    tone === "info" ? "text-brand-blue" :
-    tone === "warning" ? "text-status-warning" :
-    tone === "success" ? "text-status-success" : "text-fg-primary";
+    tone === "info"
+      ? "text-brand-blue"
+      : tone === "warning"
+        ? "text-status-warning"
+        : tone === "success"
+          ? "text-status-success"
+          : "text-fg-primary";
   return (
-    <div className="rounded-lg border border-border bg-bg-elevated p-4">
-      <div className="text-xs uppercase tracking-wider text-fg-tertiary">{label}</div>
-      <div className={`mt-1 font-mono text-2xl tnum font-medium ${colour}`}>{value}</div>
+    <div className="surface-card lift-on-hover p-4">
+      <div className="text-[10px] font-semibold uppercase tracking-[0.14em] text-fg-tertiary">
+        {label}
+      </div>
+      <div className={cn("mt-1 font-mono text-2xl tnum font-semibold", colour)}>
+        {value}
+      </div>
     </div>
   );
 }

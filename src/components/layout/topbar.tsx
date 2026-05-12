@@ -2,6 +2,7 @@ import { Search } from "lucide-react";
 import { ThemeToggle } from "@/components/layout/theme-toggle";
 import { TopbarClock } from "@/components/layout/topbar-clock";
 import { NotificationBell } from "@/components/layout/notification-bell";
+import { MobileSidebar } from "@/components/layout/mobile-sidebar";
 import { Kbd } from "@/components/ui/kbd";
 import { listNotifications } from "@/server/actions/notifications";
 import { CURRENT_USER_EMPLOYEE_ID } from "@/server/auth/current-user";
@@ -24,7 +25,8 @@ export async function Topbar() {
   });
 
   return (
-    <header className="sticky top-0 z-30 flex h-14 items-center gap-3 border-b border-border bg-bg-base/75 px-4 backdrop-blur-xl">
+    <header className="sticky top-0 z-30 flex h-14 items-center gap-2 border-b border-border bg-bg-base/75 px-3 backdrop-blur-xl sm:gap-3 sm:px-4">
+      <MobileSidebar />
       <button
         type="button"
         className="group inline-flex h-9 w-full max-w-md items-center gap-2 rounded-lg border border-border bg-bg-elevated px-3 text-sm text-fg-tertiary shadow-soft transition-all hover:border-border-strong hover:text-fg-secondary"

@@ -3,14 +3,14 @@ import { Building2, Mail, Phone, Plus } from "lucide-react";
 import { listCustomers } from "@/server/actions/customers";
 import { listBookings } from "@/server/actions/bookings";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
+import { EmptyState } from "@/components/ui/empty-state";
 import { PageHeader } from "@/components/layout/page-header";
 import { Badge } from "@/components/ui/badge";
 
 export default async function CustomersPage() {
-  const customers = await listCustomers();
-  const allBookings = await listBookings();
-  const bookingCount = (cusId: string) => allBookings.filter((b) => b.customerId === cusId).length;
+  const [customers, allBookings] = await Promise.all([listCustomers(), listBookings()]);
+  const bookingCount = (cusId: string) =>
+    allBookings.filter((b) => b.customerId === cusId).length;
 
   return (
     <div className="flex flex-col gap-6">
@@ -22,18 +22,35 @@ export default async function CustomersPage() {
           <Button asChild>
             <Link href="/customers/new">
               <Plus className="size-4" />
-              Add Customer
+              Add customer
             </Link>
           </Button>
         }
       />
 
+      {customers.length === 0 ? (
+        <div className="surface-card">
+          <EmptyState
+            icon={Building2}
+            title="No customers yet"
+            description="Add a customer to start invoicing fuel hauls."
+            action={
+              <Button asChild>
+                <Link href="/customers/new">
+                  <Plus className="size-3.5" />
+                  Add customer
+                </Link>
+              </Button>
+            }
+          />
+        </div>
+      ) : (
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {customers.map((c) => (
           <Link
             key={c.id}
             href={`/customers/${c.id}`}
-            className="group rounded-lg border border-border bg-bg-elevated p-5 transition-all hover:border-border-strong hover:shadow-soft"
+            className="surface-card surface-interactive lift-on-hover group p-5"
           >
             <div className="flex items-start gap-3">
               <div className="flex size-10 items-center justify-center rounded-md bg-brand-blue/10 text-brand-blue ring-1 ring-brand-blue/20">
@@ -73,17 +90,8 @@ export default async function CustomersPage() {
             </div>
           </Link>
         ))}
-        {customers.length === 0 && (
-          <Card className="sm:col-span-2 lg:col-span-3">
-            <CardContent className="py-12 text-center text-sm text-fg-tertiary">
-              No customers yet.{" "}
-              <Link href="/customers/new" className="text-brand-blue hover:underline">
-                Add the first one →
-              </Link>
-            </CardContent>
-          </Card>
-        )}
       </div>
+      )}
     </div>
   );
 }

@@ -3,14 +3,14 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { Loader2, Save } from "lucide-react";
+import { Droplet, Loader2, RotateCcw, Save } from "lucide-react";
 import { createTruck } from "@/server/actions/trucks";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Select } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import { FormField, FormSection } from "@/components/ui/form-section";
+import { FormFooter } from "@/components/ui/form-footer";
 
 type Sub = { id: string; name: string };
 
@@ -18,7 +18,10 @@ export function TruckCreateForm({ subcontractors }: { subcontractors: Sub[] }) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [ownerType, setOwnerType] = useState<"company_owned" | "subcontractor">("company_owned");
+  const [ownerType, setOwnerType] = useState<"company_owned" | "subcontractor">(
+    "company_owned",
+  );
+  const [formKey, setFormKey] = useState(0);
 
   async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -28,7 +31,8 @@ export function TruckCreateForm({ subcontractors }: { subcontractors: Sub[] }) {
     const input = {
       registration: String(fd.get("registration") ?? ""),
       ownerType,
-      subcontractorId: ownerType === "subcontractor" ? String(fd.get("subcontractorId") ?? "") : undefined,
+      subcontractorId:
+        ownerType === "subcontractor" ? String(fd.get("subcontractorId") ?? "") : undefined,
       make: String(fd.get("make") ?? ""),
       model: String(fd.get("model") ?? ""),
       year: Number(fd.get("year") ?? 0),
@@ -36,7 +40,6 @@ export function TruckCreateForm({ subcontractors }: { subcontractors: Sub[] }) {
       capacityTonnes: Number(fd.get("capacityTonnes") ?? 0),
       axles: Number(fd.get("axles") ?? 3),
       status: "active" as const,
-      // Tanker spec
       tankCapacityLitres: Number(fd.get("tankCapacityLitres") ?? 0) || undefined,
       compartmentCount: Number(fd.get("compartmentCount") ?? 0) || undefined,
       lastCalibrationDate: String(fd.get("lastCalibrationDate") ?? "") || undefined,
@@ -48,10 +51,8 @@ export function TruckCreateForm({ subcontractors }: { subcontractors: Sub[] }) {
       ntsaInspectionExpiry: String(fd.get("ntsaInspectionExpiry") ?? "") || undefined,
       comesaPermitExpiry: String(fd.get("comesaPermitExpiry") ?? "") || undefined,
       transitPermitExpiry: String(fd.get("transitPermitExpiry") ?? "") || undefined,
-      epraTransitLicenceExpiry:
-        String(fd.get("epraTransitLicenceExpiry") ?? "") || undefined,
-      petroleumLiabilityExpiry:
-        String(fd.get("petroleumLiabilityExpiry") ?? "") || undefined,
+      epraTransitLicenceExpiry: String(fd.get("epraTransitLicenceExpiry") ?? "") || undefined,
+      petroleumLiabilityExpiry: String(fd.get("petroleumLiabilityExpiry") ?? "") || undefined,
       notes: String(fd.get("notes") ?? "") || undefined,
     };
     const result = await createTruck(input);
@@ -64,180 +65,236 @@ export function TruckCreateForm({ subcontractors }: { subcontractors: Sub[] }) {
   }
 
   return (
-    <form onSubmit={onSubmit} className="flex flex-col gap-5">
+    <form
+      key={formKey}
+      onSubmit={onSubmit}
+      className="flex flex-col gap-5 pb-20"
+    >
       {error && (
-        <div className="rounded-md border border-status-danger/30 bg-status-danger/10 p-3 text-sm text-status-danger">
+        <div className="surface-card animate-content-in border-status-danger/30 bg-status-danger/5 p-4 text-sm text-status-danger">
           {error}
         </div>
       )}
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Identity</CardTitle>
-        </CardHeader>
-        <CardContent className="grid gap-4 sm:grid-cols-2">
-          <Field label="Registration plate" hint="e.g. KCB 421R">
-            <Input
-              name="registration"
-              required
-              placeholder="KCB 421R"
-              className="font-mono uppercase tracking-wider"
-            />
-          </Field>
-          <Field label="Owner type">
-            <Select
-              name="ownerType"
-              value={ownerType}
-              onChange={(e) => setOwnerType(e.currentTarget.value as typeof ownerType)}
-            >
-              <option value="company_owned">Company-Owned</option>
-              <option value="subcontractor">Subcontractor</option>
-            </Select>
-          </Field>
-          {ownerType === "subcontractor" && (
-            <Field label="Subcontractor" hint="Owner of the truck" className="sm:col-span-2">
-              <Select name="subcontractorId" required defaultValue="">
-                <option value="" disabled>
-                  Select a subcontractor…
+      <FormSection
+        eyebrow="Step 1"
+        title="Identity"
+        description="Plate number and ownership. Subcontractor trucks point to the partner who owns them."
+        columns={2}
+      >
+        <FormField label="Registration plate" required hint="e.g. KCB 421R">
+          <Input
+            name="registration"
+            required
+            placeholder="KCB 421R"
+            className="font-mono uppercase tracking-wider"
+          />
+        </FormField>
+        <FormField label="Owner type" required>
+          <Select
+            name="ownerType"
+            value={ownerType}
+            onChange={(e) => setOwnerType(e.currentTarget.value as typeof ownerType)}
+          >
+            <option value="company_owned">Company-owned</option>
+            <option value="subcontractor">Subcontractor</option>
+          </Select>
+        </FormField>
+        {ownerType === "subcontractor" && (
+          <FormField
+            label="Subcontractor"
+            required
+            className="sm:col-span-2"
+            helper={
+              subcontractors.length === 0 ? undefined : "Owner of the truck."
+            }
+          >
+            <Select name="subcontractorId" required defaultValue="">
+              <option value="" disabled>
+                Select a subcontractor…
+              </option>
+              {subcontractors.map((s) => (
+                <option key={s.id} value={s.id}>
+                  {s.name}
                 </option>
-                {subcontractors.map((s) => (
-                  <option key={s.id} value={s.id}>
-                    {s.name}
-                  </option>
-                ))}
-              </Select>
-              {subcontractors.length === 0 && (
-                <p className="mt-1 text-xs text-fg-tertiary">
-                  No subcontractors yet.{" "}
-                  <Link href="/subcontractors/new" className="text-brand-blue hover:underline">
-                    Add one first.
-                  </Link>
-                </p>
-              )}
-            </Field>
-          )}
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Specifications</CardTitle>
-        </CardHeader>
-        <CardContent className="grid gap-4 sm:grid-cols-2">
-          <Field label="Make">
-            <Input name="make" required placeholder="Mercedes-Benz" />
-          </Field>
-          <Field label="Model">
-            <Input name="model" required placeholder="Actros 2545" />
-          </Field>
-          <Field label="Year">
-            <Input
-              name="year"
-              type="number"
-              required
-              min={1990}
-              max={new Date().getFullYear() + 1}
-              defaultValue={new Date().getFullYear()}
-            />
-          </Field>
-          <Field label="Fuel type">
-            <Select name="fuelType" defaultValue="diesel">
-              <option value="diesel">Diesel</option>
-              <option value="petrol">Petrol</option>
+              ))}
             </Select>
-          </Field>
-          <Field label="Capacity (tonnes)">
-            <Input name="capacityTonnes" type="number" required min={1} step={0.5} placeholder="28" />
-          </Field>
-          <Field label="Axles">
-            <Input name="axles" type="number" required min={2} max={7} defaultValue={3} />
-          </Field>
-        </CardContent>
-      </Card>
+            {subcontractors.length === 0 && (
+              <p className="mt-1 text-xs text-fg-tertiary">
+                No subcontractors yet.{" "}
+                <Link href="/subcontractors/new" className="text-brand-blue hover:underline">
+                  Add one first.
+                </Link>
+              </p>
+            )}
+          </FormField>
+        )}
+      </FormSection>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Tanker spec</CardTitle>
-        </CardHeader>
-        <CardContent className="grid gap-4 sm:grid-cols-2">
-          <Field label="Tank capacity (litres)" hint="Sum of all compartments">
-            <Input
-              name="tankCapacityLitres"
-              type="number"
-              min={1000}
-              step={100}
-              placeholder="40000"
-              className="font-mono tnum"
-            />
-          </Field>
-          <Field label="Compartments" hint="Typically 4 to 7">
-            <Input
-              name="compartmentCount"
-              type="number"
-              min={1}
-              max={10}
-              placeholder="5"
-              className="font-mono tnum"
-            />
-          </Field>
-          <Field label="Last calibration date" hint="EPRA cert; valid 2 years">
-            <Input name="lastCalibrationDate" type="date" />
-          </Field>
-          <Field label="Calibration due">
-            <Input name="calibrationDueDate" type="date" />
-          </Field>
-          <Field label="Permitted products" className="sm:col-span-2">
-            <div className="flex flex-wrap gap-3">
-              <label className="inline-flex items-center gap-2 rounded-md border border-border bg-bg-elevated px-3 py-2 text-sm">
-                <input type="checkbox" name="permittedProducts" value="PMS" defaultChecked />
-                <span>PMS (petrol)</span>
-              </label>
-              <label className="inline-flex items-center gap-2 rounded-md border border-border bg-bg-elevated px-3 py-2 text-sm">
-                <input type="checkbox" name="permittedProducts" value="AGO" defaultChecked />
-                <span>AGO (diesel)</span>
-              </label>
-            </div>
-          </Field>
-        </CardContent>
-      </Card>
+      <FormSection
+        eyebrow="Step 2"
+        title="Vehicle specifications"
+        description="Make, model, drivetrain — used in dispatch lookups and on the truck detail page."
+        columns={3}
+      >
+        <FormField label="Make" required>
+          <Input name="make" required placeholder="Mercedes-Benz" />
+        </FormField>
+        <FormField label="Model" required>
+          <Input name="model" required placeholder="Actros 2545" />
+        </FormField>
+        <FormField label="Year" required>
+          <Input
+            name="year"
+            type="number"
+            required
+            min={1990}
+            max={new Date().getFullYear() + 1}
+            defaultValue={new Date().getFullYear()}
+            className="font-mono tnum"
+          />
+        </FormField>
+        <FormField label="Engine fuel" required>
+          <Select name="fuelType" defaultValue="diesel">
+            <option value="diesel">Diesel</option>
+            <option value="petrol">Petrol</option>
+          </Select>
+        </FormField>
+        <FormField label="GVW" required hint="TONNES">
+          <Input
+            name="capacityTonnes"
+            type="number"
+            required
+            min={1}
+            step={0.5}
+            placeholder="28"
+            className="font-mono tnum"
+          />
+        </FormField>
+        <FormField label="Axles" required>
+          <Input
+            name="axles"
+            type="number"
+            required
+            min={2}
+            max={7}
+            defaultValue={3}
+            className="font-mono tnum"
+          />
+        </FormField>
+      </FormSection>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Compliance & expiries</CardTitle>
-        </CardHeader>
-        <CardContent className="grid gap-4 sm:grid-cols-2">
-          <Field label="Insurance expiry" hint="GIT + comprehensive">
-            <Input name="insuranceExpiry" type="date" />
-          </Field>
-          <Field label="Petroleum carriers' liability" hint="Required for fuel haul">
-            <Input name="petroleumLiabilityExpiry" type="date" />
-          </Field>
-          <Field label="NTSA inspection expiry">
-            <Input name="ntsaInspectionExpiry" type="date" />
-          </Field>
-          <Field label="EPRA transit licence">
-            <Input name="epraTransitLicenceExpiry" type="date" />
-          </Field>
-          <Field label="COMESA permit expiry">
-            <Input name="comesaPermitExpiry" type="date" />
-          </Field>
-          <Field label="Transit permit expiry">
-            <Input name="transitPermitExpiry" type="date" />
-          </Field>
-        </CardContent>
-      </Card>
+      <FormSection
+        eyebrow="Step 3"
+        title="Tanker spec"
+        description="EPRA calibration metadata and which fuel products this tanker is rated to carry."
+        columns={2}
+      >
+        <FormField label="Tank capacity" hint="LITRES" helper="Sum of all compartments.">
+          <Input
+            name="tankCapacityLitres"
+            type="number"
+            min={1000}
+            step={100}
+            placeholder="40,000"
+            className="font-mono tnum"
+          />
+        </FormField>
+        <FormField label="Compartments" helper="Typically 4 to 7 on a fuel tanker.">
+          <Input
+            name="compartmentCount"
+            type="number"
+            min={1}
+            max={10}
+            placeholder="5"
+            className="font-mono tnum"
+          />
+        </FormField>
+        <FormField label="Last calibration date" helper="EPRA cert; valid for 2 years.">
+          <Input name="lastCalibrationDate" type="date" />
+        </FormField>
+        <FormField label="Calibration due">
+          <Input name="calibrationDueDate" type="date" />
+        </FormField>
+        <FormField label="Permitted products" className="sm:col-span-2">
+          <div className="flex flex-wrap gap-2">
+            <ProductCheckbox value="PMS" label="PMS (petrol)" />
+            <ProductCheckbox value="AGO" label="AGO (diesel)" />
+          </div>
+        </FormField>
+      </FormSection>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Notes</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <Textarea name="notes" placeholder="Any free-form notes about this truck…" rows={3} />
-        </CardContent>
-      </Card>
+      <FormSection
+        eyebrow="Step 4"
+        title="Compliance & expiries"
+        description="The dashboard surfaces these dates on the Needs Attention card so you can renew before they bite."
+        columns={2}
+      >
+        <FormField label="Insurance expiry" helper="GIT + comprehensive.">
+          <Input name="insuranceExpiry" type="date" />
+        </FormField>
+        <FormField
+          label="Petroleum carriers' liability"
+          helper="Required to load at KPC depots."
+        >
+          <Input name="petroleumLiabilityExpiry" type="date" />
+        </FormField>
+        <FormField label="NTSA inspection expiry">
+          <Input name="ntsaInspectionExpiry" type="date" />
+        </FormField>
+        <FormField label="EPRA transit licence">
+          <Input name="epraTransitLicenceExpiry" type="date" />
+        </FormField>
+        <FormField label="COMESA permit expiry">
+          <Input name="comesaPermitExpiry" type="date" />
+        </FormField>
+        <FormField label="Transit permit expiry">
+          <Input name="transitPermitExpiry" type="date" />
+        </FormField>
+      </FormSection>
 
-      <div className="sticky bottom-4 z-10 flex items-center justify-end gap-2">
-        <Button type="button" variant="ghost" onClick={() => router.back()}>
+      <FormSection
+        eyebrow="Optional"
+        title="Notes"
+        description="Any free-form notes about this truck — special quirks, dispatch preferences, etc."
+        columns={1}
+      >
+        <FormField label="Notes" hint="OPTIONAL">
+          <Textarea
+            name="notes"
+            placeholder="e.g. Prefers night dispatch · long-haul certified driver pool"
+            rows={3}
+          />
+        </FormField>
+      </FormSection>
+
+      <FormFooter
+        meta={
+          <span>
+            All dates in EAT. Trucks are immediately available for booking once
+            saved.
+          </span>
+        }
+      >
+        <Button
+          type="button"
+          variant="ghost"
+          onClick={() => {
+            setFormKey((k) => k + 1);
+            setOwnerType("company_owned");
+            setError(null);
+          }}
+          disabled={loading}
+        >
+          <RotateCcw className="size-3.5" />
+          Reset
+        </Button>
+        <Button
+          type="button"
+          variant="secondary"
+          onClick={() => router.back()}
+          disabled={loading}
+        >
           Cancel
         </Button>
         <Button type="submit" disabled={loading}>
@@ -249,31 +306,27 @@ export function TruckCreateForm({ subcontractors }: { subcontractors: Sub[] }) {
           ) : (
             <>
               <Save className="size-4" />
-              Save Truck
+              Save truck
             </>
           )}
         </Button>
-      </div>
+      </FormFooter>
     </form>
   );
 }
 
-function Field({
-  label,
-  hint,
-  className,
-  children,
-}: {
-  label: string;
-  hint?: string;
-  className?: string;
-  children: React.ReactNode;
-}) {
+function ProductCheckbox({ value, label }: { value: string; label: string }) {
   return (
-    <div className={"flex flex-col gap-1.5 " + (className ?? "")}>
-      <Label>{label}</Label>
-      {children}
-      {hint && <span className="text-[11px] text-fg-tertiary">{hint}</span>}
-    </div>
+    <label className="inline-flex cursor-pointer select-none items-center gap-2 rounded-lg border border-border bg-bg-elevated px-3 py-2 text-sm text-fg-primary shadow-soft transition-colors hover:border-border-strong has-[:checked]:border-brand-blue/50 has-[:checked]:bg-brand-blue/5 has-[:checked]:text-brand-blue">
+      <input
+        type="checkbox"
+        name="permittedProducts"
+        value={value}
+        defaultChecked
+        className="size-3.5 accent-brand-blue"
+      />
+      <Droplet className="size-3.5" />
+      <span>{label}</span>
+    </label>
   );
 }

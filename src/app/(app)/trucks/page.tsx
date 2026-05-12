@@ -3,16 +3,24 @@ import { Plus, Search, Truck as TruckIcon } from "lucide-react";
 import { listTrucks } from "@/server/actions/trucks";
 import { listSubcontractors } from "@/server/actions/subcontractors";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { EmptyState } from "@/components/ui/empty-state";
+import {
+  DataTable,
+  DataTableBody,
+  DataTableCell,
+  DataTableHead,
+  DataTableHeaderCell,
+  DataTableRow,
+} from "@/components/ui/data-table";
 import { PageHeader } from "@/components/layout/page-header";
 import { OwnerPill } from "@/components/fleet/owner-pill";
 import { TruckStatusPill } from "@/components/fleet/truck-status-pill";
 import { ExpiryChip } from "@/components/fleet/expiry-chip";
+import { cn } from "@/lib/utils";
 
 export default async function TrucksPage() {
-  const trucks = await listTrucks();
-  const subs = await listSubcontractors();
+  const [trucks, subs] = await Promise.all([listTrucks(), listSubcontractors()]);
   const subById = new Map(subs.map((s) => [s.id, s]));
 
   const ownStats = trucks.filter((t) => t.ownerType === "company_owned").length;
@@ -25,118 +33,125 @@ export default async function TrucksPage() {
       <PageHeader
         eyebrow="Fleet"
         title="Trucks"
-        description="Asset register for company-owned and subcontractor trucks operating under Nile Valley."
+        description="Asset register for company-owned and subcontractor tankers operating under Nile Valley."
         actions={
           <Button asChild>
             <Link href="/trucks/new">
               <Plus className="size-4" />
-              Add Truck
+              Add truck
             </Link>
           </Button>
         }
       />
 
-      {/* Quick stats */}
-      <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
+      <div className="grid grid-cols-2 gap-3 md:grid-cols-4 md:gap-4">
         <StatPill label="Total" value={trucks.length} />
-        <StatPill label="Company-Owned" value={ownStats} />
+        <StatPill label="Company-owned" value={ownStats} />
         <StatPill label="Subcontractor" value={subStats} />
-        <StatPill label="In Workshop" value={workshopStats} tone="warning" />
+        <StatPill label="In workshop" value={workshopStats} tone="warning" />
       </div>
 
-      {/* Filter bar */}
-      <Card>
-        <CardContent className="!p-4">
-          <div className="flex items-center gap-2">
-            <div className="relative flex-1">
-              <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-fg-tertiary" />
-              <Input
-                type="search"
-                placeholder="Search by registration, make, model…"
-                className="pl-9"
-              />
-            </div>
-            <div className="font-mono text-xs tnum text-fg-tertiary">
-              {trucks.length} truck{trucks.length === 1 ? "" : "s"} · {activeStats} active
-            </div>
+      <div className="surface-card p-3">
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+          <Input
+            type="search"
+            placeholder="Search by registration, make, model…"
+            leadingIcon={<Search />}
+            className="h-9 flex-1"
+          />
+          <div className="font-mono text-xs tnum text-fg-tertiary">
+            {trucks.length} truck{trucks.length === 1 ? "" : "s"} · {activeStats} active
           </div>
-        </CardContent>
-      </Card>
+        </div>
+      </div>
 
-      {/* Truck table */}
-      <Card>
-        <CardContent className="!p-0">
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-border text-left text-xs uppercase tracking-wider text-fg-tertiary">
-                  <th className="px-5 py-3 font-medium">Registration</th>
-                  <th className="px-5 py-3 font-medium">Make / Model</th>
-                  <th className="px-5 py-3 font-medium">Year</th>
-                  <th className="px-5 py-3 font-medium">Capacity</th>
-                  <th className="px-5 py-3 font-medium">Owner</th>
-                  <th className="px-5 py-3 font-medium">Status</th>
-                  <th className="px-5 py-3 font-medium">Insurance</th>
-                  <th className="px-5 py-3 font-medium">COMESA</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-border">
-                {trucks.map((t) => {
-                  const sub = t.subcontractorId ? subById.get(t.subcontractorId) : undefined;
-                  return (
-                    <tr key={t.id} className="group transition-colors hover:bg-bg-base/40">
-                      <td className="px-5 py-3">
-                        <Link href={`/trucks/${t.id}`} className="flex items-center gap-2">
-                          <span className="flex size-7 items-center justify-center rounded-md bg-bg-base ring-1 ring-border">
-                            <TruckIcon className="size-3.5 text-fg-tertiary" />
-                          </span>
-                          <span className="font-mono text-xs font-medium text-fg-primary group-hover:text-brand-blue">
-                            {t.registration}
-                          </span>
-                        </Link>
-                      </td>
-                      <td className="px-5 py-3 text-fg-primary">
-                        {t.make} <span className="text-fg-tertiary">{t.model}</span>
-                      </td>
-                      <td className="px-5 py-3 font-mono tnum text-fg-secondary">{t.year}</td>
-                      <td className="px-5 py-3 font-mono tnum text-fg-secondary">
+      {trucks.length === 0 ? (
+        <div className="surface-card">
+          <EmptyState
+            icon={TruckIcon}
+            title="No trucks registered yet"
+            description="Add your first tanker to start dispatching fuel hauls."
+            action={
+              <Button asChild>
+                <Link href="/trucks/new">
+                  <Plus className="size-3.5" />
+                  Add truck
+                </Link>
+              </Button>
+            }
+          />
+        </div>
+      ) : (
+        <DataTable>
+          <DataTableHead>
+            <tr>
+              <DataTableHeaderCell>Registration</DataTableHeaderCell>
+              <DataTableHeaderCell>Make / Model</DataTableHeaderCell>
+              <DataTableHeaderCell>Year</DataTableHeaderCell>
+              <DataTableHeaderCell>Tank</DataTableHeaderCell>
+              <DataTableHeaderCell>Owner</DataTableHeaderCell>
+              <DataTableHeaderCell>Status</DataTableHeaderCell>
+              <DataTableHeaderCell>Insurance</DataTableHeaderCell>
+              <DataTableHeaderCell>COMESA</DataTableHeaderCell>
+            </tr>
+          </DataTableHead>
+          <DataTableBody>
+            {trucks.map((t) => {
+              const sub = t.subcontractorId ? subById.get(t.subcontractorId) : undefined;
+              return (
+                <DataTableRow key={t.id} linkHref={`/trucks/${t.id}`}>
+                  <DataTableCell>
+                    <Link href={`/trucks/${t.id}`} className="flex items-center gap-2.5">
+                      <span className="flex size-7 items-center justify-center rounded-md border border-border bg-bg-surface">
+                        <TruckIcon className="size-3.5 text-fg-tertiary" />
+                      </span>
+                      <span className="font-mono text-xs font-semibold text-fg-primary group-hover:text-brand-blue">
+                        {t.registration}
+                      </span>
+                    </Link>
+                  </DataTableCell>
+                  <DataTableCell>
+                    <span className="text-fg-primary">{t.make}</span>{" "}
+                    <span className="text-fg-tertiary">{t.model}</span>
+                  </DataTableCell>
+                  <DataTableCell mono className="text-fg-secondary">
+                    {t.year}
+                  </DataTableCell>
+                  <DataTableCell mono className="text-fg-secondary">
+                    {t.tankCapacityLitres ? (
+                      <>
+                        {t.tankCapacityLitres.toLocaleString()}{" "}
+                        <span className="text-fg-tertiary">L</span>
+                      </>
+                    ) : (
+                      <>
                         {t.capacityTonnes} <span className="text-fg-tertiary">t</span>
-                      </td>
-                      <td className="px-5 py-3">
-                        <div className="flex flex-col gap-0.5">
-                          <OwnerPill ownerType={t.ownerType} />
-                          {sub && (
-                            <span className="text-[10px] text-fg-tertiary">{sub.name}</span>
-                          )}
-                        </div>
-                      </td>
-                      <td className="px-5 py-3">
-                        <TruckStatusPill status={t.status} />
-                      </td>
-                      <td className="px-5 py-3">
-                        <ExpiryChip date={t.insuranceExpiry} />
-                      </td>
-                      <td className="px-5 py-3">
-                        <ExpiryChip date={t.comesaPermitExpiry} />
-                      </td>
-                    </tr>
-                  );
-                })}
-                {trucks.length === 0 && (
-                  <tr>
-                    <td colSpan={8} className="px-5 py-12 text-center text-sm text-fg-tertiary">
-                      No trucks registered yet.{" "}
-                      <Link href="/trucks/new" className="text-brand-blue hover:underline">
-                        Add the first one →
-                      </Link>
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
-          </div>
-        </CardContent>
-      </Card>
+                      </>
+                    )}
+                  </DataTableCell>
+                  <DataTableCell>
+                    <div className="flex flex-col gap-0.5">
+                      <OwnerPill ownerType={t.ownerType} />
+                      {sub && (
+                        <span className="text-[10px] text-fg-tertiary">{sub.name}</span>
+                      )}
+                    </div>
+                  </DataTableCell>
+                  <DataTableCell>
+                    <TruckStatusPill status={t.status} />
+                  </DataTableCell>
+                  <DataTableCell>
+                    <ExpiryChip date={t.insuranceExpiry} />
+                  </DataTableCell>
+                  <DataTableCell>
+                    <ExpiryChip date={t.comesaPermitExpiry} />
+                  </DataTableCell>
+                </DataTableRow>
+              );
+            })}
+          </DataTableBody>
+        </DataTable>
+      )}
     </div>
   );
 }
@@ -151,13 +166,15 @@ function StatPill({
   tone?: "default" | "warning";
 }) {
   return (
-    <div className="rounded-lg border border-border bg-bg-elevated p-4">
-      <div className="text-xs uppercase tracking-wider text-fg-tertiary">{label}</div>
+    <div className="surface-card lift-on-hover p-4">
+      <div className="text-[10px] font-semibold uppercase tracking-[0.14em] text-fg-tertiary">
+        {label}
+      </div>
       <div
-        className={
-          "mt-1 font-mono text-2xl tnum font-medium " +
-          (tone === "warning" ? "text-status-warning" : "text-fg-primary")
-        }
+        className={cn(
+          "mt-1 font-mono text-2xl tnum font-semibold",
+          tone === "warning" ? "text-status-warning" : "text-fg-primary",
+        )}
       >
         {value}
       </div>
