@@ -19,15 +19,15 @@ export function KpiCard({ label, value, unit, delta, trend, icon: Icon, hint }: 
   const trendColor = positive ? "rgb(var(--status-success))" : "rgb(var(--status-danger))";
 
   return (
-    <div className="group relative flex flex-col gap-3 overflow-hidden rounded-lg border border-border bg-bg-elevated p-5 transition-all hover:border-border-strong hover:shadow-soft">
+    <div className="group surface-card lift-on-hover relative flex flex-col gap-3 overflow-hidden p-5">
       <div className="flex items-start justify-between">
         <div className="flex items-center gap-2">
           {Icon && (
-            <div className="flex size-7 items-center justify-center rounded-md bg-bg-base text-fg-tertiary ring-1 ring-border">
-              <Icon className="size-3.5" />
+            <div className="flex size-8 items-center justify-center rounded-lg bg-brand-blue/10 text-brand-blue ring-1 ring-brand-blue/20">
+              <Icon className="size-4" />
             </div>
           )}
-          <div className="text-xs font-medium uppercase tracking-wide text-fg-tertiary">
+          <div className="text-[11px] font-semibold uppercase tracking-[0.14em] text-fg-tertiary">
             {label}
           </div>
         </div>

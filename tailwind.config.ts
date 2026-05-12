@@ -28,6 +28,7 @@ const config: Config = {
           navy: "rgb(var(--brand-navy) / <alpha-value>)",
           blue: "rgb(var(--brand-blue) / <alpha-value>)",
           "blue-hover": "rgb(var(--brand-blue-hover) / <alpha-value>)",
+          cyan: "rgb(var(--brand-cyan) / <alpha-value>)",
         },
         // Apple semantic statuses
         status: {
@@ -52,10 +53,11 @@ const config: Config = {
         xl: "20px",
       },
       boxShadow: {
-        soft: "0 1px 2px rgba(0,0,0,.04), 0 4px 12px rgba(0,0,0,.06)",
+        soft: "0 1px 2px rgba(15,23,42,.04), 0 2px 8px rgba(15,23,42,.05)",
         elevated:
-          "0 4px 12px rgba(0,0,0,.08), 0 16px 40px rgba(0,0,0,.10)",
-        modal: "0 24px 64px rgba(0,0,0,.18)",
+          "0 4px 16px rgba(15,23,42,.06), 0 16px 40px rgba(15,23,42,.08)",
+        modal: "0 24px 64px rgba(15,23,42,.18)",
+        focus: "0 0 0 4px rgba(37,99,235,.22)",
       },
       backdropBlur: {
         xl: "24px",

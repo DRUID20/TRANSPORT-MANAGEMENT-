@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useEffect, useState } from "react";
 import {
   LayoutDashboard,
   Truck,
@@ -42,6 +43,9 @@ import {
   Pause,
   Grid3X3,
   FileBarChart,
+  PanelLeftClose,
+  PanelLeftOpen,
+  Calendar,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Logo } from "@/components/layout/logo";
@@ -53,11 +57,27 @@ type NavItem = {
   badge?: string;
 };
 
+/**
+ * Sidebar navigation — premium SaaS shell.
+ *
+ * Two visual modes:
+ *  - expanded (240px): labels + icons + group eyebrows
+ *  - collapsed (64px):  icons only, with tooltip-equivalent title attrs
+ *
+ * State is persisted to localStorage so users only choose once. Hidden
+ * below md: a hamburger in the topbar (out of scope here) toggles a
+ * mobile drawer that re-uses this component.
+ *
+ * The active state uses a left accent rule + soft brand-blue background
+ * pill — a cleaner pattern than full-row fill, and consistent with
+ * Linear / Notion / Vercel.
+ */
 const navGroups: { title: string; items: NavItem[] }[] = [
   {
     title: "Operations",
     items: [
       { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
+      { href: "/calendar", label: "Schedule", icon: Calendar },
       { href: "/bookings", label: "Bookings", icon: ClipboardList },
       { href: "/trips", label: "Trips", icon: Route },
       { href: "/trucks", label: "Trucks", icon: Truck },
@@ -130,36 +150,95 @@ const navGroups: { title: string; items: NavItem[] }[] = [
   },
   {
     title: "AI",
-    items: [
-      { href: "/assistant", label: "Assistant", icon: Sparkles },
-    ],
+    items: [{ href: "/assistant", label: "Assistant", icon: Sparkles }],
   },
   {
     title: "Admin",
-    items: [
-      { href: "/hr", label: "HR & Staff", icon: Users, badge: "soon" },
-      { href: "/settings", label: "Settings", icon: Settings, badge: "soon" },
-    ],
+    items: [{ href: "/settings", label: "Settings", icon: Settings, badge: "soon" }],
   },
 ];
 
+const STORAGE_KEY = "tx.sidebar.collapsed";
+
 export function Sidebar() {
   const pathname = usePathname();
+  const [collapsed, setCollapsed] = useState(false);
+  const [hydrated, setHydrated] = useState(false);
+
+  useEffect(() => {
+    const stored = typeof window !== "undefined" ? window.localStorage.getItem(STORAGE_KEY) : null;
+    if (stored === "1") setCollapsed(true);
+    setHydrated(true);
+  }, []);
+
+  function toggle() {
+    setCollapsed((prev) => {
+      const next = !prev;
+      try {
+        window.localStorage.setItem(STORAGE_KEY, next ? "1" : "0");
+      } catch {
+        // localStorage may be unavailable (private mode); fall back silently.
+      }
+      return next;
+    });
+  }
 
   return (
-    <aside className="hidden h-screen w-60 flex-col border-r border-border bg-bg-surface md:flex">
-      <div className="flex h-14 items-center border-b border-border px-4">
-        <Link href="/dashboard" className="-mx-1 rounded-md px-1 py-1 transition-colors hover:bg-bg-elevated">
-          <Logo />
+    <aside
+      className={cn(
+        "hidden h-screen shrink-0 flex-col border-r border-border bg-bg-surface transition-[width] duration-200 ease-out md:flex",
+        collapsed ? "w-[68px]" : "w-60",
+      )}
+      aria-label="Primary navigation"
+    >
+      <div className="flex h-14 items-center justify-between gap-2 border-b border-border px-3">
+        <Link
+          href="/dashboard"
+          className={cn(
+            "inline-flex items-center gap-2 rounded-md px-1 py-1 transition-colors hover:bg-bg-elevated",
+            collapsed && "w-full justify-center px-0",
+          )}
+        >
+          {collapsed ? (
+            <span
+              className="grid size-8 place-items-center rounded-md bg-brand-blue text-[11px] font-semibold tracking-wide text-white shadow-soft"
+              aria-label="Nile Valley"
+            >
+              NV
+            </span>
+          ) : (
+            <Logo />
+          )}
         </Link>
+        {hydrated && (
+          <button
+            type="button"
+            onClick={toggle}
+            className={cn(
+              "rounded-md p-1.5 text-fg-tertiary transition-colors hover:bg-bg-elevated hover:text-fg-primary",
+              collapsed && "absolute left-1/2 mt-12 -translate-x-1/2",
+            )}
+            aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+            title={collapsed ? "Expand" : "Collapse"}
+          >
+            {collapsed ? (
+              <PanelLeftOpen className="size-4" />
+            ) : (
+              <PanelLeftClose className="size-4" />
+            )}
+          </button>
+        )}
       </div>
 
       <nav className="flex-1 overflow-y-auto py-4">
         {navGroups.map((group) => (
-          <div key={group.title} className="mb-5 px-3">
-            <div className="mb-1.5 px-2 text-[10px] font-semibold uppercase tracking-[0.12em] text-fg-tertiary">
-              {group.title}
-            </div>
+          <div key={group.title} className={cn("mb-5", collapsed ? "px-2" : "px-3")}>
+            {!collapsed && (
+              <div className="mb-1.5 px-2 text-[10px] font-semibold uppercase tracking-[0.16em] text-fg-tertiary">
+                {group.title}
+              </div>
+            )}
+            {collapsed && <div aria-hidden className="mx-2 mb-2 h-px bg-border" />}
             <div className="flex flex-col gap-0.5">
               {group.items.map((item) => {
                 const active =
@@ -170,24 +249,38 @@ export function Sidebar() {
                   <Link
                     key={item.href}
                     href={item.href}
+                    title={collapsed ? item.label : undefined}
                     className={cn(
-                      "group flex items-center gap-2.5 rounded-md px-2 py-1.5 text-sm transition-all",
+                      "group relative flex items-center gap-2.5 rounded-md text-sm transition-all",
+                      collapsed ? "justify-center px-0 py-2" : "px-2.5 py-1.5",
                       active
                         ? "bg-brand-blue/10 text-fg-primary"
                         : "text-fg-secondary hover:bg-bg-elevated hover:text-fg-primary",
                     )}
                   >
+                    {active && !collapsed && (
+                      <span
+                        aria-hidden
+                        className="absolute left-0 top-1/2 h-5 w-[3px] -translate-y-1/2 rounded-r-full bg-brand-blue"
+                      />
+                    )}
                     <Icon
                       className={cn(
                         "size-4 shrink-0 transition-colors",
-                        active ? "text-brand-blue" : "text-fg-tertiary group-hover:text-fg-secondary",
+                        active
+                          ? "text-brand-blue"
+                          : "text-fg-tertiary group-hover:text-fg-secondary",
                       )}
                     />
-                    <span className="flex-1">{item.label}</span>
-                    {item.badge && (
-                      <span className="rounded-full bg-bg-elevated-2 px-1.5 py-0.5 font-mono text-[9px] uppercase tracking-wider text-fg-tertiary">
-                        {item.badge}
-                      </span>
+                    {!collapsed && (
+                      <>
+                        <span className="flex-1 truncate">{item.label}</span>
+                        {item.badge && (
+                          <span className="rounded-full bg-bg-surface px-1.5 py-0.5 font-mono text-[9px] uppercase tracking-wider text-fg-tertiary ring-1 ring-border">
+                            {item.badge}
+                          </span>
+                        )}
+                      </>
                     )}
                   </Link>
                 );
@@ -197,14 +290,18 @@ export function Sidebar() {
         ))}
       </nav>
 
-      <div className="border-t border-border p-3">
-        <div className="rounded-md bg-bg-elevated p-3">
-          <div className="text-[10px] font-mono uppercase tracking-wider text-fg-tertiary">
-            Build
+      {!collapsed && (
+        <div className="border-t border-border p-3">
+          <div className="rounded-lg border border-border bg-bg-base p-3">
+            <div className="font-mono text-[10px] uppercase tracking-wider text-fg-tertiary">
+              Build
+            </div>
+            <div className="font-mono text-xs text-fg-secondary">
+              tx-system v0.1
+            </div>
           </div>
-          <div className="font-mono text-xs text-fg-secondary">tx-system v0.1 · phase 0</div>
         </div>
-      </div>
+      )}
     </aside>
   );
 }

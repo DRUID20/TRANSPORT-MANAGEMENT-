@@ -7,20 +7,24 @@ import { cn } from "@/lib/utils";
  * We use native rather than Radix Select so it works seamlessly with
  * <form> submissions (FormData) and on mobile keyboards.
  */
-export const Select = React.forwardRef<
-  HTMLSelectElement,
-  React.SelectHTMLAttributes<HTMLSelectElement>
->(({ className, children, ...props }, ref) => {
+export interface SelectProps extends React.SelectHTMLAttributes<HTMLSelectElement> {
+  error?: boolean;
+}
+
+export const Select = React.forwardRef<HTMLSelectElement, SelectProps>(
+  ({ className, children, error, ...props }, ref) => {
   return (
     <div className="relative">
       <select
         ref={ref}
         className={cn(
-          "flex h-10 w-full appearance-none rounded-md border border-border bg-bg-base pl-3 pr-9 py-2 text-sm",
+          "flex h-9 w-full appearance-none rounded-lg border bg-bg-elevated pl-3 pr-9 py-2 text-sm shadow-soft transition-all",
           "text-fg-primary",
-          "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-blue focus-visible:ring-offset-2 focus-visible:ring-offset-bg-base",
-          "disabled:cursor-not-allowed disabled:opacity-50",
-          "transition-colors",
+          "focus-visible:outline-none",
+          error
+            ? "border-status-danger/60 focus-visible:border-status-danger"
+            : "border-border hover:border-border-strong focus-visible:border-brand-blue",
+          "disabled:cursor-not-allowed disabled:bg-bg-surface disabled:opacity-60",
           className,
         )}
         {...props}
