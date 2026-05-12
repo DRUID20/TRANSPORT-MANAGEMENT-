@@ -86,9 +86,15 @@ export function InvoiceCreateForm({
           description: `Freight ${preselectTrip.number} · ${preselectTrip.cargoType}`,
           quantity: String(preselectTrip.cargoQty),
           unit: preselectTrip.cargoUnit,
+          // Per-litre unit prices commonly run to 4 decimals (e.g. KES 8.4250)
+          // so for litre-denominated trips we keep more precision than the
+          // 2-dp rounding used for tonne/container freight. Without this,
+          // a 40 000 L × 8.4250 = 337 000 revenue rounds to 337 040 at 2dp.
           unitPrice: String(
             preselectTrip.cargoQty > 0
-              ? Math.round((preselectTrip.revenueAmount / preselectTrip.cargoQty) * 100) / 100
+              ? preselectTrip.cargoUnit === "litres"
+                ? Math.round((preselectTrip.revenueAmount / preselectTrip.cargoQty) * 10_000) / 10_000
+                : Math.round((preselectTrip.revenueAmount / preselectTrip.cargoQty) * 100) / 100
               : preselectTrip.revenueAmount,
           ),
         },

@@ -31,7 +31,12 @@ import type {
   TripStatus,
   TripStatusEvent,
 } from "@/lib/types/trips";
-import { allowedTransitions, isTerminal } from "@/lib/types/trips";
+import {
+  allowedTransitions,
+  computeFuelRevenue,
+  isTerminal,
+  lookupRouteKm,
+} from "@/lib/types/trips";
 import type {
   TripDocument,
   TripDocumentKind,
@@ -1450,9 +1455,12 @@ function seedTrips() {
       cargoType: b.cargoType,
       cargoQuantity: b.cargoQuantity,
       cargoUnit: b.cargoUnit,
-      revenueAmount: b.agreedBasis === "per_tonne" ? b.agreedAmount * b.cargoQuantity
-                   : b.agreedBasis === "per_container" ? b.agreedAmount * b.cargoQuantity
-                   : b.agreedAmount,
+      revenueAmount: computeFuelRevenue({
+        basis: b.agreedBasis,
+        amount: b.agreedAmount,
+        cargoQuantityLitres: b.cargoQuantity,
+        km: lookupRouteKm(b.origin, b.destination),
+      }),
       revenueCurrency: b.agreedCurrency,
       driverAdvanceKes: 35000,
       plannedDepartureDate: b.requestedDate,
@@ -1508,10 +1516,12 @@ export function planTrip(input: {
   if (booking.status === "planned" || booking.status === "cancelled") return undefined;
 
   const id = randomUUID();
-  const revenue =
-    booking.agreedBasis === "per_tonne" || booking.agreedBasis === "per_container"
-      ? booking.agreedAmount * booking.cargoQuantity
-      : booking.agreedAmount;
+  const revenue = computeFuelRevenue({
+    basis: booking.agreedBasis,
+    amount: booking.agreedAmount,
+    cargoQuantityLitres: booking.cargoQuantity,
+    km: lookupRouteKm(booking.origin, booking.destination),
+  });
   const trip: Trip = {
     id,
     number: nextTripNumber(),

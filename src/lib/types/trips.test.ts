@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 import {
+  computeFuelRevenue,
   correctVolumeTo20C,
+  lookupRouteKm,
   ullageVariancePct,
   ULLAGE_ALERT_THRESHOLD_PCT,
 } from "./trips";
@@ -70,5 +72,85 @@ describe("end-to-end: loading + discharge → ullage", () => {
     // After temperature correction the apparent loss should be within
     // the acceptable threshold (no real shrinkage, just thermal).
     expect(Math.abs(ullage)).toBeLessThan(ULLAGE_ALERT_THRESHOLD_PCT);
+  });
+});
+
+describe("computeFuelRevenue", () => {
+  it("per_litre × cargo litres", () => {
+    // 40 000 L AGO @ KES 8.50 / L → 340 000 KES
+    expect(
+      computeFuelRevenue({
+        basis: "per_litre",
+        amount: 8.5,
+        cargoQuantityLitres: 40_000,
+      }),
+    ).toBe(340_000);
+  });
+
+  it("per_litre_per_km × litres × km", () => {
+    // 40 000 L × KES 0.012 / L / km × 480 km (Mombasa-Nairobi) = 230 400
+    expect(
+      computeFuelRevenue({
+        basis: "per_litre_per_km",
+        amount: 0.012,
+        cargoQuantityLitres: 40_000,
+        km: 480,
+      }),
+    ).toBeCloseTo(230_400, 0);
+  });
+
+  it("per_litre_per_km with missing km falls through to zero (caller surfaces)", () => {
+    // Operator picked an unknown route — we'd rather show zero and let the
+    // operator notice than silently bill a nonsense flat fee.
+    expect(
+      computeFuelRevenue({
+        basis: "per_litre_per_km",
+        amount: 0.012,
+        cargoQuantityLitres: 40_000,
+      }),
+    ).toBe(0);
+  });
+
+  it("per_trip ignores cargo and km", () => {
+    expect(
+      computeFuelRevenue({
+        basis: "per_trip",
+        amount: 250_000,
+        cargoQuantityLitres: 40_000,
+        km: 480,
+      }),
+    ).toBe(250_000);
+  });
+
+  it("per_km × distance, regardless of litres", () => {
+    expect(
+      computeFuelRevenue({
+        basis: "per_km",
+        amount: 400,
+        cargoQuantityLitres: 40_000,
+        km: 480,
+      }),
+    ).toBe(192_000);
+  });
+
+  it("legacy per_tonne basis still multiplies by quantity (seed compatibility)", () => {
+    expect(
+      computeFuelRevenue({
+        basis: "per_tonne",
+        amount: 95,
+        cargoQuantityLitres: 28,
+      }),
+    ).toBe(2_660);
+  });
+});
+
+describe("lookupRouteKm", () => {
+  it("returns km for known KPC pairs", () => {
+    expect(lookupRouteKm("KPC Mombasa", "Nairobi")).toBe(480);
+    expect(lookupRouteKm("KPC Nairobi", "Kampala")).toBe(660);
+  });
+
+  it("undefined for unknown pairs — caller must handle it", () => {
+    expect(lookupRouteKm("KPC Mombasa", "Lokichogio")).toBeUndefined();
   });
 });

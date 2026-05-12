@@ -271,3 +271,76 @@ export function ullageVariancePct(
 
 /** Threshold above which an ullage variance should trigger an alert. */
 export const ULLAGE_ALERT_THRESHOLD_PCT = 0.5;
+
+/**
+ * Indicative one-way road distance in km for common KPC-depot to off-take
+ * destination pairs. Used to compute the projected revenue at planning time
+ * for `per_km` and `per_litre_per_km` rates; once the trip closes, the
+ * actual GPS-recorded km on the trip overrides this.
+ *
+ * Source: typical operator route plans, rounded to the nearest 10 km. Not
+ * an authoritative geodetic figure — fine for revenue projection but use
+ * actualKm for final invoicing.
+ */
+export const KENYA_FUEL_ROUTE_KM: Record<string, number> = {
+  "KPC Mombasa->Nairobi": 480,
+  "KPC Mombasa->Eldoret": 800,
+  "KPC Mombasa->Kisumu": 820,
+  "KPC Mombasa->Nakuru": 640,
+  "KPC Mombasa->Kampala": 1170,
+  "KPC Mombasa->Kigali": 1690,
+  "KPC Mombasa->Bujumbura": 1850,
+  "KPC Mombasa->Juba": 1880,
+  "KPC Mombasa->Goma": 1850,
+  "KPC Nairobi->Eldoret": 320,
+  "KPC Nairobi->Kisumu": 350,
+  "KPC Nairobi->Nakuru": 160,
+  "KPC Nairobi->Kampala": 660,
+  "KPC Nairobi->Kigali": 1170,
+  "KPC Eldoret->Kampala": 410,
+  "KPC Eldoret->Juba": 950,
+  "KPC Kisumu->Kampala": 350,
+  "KPRL Mombasa->Nairobi": 480,
+};
+
+/** Look up the route km, returning undefined for unknown pairs. */
+export function lookupRouteKm(origin: string, destination: string): number | undefined {
+  return KENYA_FUEL_ROUTE_KM[`${origin}->${destination}`];
+}
+
+/**
+ * Compute revenue for a fuel haul given the agreed rate and the route.
+ *
+ * - per_litre        → amount × litres
+ * - per_litre_per_km → amount × litres × km
+ * - per_km           → amount × km
+ * - per_trip         → amount (flat)
+ *
+ * Legacy bases (per_tonne, per_container) still multiply by cargoQuantity
+ * so existing seed data continues to value correctly.
+ *
+ * km is optional — when missing for a per-km variant the caller's km
+ * fallback (typically lookupRouteKm) is used; if that also fails we
+ * degrade gracefully to a flat amount and the caller surfaces a hint.
+ */
+export function computeFuelRevenue(input: {
+  basis: RateBasis;
+  amount: number;
+  cargoQuantityLitres: number;
+  km?: number;
+}): number {
+  const { basis, amount, cargoQuantityLitres, km } = input;
+  switch (basis) {
+    case "per_litre":
+      return amount * cargoQuantityLitres;
+    case "per_litre_per_km":
+      return amount * cargoQuantityLitres * (km ?? 0);
+    case "per_km":
+      return amount * (km ?? 0);
+    case "per_trip":
+      return amount;
+    case "per_tonne":
+    case "per_container":
+      return amount * cargoQuantityLitres;
+  }
+}
