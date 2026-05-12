@@ -12,6 +12,7 @@ const filters = [
   { key: "insurance", label: "Insurance" },
   { key: "comesa",    label: "COMESA" },
   { key: "driver",    label: "Driver docs" },
+  { key: "fuel",      label: "Fuel paperwork" },
 ] as const;
 
 export function ComplianceFilters({ active }: { active: string }) {

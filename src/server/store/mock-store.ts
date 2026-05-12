@@ -200,6 +200,14 @@ const truckSeed: Truck[] = [
     insuranceExpiry: "2026-08-15",
     ntsaInspectionExpiry: "2026-11-04",
     comesaPermitExpiry: "2026-06-20",
+    // Tanker spec (Fuel-only TMS — F-3 seed)
+    tankCapacityLitres: 40_000,
+    compartmentCount: 5,
+    permittedProducts: ["AGO", "PMS"],
+    lastCalibrationDate: "2024-06-01",
+    calibrationDueDate: "2026-06-02",         // warning band (~21d)
+    petroleumLiabilityExpiry: "2026-05-30",   // warning band (~18d)
+    epraTransitLicenceExpiry: "2027-01-15",
     createdAt: "2026-01-04T08:00:00Z",
   },
   {
@@ -216,6 +224,13 @@ const truckSeed: Truck[] = [
     insuranceExpiry: "2026-12-30",
     ntsaInspectionExpiry: "2026-09-12",
     comesaPermitExpiry: "2026-05-25",
+    tankCapacityLitres: 42_000,
+    compartmentCount: 6,
+    permittedProducts: ["AGO"],
+    lastCalibrationDate: "2025-02-20",
+    calibrationDueDate: "2027-02-20",
+    petroleumLiabilityExpiry: "2026-05-19",   // critical (~7d)
+    epraTransitLicenceExpiry: "2027-04-30",
     createdAt: "2026-01-05T08:00:00Z",
   },
   {
@@ -5303,6 +5318,33 @@ function seedComplianceFromDrivers() {
       issueDate: "2022-04-18",
       expiryDate: inDays(-15),        // expired — for the dashboard
       issuingAuthority: "NITA",
+    },
+    // Fuel-only TMS (F-3): petroleum-carrier paperwork. Sprinkled across a
+    // few driver-linked employees so the dashboard 'Fuel compliance' line
+    // has real entries to surface. emp-006 and emp-007 are both drivers.
+    {
+      employeeId: "emp-006",
+      kind: "hazmat_endorsement",
+      number: "NTSA-HAZ-2024-0331",
+      issueDate: "2024-08-01",
+      expiryDate: inDays(22),         // warning band
+      issuingAuthority: "NTSA",
+    },
+    {
+      employeeId: "emp-006",
+      kind: "epra_dangerous_goods",
+      number: "EPRA-DG-2024-118",
+      issueDate: "2024-09-15",
+      expiryDate: inDays(10),         // critical
+      issuingAuthority: "EPRA",
+    },
+    {
+      employeeId: "emp-007",
+      kind: "puc_certificate",
+      number: "PUC-2025-0992",
+      issueDate: "2025-11-01",
+      expiryDate: inDays(-3),         // freshly expired
+      issuingAuthority: "NEMA",
     },
   ];
 

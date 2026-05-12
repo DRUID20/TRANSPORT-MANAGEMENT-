@@ -134,6 +134,19 @@ export default function DashboardPage() {
           href: "/compliance?filter=driver",
         });
       }
+      if (s.fuelComplianceExpiring > 0) {
+        // Petroleum paperwork — HazMat / EPRA / PUC / tank calibration /
+        // petroleum carriers' liability. Without these the trip cannot
+        // legally load at KPC, so this lights up red instead of warning.
+        items.push({
+          icon: Fuel,
+          count: s.fuelComplianceExpiring,
+          title: "Fuel compliance",
+          hint: "HazMat / EPRA / PUC / calibration",
+          tone: "danger",
+          href: "/compliance?filter=fuel",
+        });
+      }
       setAttention(items);
     });
     return () => {

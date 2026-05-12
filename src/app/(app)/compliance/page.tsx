@@ -27,7 +27,16 @@ const entityLabel: Record<ExpiryEntityKind, string> = {
   driver: "Driver",
 };
 
-type Filter = "all" | "expired" | "critical" | "warning" | "ok" | "insurance" | "comesa" | "driver";
+type Filter =
+  | "all"
+  | "expired"
+  | "critical"
+  | "warning"
+  | "ok"
+  | "insurance"
+  | "comesa"
+  | "driver"
+  | "fuel";
 
 function applyFilter(items: ExpiryItem[], filter: Filter): ExpiryItem[] {
   switch (filter) {
@@ -47,6 +56,8 @@ function applyFilter(items: ExpiryItem[], filter: Filter): ExpiryItem[] {
       );
     case "driver":
       return items.filter((i) => i.entityKind === "driver");
+    case "fuel":
+      return items.filter((i) => i.category === "fuel");
     default:
       return items;
   }
@@ -59,7 +70,17 @@ export default async function CompliancePage({
 }) {
   const { filter: rawFilter } = await searchParams;
   const filter = (
-    ["all", "expired", "critical", "warning", "ok", "insurance", "comesa", "driver"].includes(rawFilter ?? "")
+    [
+      "all",
+      "expired",
+      "critical",
+      "warning",
+      "ok",
+      "insurance",
+      "comesa",
+      "driver",
+      "fuel",
+    ].includes(rawFilter ?? "")
       ? rawFilter
       : "all"
   ) as Filter;
@@ -72,15 +93,20 @@ export default async function CompliancePage({
       <PageHeader
         eyebrow="Fleet"
         title="Compliance"
-        description="Every expiring document across trucks, trailers, and drivers — sorted by urgency."
+        description={
+          filter === "fuel"
+            ? "Petroleum-carrier paperwork — HazMat, EPRA, PUC, tank calibration, petroleum liability."
+            : "Every expiring document across trucks, trailers, and drivers — sorted by urgency."
+        }
       />
 
       {/* Status summary stats */}
-      <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
+      <div className="grid grid-cols-2 gap-4 md:grid-cols-5">
         <Stat label="Total tracked" value={summary.totalItems} />
         <Stat label="Expired" value={summary.expiredCount} tone="danger" />
         <Stat label="Critical (≤14d)" value={summary.criticalCount} tone="danger" />
         <Stat label="Warning (≤30d)" value={summary.warningCount} tone="warning" />
+        <Stat label="Fuel paperwork" value={summary.fuelComplianceExpiring} tone="danger" />
       </div>
 
       <ComplianceFilters active={filter} />
