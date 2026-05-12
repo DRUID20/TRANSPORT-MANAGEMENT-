@@ -2,14 +2,14 @@ import Link from "next/link";
 import { CheckCheck, Inbox } from "lucide-react";
 import { listNotifications } from "@/server/actions/notifications";
 import { CURRENT_USER_EMPLOYEE_ID, getCurrentEmployee } from "@/server/auth/current-user";
-import { Card, CardContent } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { EmptyState } from "@/components/ui/empty-state";
 import { PageHeader } from "@/components/layout/page-header";
 import { CATEGORY_LABELS } from "@/lib/types/notifications";
 import { InboxList } from "./inbox-list";
 
 export default async function InboxPage() {
   const me = getCurrentEmployee();
-  // All in-app entries (read + unread) for the current user, latest first
   const items = await listNotifications({
     recipientId: CURRENT_USER_EMPLOYEE_ID,
     channel: "in_app",
@@ -26,47 +26,57 @@ export default async function InboxPage() {
         ]}
         eyebrow={`Inbox · ${me?.fullName ?? "Current user"}`}
         title="Your inbox"
-        description={`${unread.length} unread of ${items.length} in-app messages`}
+        description={`${unread.length} unread of ${items.length} in-app message${items.length === 1 ? "" : "s"}.`}
         actions={
           unread.length > 0 ? (
-            <span className="inline-flex items-center gap-1.5 rounded-md bg-status-danger/10 px-3 py-2 text-xs font-medium text-status-danger ring-1 ring-status-danger/30">
-              <CheckCheck className="size-3.5" /> {unread.length} unread
-            </span>
+            <Badge variant="danger" dot>
+              <CheckCheck className="size-3" />
+              {unread.length} unread
+            </Badge>
           ) : null
         }
       />
 
-      <Card>
-        <CardContent className="!p-0">
-          {items.length === 0 ? (
-            <div className="flex flex-col items-center gap-2 px-6 py-16 text-center text-sm text-fg-tertiary">
-              <Inbox className="size-8" />
-              <span>No in-app notifications.</span>
-            </div>
-          ) : (
-            <InboxList
-              initialItems={items.map((n) => ({
-                id: n.id,
-                category: n.category,
-                categoryLabel: CATEGORY_LABELS[n.category] ?? n.category,
-                subject: n.subject,
-                body: n.body,
-                href: n.href,
-                priority: n.priority,
-                isRead: n.status === "read",
-                createdAt: n.createdAt,
-              }))}
-            />
-          )}
-        </CardContent>
-      </Card>
+      {items.length === 0 ? (
+        <div className="surface-card">
+          <EmptyState
+            icon={Inbox}
+            title="Inbox empty"
+            description="No in-app notifications yet. New alerts (compliance, dispatch, AR/AP) land here as they happen."
+            action={
+              <Link
+                href="/notifications/preferences"
+                className="text-sm text-brand-blue hover:underline"
+              >
+                Manage notification preferences →
+              </Link>
+            }
+          />
+        </div>
+      ) : (
+        <div className="surface-card !p-0 overflow-hidden">
+          <InboxList
+            initialItems={items.map((n) => ({
+              id: n.id,
+              category: n.category,
+              categoryLabel: CATEGORY_LABELS[n.category] ?? n.category,
+              subject: n.subject,
+              body: n.body,
+              href: n.href,
+              priority: n.priority,
+              isRead: n.status === "read",
+              createdAt: n.createdAt,
+            }))}
+          />
+        </div>
+      )}
 
       <div className="text-center">
         <Link
           href="/notifications"
           className="text-sm text-fg-tertiary hover:text-fg-secondary"
         >
-          ← Back to Notifications
+          ← Back to notifications
         </Link>
       </div>
     </div>

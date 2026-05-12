@@ -2,18 +2,19 @@
 
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { Loader2, Save } from "lucide-react";
+import { Loader2, RotateCcw, Save } from "lucide-react";
 import { createSubcontractor } from "@/server/actions/subcontractors";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { FormField, FormSection } from "@/components/ui/form-section";
+import { FormFooter } from "@/components/ui/form-footer";
 
 export function SubcontractorCreateForm() {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [formKey, setFormKey] = useState(0);
 
   async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -40,64 +41,106 @@ export function SubcontractorCreateForm() {
   }
 
   return (
-    <form onSubmit={onSubmit} className="flex flex-col gap-5">
+    <form key={formKey} onSubmit={onSubmit} className="flex flex-col gap-5 pb-20">
       {error && (
-        <div className="rounded-md border border-status-danger/30 bg-status-danger/10 p-3 text-sm text-status-danger">
+        <div className="surface-card animate-content-in border-status-danger/30 bg-status-danger/5 p-4 text-sm text-status-danger">
           {error}
         </div>
       )}
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Identity & contact</CardTitle>
-        </CardHeader>
-        <CardContent className="grid gap-4 sm:grid-cols-2">
-          <Field label="Company / Trading name" className="sm:col-span-2">
-            <Input name="name" required placeholder="Mwalimu Logistics Ltd" />
-          </Field>
-          <Field label="Contact person">
-            <Input name="contactPerson" required placeholder="James Mwalimu" />
-          </Field>
-          <Field label="Phone">
-            <Input name="phone" required type="tel" placeholder="+254 722 884 110" />
-          </Field>
-          <Field label="Email" hint="Optional">
-            <Input name="email" type="email" placeholder="ops@example.co.ke" />
-          </Field>
-          <Field label="KRA PIN" hint="For year-end tax / withholding">
-            <Input name="kraPin" placeholder="P051234567A" className="font-mono uppercase" />
-          </Field>
-        </CardContent>
-      </Card>
+      <FormSection
+        eyebrow="Step 1"
+        title="Identity & contact"
+        description="Trading entity and primary contact. KRA PIN drives year-end withholding."
+        columns={2}
+      >
+        <FormField label="Company / trading name" required className="sm:col-span-2">
+          <Input name="name" required placeholder="Mwalimu Logistics Ltd" />
+        </FormField>
+        <FormField label="Contact person" required>
+          <Input name="contactPerson" required placeholder="James Mwalimu" />
+        </FormField>
+        <FormField label="Phone" required>
+          <Input name="phone" required type="tel" placeholder="+254 722 884 110" />
+        </FormField>
+        <FormField label="Email" hint="OPTIONAL">
+          <Input name="email" type="email" placeholder="ops@example.co.ke" />
+        </FormField>
+        <FormField
+          label="KRA PIN"
+          hint="OPTIONAL"
+          helper="Required for year-end tax / withholding."
+        >
+          <Input
+            name="kraPin"
+            placeholder="P051234567A"
+            className="font-mono uppercase"
+          />
+        </FormField>
+      </FormSection>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Settlement details</CardTitle>
-        </CardHeader>
-        <CardContent className="grid gap-4 sm:grid-cols-2">
-          <Field label="M-Pesa number" hint="For year-end payouts">
-            <Input name="mpesaNumber" placeholder="+254 722 884 110" />
-          </Field>
-          <Field label="Bank name" hint="Optional">
-            <Input name="bankName" placeholder="Equity Bank" />
-          </Field>
-          <Field label="Bank account" hint="Optional" className="sm:col-span-2">
-            <Input name="bankAccount" placeholder="0123456789" className="font-mono tnum" />
-          </Field>
-        </CardContent>
-      </Card>
+      <FormSection
+        eyebrow="Step 2"
+        title="Settlement details"
+        description="Where year-end payouts go. M-Pesa is fine for small operators; bank for the larger ones."
+        columns={2}
+      >
+        <FormField label="M-Pesa number" hint="OPTIONAL">
+          <Input name="mpesaNumber" placeholder="+254 722 884 110" />
+        </FormField>
+        <FormField label="Bank name" hint="OPTIONAL">
+          <Input name="bankName" placeholder="Equity Bank" />
+        </FormField>
+        <FormField label="Bank account" hint="OPTIONAL" className="sm:col-span-2">
+          <Input
+            name="bankAccount"
+            placeholder="0123456789"
+            className="font-mono tnum"
+          />
+        </FormField>
+      </FormSection>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Notes</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <Textarea name="notes" placeholder="Any background, lanes they specialise in, etc." rows={3} />
-        </CardContent>
-      </Card>
+      <FormSection
+        eyebrow="Optional"
+        title="Notes"
+        description="Background, lanes they specialise in, fleet size, dispatcher preferences."
+        columns={1}
+      >
+        <FormField label="Notes" hint="OPTIONAL">
+          <Textarea
+            name="notes"
+            rows={3}
+            placeholder="e.g. 3 tankers · Mombasa-Nairobi corridor · prefers night dispatch"
+          />
+        </FormField>
+      </FormSection>
 
-      <div className="flex items-center justify-end gap-2">
-        <Button type="button" variant="ghost" onClick={() => router.back()}>
+      <FormFooter
+        meta={
+          <span>
+            Subcontractors are immediately eligible to be linked from trucks
+            and trailers.
+          </span>
+        }
+      >
+        <Button
+          type="button"
+          variant="ghost"
+          onClick={() => {
+            setFormKey((k) => k + 1);
+            setError(null);
+          }}
+          disabled={loading}
+        >
+          <RotateCcw className="size-3.5" />
+          Reset
+        </Button>
+        <Button
+          type="button"
+          variant="secondary"
+          onClick={() => router.back()}
+          disabled={loading}
+        >
           Cancel
         </Button>
         <Button type="submit" disabled={loading}>
@@ -109,31 +152,11 @@ export function SubcontractorCreateForm() {
           ) : (
             <>
               <Save className="size-4" />
-              Save Subcontractor
+              Save subcontractor
             </>
           )}
         </Button>
-      </div>
+      </FormFooter>
     </form>
-  );
-}
-
-function Field({
-  label,
-  hint,
-  className,
-  children,
-}: {
-  label: string;
-  hint?: string;
-  className?: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <div className={"flex flex-col gap-1.5 " + (className ?? "")}>
-      <Label>{label}</Label>
-      {children}
-      {hint && <span className="text-[11px] text-fg-tertiary">{hint}</span>}
-    </div>
   );
 }
