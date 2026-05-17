@@ -2,13 +2,22 @@ import Link from "next/link";
 import { BookOpen, ListChecks, Plus } from "lucide-react";
 import { listJournalEntries } from "@/server/actions/ledger";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
+import { EmptyState } from "@/components/ui/empty-state";
+import {
+  DataTable,
+  DataTableBody,
+  DataTableCell,
+  DataTableHead,
+  DataTableHeaderCell,
+  DataTableRow,
+} from "@/components/ui/data-table";
 import { PageHeader } from "@/components/layout/page-header";
 import { JournalStatusPill } from "@/components/finance/journal-status-pill";
+import { cn } from "@/lib/utils";
 
 const refLabels: Record<string, string> = {
   manual: "Manual",
-  opening_balance: "Opening Balance",
+  opening_balance: "Opening balance",
   trip: "Trip",
   expense: "Expense",
   fuel: "Fuel",
@@ -31,97 +40,110 @@ export default async function LedgerPage() {
     <div className="flex flex-col gap-6">
       <PageHeader
         eyebrow="Finance"
-        title="General Ledger"
-        description="Every journal entry. Double-entry, multi-currency. Trial Balance rebuilds from this."
+        title="General ledger"
+        description="Every journal entry. Double-entry, multi-currency. The trial balance rebuilds from this."
         actions={
           <>
-            <Button asChild variant="outline">
+            <Button asChild variant="outline" size="sm">
               <Link href="/ledger/trial-balance">
-                <ListChecks className="size-4" />
-                Trial Balance
+                <ListChecks className="size-3.5" />
+                Trial balance
               </Link>
             </Button>
             <Button asChild>
               <Link href="/ledger/new">
                 <Plus className="size-4" />
-                Post Journal
+                Post journal
               </Link>
             </Button>
           </>
         }
       />
 
-      <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
+      <div className="grid grid-cols-2 gap-3 md:grid-cols-4 md:gap-4">
         <Stat label="Entries" value={entries.length} />
         <Stat label="Posted" value={posted.length} tone="success" />
         <Stat label="Reversed" value={reversed.length} tone="danger" />
-        <Stat label="Posted value (KES)" value={`KSh ${totalPosted.toLocaleString()}`} mono tone="success" />
+        <Stat
+          label="Posted value"
+          value={`KSh ${totalPosted.toLocaleString()}`}
+          mono
+          tone="success"
+        />
       </div>
 
-      <Card>
-        <CardContent className="!p-0">
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-border text-left text-xs uppercase tracking-wider text-fg-tertiary">
-                  <th className="px-5 py-3 font-medium">Number</th>
-                  <th className="px-5 py-3 font-medium">Date</th>
-                  <th className="px-5 py-3 font-medium">Memo</th>
-                  <th className="px-5 py-3 font-medium">Source</th>
-                  <th className="px-5 py-3 font-medium">Status</th>
-                  <th className="px-5 py-3 text-right font-medium">Dr (KES)</th>
-                  <th className="px-5 py-3 text-right font-medium">Cr (KES)</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-border">
-                {entries.map((e) => (
-                  <tr key={e.id} className="group transition-colors hover:bg-bg-base/40">
-                    <td className="px-5 py-2.5">
-                      <Link
-                        href={`/ledger/${e.id}`}
-                        className="flex items-center gap-2"
-                      >
-                        <span className="flex size-7 items-center justify-center rounded-md bg-bg-base ring-1 ring-border">
-                          <BookOpen className="size-3.5 text-fg-tertiary" />
-                        </span>
-                        <span className="font-mono text-xs font-medium text-fg-primary group-hover:text-brand-blue">
-                          {e.number}
-                        </span>
-                      </Link>
-                    </td>
-                    <td className="px-5 py-2.5 font-mono tnum text-xs text-fg-secondary">
-                      {e.date}
-                    </td>
-                    <td className="px-5 py-2.5 text-fg-primary">{e.memo}</td>
-                    <td className="px-5 py-2.5 text-xs text-fg-secondary">
-                      {refLabels[e.referenceType] ?? e.referenceType}
-                    </td>
-                    <td className="px-5 py-2.5">
-                      <JournalStatusPill status={e.status} />
-                    </td>
-                    <td className="px-5 py-2.5 text-right font-mono tnum text-fg-primary">
-                      {e.totalDebitKes.toLocaleString()}
-                    </td>
-                    <td className="px-5 py-2.5 text-right font-mono tnum text-fg-primary">
-                      {e.totalCreditKes.toLocaleString()}
-                    </td>
-                  </tr>
-                ))}
-                {entries.length === 0 && (
-                  <tr>
-                    <td colSpan={7} className="px-5 py-12 text-center text-sm text-fg-tertiary">
-                      No journal entries yet.{" "}
-                      <Link href="/ledger/new" className="text-brand-blue hover:underline">
-                        Post the first one →
-                      </Link>
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
-          </div>
-        </CardContent>
-      </Card>
+      {entries.length === 0 ? (
+        <div className="surface-card">
+          <EmptyState
+            icon={BookOpen}
+            title="No journal entries yet"
+            description="Post your first journal — manual or auto-derived from trip / invoice / fuel / payment flows."
+            action={
+              <Button asChild>
+                <Link href="/ledger/new">
+                  <Plus className="size-3.5" />
+                  Post journal
+                </Link>
+              </Button>
+            }
+          />
+        </div>
+      ) : (
+        <DataTable
+          caption={
+            <span>
+              {entries.length} entr{entries.length === 1 ? "y" : "ies"} · most recent first
+            </span>
+          }
+        >
+          <DataTableHead>
+            <tr>
+              <DataTableHeaderCell>Number</DataTableHeaderCell>
+              <DataTableHeaderCell>Date</DataTableHeaderCell>
+              <DataTableHeaderCell>Memo</DataTableHeaderCell>
+              <DataTableHeaderCell>Source</DataTableHeaderCell>
+              <DataTableHeaderCell>Status</DataTableHeaderCell>
+              <DataTableHeaderCell align="right">Dr (KES)</DataTableHeaderCell>
+              <DataTableHeaderCell align="right">Cr (KES)</DataTableHeaderCell>
+            </tr>
+          </DataTableHead>
+          <DataTableBody>
+            {entries.map((e) => (
+              <DataTableRow key={e.id} linkHref={`/ledger/${e.id}`}>
+                <DataTableCell>
+                  <Link
+                    href={`/ledger/${e.id}`}
+                    className="flex items-center gap-2.5"
+                  >
+                    <span className="flex size-7 items-center justify-center rounded-md border border-border bg-bg-surface">
+                      <BookOpen className="size-3.5 text-fg-tertiary" />
+                    </span>
+                    <span className="font-mono text-xs font-semibold text-fg-primary group-hover:text-brand-blue">
+                      {e.number}
+                    </span>
+                  </Link>
+                </DataTableCell>
+                <DataTableCell mono className="text-xs text-fg-secondary">
+                  {e.date}
+                </DataTableCell>
+                <DataTableCell className="text-fg-primary">{e.memo}</DataTableCell>
+                <DataTableCell className="text-xs text-fg-secondary">
+                  {refLabels[e.referenceType] ?? e.referenceType}
+                </DataTableCell>
+                <DataTableCell>
+                  <JournalStatusPill status={e.status} />
+                </DataTableCell>
+                <DataTableCell mono align="right">
+                  {e.totalDebitKes.toLocaleString()}
+                </DataTableCell>
+                <DataTableCell mono align="right">
+                  {e.totalCreditKes.toLocaleString()}
+                </DataTableCell>
+              </DataTableRow>
+            ))}
+          </DataTableBody>
+        </DataTable>
+      )}
     </div>
   );
 }
@@ -138,12 +160,17 @@ function Stat({
   mono?: boolean;
 }) {
   const colour =
-    tone === "success" ? "text-status-success" :
-    tone === "danger" ? "text-status-danger" : "text-fg-primary";
+    tone === "success"
+      ? "text-status-success"
+      : tone === "danger"
+        ? "text-status-danger"
+        : "text-fg-primary";
   return (
-    <div className="rounded-lg border border-border bg-bg-elevated p-4">
-      <div className="text-xs uppercase tracking-wider text-fg-tertiary">{label}</div>
-      <div className={`mt-1 ${mono ? "font-mono tnum" : ""} text-2xl font-medium ${colour}`}>
+    <div className="surface-card lift-on-hover p-4">
+      <div className="text-[10px] font-semibold uppercase tracking-[0.14em] text-fg-tertiary">
+        {label}
+      </div>
+      <div className={cn("mt-1 text-2xl font-semibold", mono && "font-mono tnum", colour)}>
         {value}
       </div>
     </div>
