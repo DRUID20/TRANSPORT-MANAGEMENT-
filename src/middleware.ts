@@ -1,5 +1,5 @@
 import { NextResponse, type NextRequest } from "next/server";
-import { getIronSession } from "iron-session";
+import { unsealData } from "iron-session";
 import type { SessionData } from "@/server/auth/session";
 
 /**
@@ -7,10 +7,10 @@ import type { SessionData } from "@/server/auth/session";
  * to app pages get bounced to /login with a returnTo query so they land
  * back where they meant to go after signing in.
  *
- * Public routes: /login, /api/health (if we add one), static assets.
- *
- * The middleware reads the same iron-session cookie the server actions
- * write — they share the same SESSION_SECRET via env.
+ * We read the cookie value directly from the request and verify it with
+ * iron-session's `unsealData` — `getIronSession` is for route handlers
+ * and server actions where it can both read and write the cookie. In
+ * middleware all we need is read + verify.
  */
 
 const PUBLIC_PATHS = [
@@ -21,6 +21,8 @@ const PUBLIC_PATHS = [
   "/favicon.ico",
 ];
 
+const SESSION_COOKIE = "tx_session";
+
 export async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
 
@@ -28,30 +30,34 @@ export async function middleware(req: NextRequest) {
     return NextResponse.next();
   }
 
-  // Don't gate API routes — they have their own auth checks (TODO once we add any).
+  // API routes carry their own auth checks (TODO: once we add any).
   if (pathname.startsWith("/api")) return NextResponse.next();
 
   const secret = process.env.SESSION_SECRET;
   if (!secret) {
-    // No secret = misconfigured deploy. Send to login with an error so the
-    // operator notices instead of seeing a blank page.
     const url = new URL("/login?error=session_unconfigured", req.url);
     return NextResponse.redirect(url);
   }
 
-  const res = NextResponse.next();
-  const session = await getIronSession<SessionData>(req.cookies as never, res.cookies as never, {
-    password: secret,
-    cookieName: "tx_session",
-  });
+  const cookieValue = req.cookies.get(SESSION_COOKIE)?.value;
+  let session: SessionData | null = null;
 
-  if (!session.userId) {
+  if (cookieValue) {
+    try {
+      session = await unsealData<SessionData>(cookieValue, { password: secret });
+    } catch {
+      // Cookie tampered, password rotated, or otherwise undecryptable.
+      session = null;
+    }
+  }
+
+  if (!session?.userId) {
     const url = new URL("/login", req.url);
     if (pathname !== "/") url.searchParams.set("returnTo", pathname);
     return NextResponse.redirect(url);
   }
 
-  return res;
+  return NextResponse.next();
 }
 
 export const config = {
