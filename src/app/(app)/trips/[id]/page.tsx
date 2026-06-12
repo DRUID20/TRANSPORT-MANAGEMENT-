@@ -389,6 +389,7 @@ function LinkedCard({
 
 type TripForFuelCard = {
   id: string;
+  status: string;
   product?: "PMS" | "AGO";
   cargoQuantity: number;
   cargoUnit: string;
@@ -407,6 +408,9 @@ type TripForFuelCard = {
 function FuelCargoCard({ trip }: { trip: TripForFuelCard }) {
   const hasLoading = trip.loadedLitres !== undefined;
   const hasDischarge = trip.dischargedLitres !== undefined;
+  // Closed/cancelled trips are read-only — observations feed reconciled
+  // variance figures and must not change after the fact.
+  const editable = trip.status !== "closed" && trip.status !== "cancelled";
 
   // Compute corrected litres / ullage on the fly if needed
   const loaded20C =
@@ -474,7 +478,7 @@ function FuelCargoCard({ trip }: { trip: TripForFuelCard }) {
             value={trip.loadingSealNumbers ?? "—"}
             mono
           />
-          {trip.product && (
+          {trip.product && editable && (
             <CaptureLoadingButton
               tripId={trip.id}
               product={trip.product}
@@ -513,7 +517,7 @@ function FuelCargoCard({ trip }: { trip: TripForFuelCard }) {
             value={trip.dischargeSealNumbers ?? "—"}
             mono
           />
-          {trip.product && (
+          {trip.product && editable && (
             <CaptureDischargeButton
               tripId={trip.id}
               product={trip.product}

@@ -21,6 +21,7 @@ import { Select } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { SegmentedControl } from "@/components/ui/segmented-control";
 import { EmptyState } from "@/components/ui/empty-state";
+import { localIsoDate } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import type { CalendarEvent, CalendarEventKind } from "@/server/actions/calendar";
 
@@ -154,7 +155,7 @@ export function CalendarBoard({
   // Build the month grid (always 6 rows × 7 cols so prev/next don't reflow)
   const grid = useMemo(() => buildMonthGrid(ymStartIso), [ymStartIso]);
   const monthLabel = useMemo(() => {
-    const d = new Date(ymStartIso);
+    const d = new Date(ymStartIso + "T00:00:00");
     return d.toLocaleDateString("en-GB", { month: "long", year: "numeric" });
   }, [ymStartIso]);
 
@@ -309,7 +310,7 @@ export function CalendarBoard({
           <div className="grid grid-cols-7">
             {grid.map((cell, i) => {
               const dayEvents = eventsByDay.get(cell.iso) ?? [];
-              const isToday = cell.iso === new Date().toISOString().slice(0, 10);
+              const isToday = cell.iso === localIsoDate();
               const isCurrentMonth = cell.iso.startsWith(referenceMonth);
               return (
                 <div
@@ -432,7 +433,7 @@ function WeekView({
     const d = new Date(monday);
     d.setDate(monday.getDate() + i);
     return {
-      iso: d.toISOString().slice(0, 10),
+      iso: localIsoDate(d),
       label: d.toLocaleDateString("en-GB", { weekday: "short", day: "numeric" }),
       isToday: d.toDateString() === today.toDateString(),
     };
@@ -631,7 +632,9 @@ function DetailRow({
  * containing the 1st of the reference month. Each cell is { iso, day }.
  */
 function buildMonthGrid(ymStartIso: string): Array<{ iso: string; day: number }> {
-  const first = new Date(ymStartIso);
+  // "T00:00:00" forces local-time parsing; a bare YYYY-MM-DD parses as UTC
+  // midnight and shifts the weekday in non-UTC timezones.
+  const first = new Date(ymStartIso + "T00:00:00");
   // Monday-first weekday index (Mon=0 … Sun=6)
   const jsDay = first.getDay();
   const offset = jsDay === 0 ? 6 : jsDay - 1;
@@ -642,7 +645,7 @@ function buildMonthGrid(ymStartIso: string): Array<{ iso: string; day: number }>
     const d = new Date(gridStart);
     d.setDate(gridStart.getDate() + i);
     return {
-      iso: d.toISOString().slice(0, 10),
+      iso: localIsoDate(d),
       day: d.getDate(),
     };
   });

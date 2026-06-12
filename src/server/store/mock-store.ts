@@ -522,7 +522,7 @@ const driverSeed: Driver[] = [
     fullName: "Joseph Mwangi",
     phone: "+254 722 410 220",
     nationalId: "21884401",
-    status: "on_trip",
+    status: "active",
     licenceClass: "CE",
     licenceNumber: "DL/CE/0009212",
     licenceExpiry: "2027-06-12",
@@ -539,7 +539,7 @@ const driverSeed: Driver[] = [
     fullName: "Ali Hassan",
     phone: "+254 711 552 308",
     nationalId: "29104412",
-    status: "on_trip",
+    status: "active",
     licenceClass: "CE",
     licenceNumber: "DL/CE/0011008",
     licenceExpiry: "2026-05-22",
@@ -1582,7 +1582,9 @@ export function planTrip(input: {
 }): Trip | undefined {
   const booking = bookings.get(input.bookingId);
   if (!booking) return undefined;
-  if (booking.status === "planned" || booking.status === "cancelled") return undefined;
+  // Only confirmed bookings can be planned — drafts must be confirmed
+  // first (the UI enforces this; this guard covers direct action calls).
+  if (booking.status !== "confirmed") return undefined;
 
   const id = randomUUID();
   const revenue = computeFuelRevenue({
@@ -1689,6 +1691,11 @@ export function transitionTrip(input: {
   }
   if (input.toStatus === "closed" && !trip.closedAt) {
     patch.closedAt = now;
+    // A trip closed via the bare status button (without going through
+    // reconciliation) must still become invoiceable — otherwise the
+    // invoice card stays locked forever since reconcileAndCloseTrip
+    // rejects terminal trips.
+    patch.readyToInvoice = true;
   }
   const updatedTrip: Trip = { ...trip, ...patch };
   trips.set(trip.id, updatedTrip);

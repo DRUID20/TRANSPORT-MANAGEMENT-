@@ -20,6 +20,7 @@ import {
 } from "@/server/store/mock-store";
 import {
   correctVolumeTo20C,
+  isTerminal,
   ullageVariancePct,
   type TripStatus,
 } from "@/lib/types/trips";
@@ -130,6 +131,12 @@ export async function captureTripLoading(
   }
   const trip = getTrip(tripId);
   if (!trip) return { ok: false, error: "Trip not found." };
+  if (isTerminal(trip.status)) {
+    return {
+      ok: false,
+      error: "Trip is closed — loading observations can no longer be edited.",
+    };
+  }
   if (!trip.product) {
     return {
       ok: false,
@@ -175,6 +182,12 @@ export async function captureTripDischarge(
   }
   const trip = getTrip(tripId);
   if (!trip) return { ok: false, error: "Trip not found." };
+  if (isTerminal(trip.status)) {
+    return {
+      ok: false,
+      error: "Trip is closed — discharge observations can no longer be edited.",
+    };
+  }
   if (!trip.product) {
     return {
       ok: false,

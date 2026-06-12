@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import { listCalendarEvents, type CalendarEvent } from "@/server/actions/calendar";
 import { Button } from "@/components/ui/button";
+import { localIsoDate } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
 /**
@@ -43,8 +44,7 @@ const TONE_BG: Record<string, string> = {
 function todayIso(offset = 0): string {
   const d = new Date();
   d.setDate(d.getDate() + offset);
-  d.setHours(0, 0, 0, 0);
-  return d.toISOString().slice(0, 10);
+  return localIsoDate(d);
 }
 
 function dayLabel(iso: string): string {

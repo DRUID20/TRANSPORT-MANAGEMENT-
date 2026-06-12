@@ -6,6 +6,7 @@ import { listDrivers } from "@/server/actions/drivers";
 import { listCustomers } from "@/server/actions/customers";
 import { PageHeader } from "@/components/layout/page-header";
 import { Button } from "@/components/ui/button";
+import { localIsoDate } from "@/lib/format";
 import { CalendarBoard } from "./calendar-board";
 
 /**
@@ -32,12 +33,14 @@ export default async function CalendarPage({
   const ymEnd = new Date(ref.getFullYear(), ref.getMonth() + 1, 0);
 
   // Fetch a 3-month window so prev/next nav doesn't re-fetch immediately.
-  const windowFrom = new Date(ref.getFullYear(), ref.getMonth() - 1, 1)
-    .toISOString()
-    .slice(0, 10);
-  const windowTo = new Date(ref.getFullYear(), ref.getMonth() + 2, 0)
-    .toISOString()
-    .slice(0, 10);
+  // localIsoDate (not toISOString) — east-of-UTC timezones would otherwise
+  // shift every boundary back one day and mislabel the whole month.
+  const windowFrom = localIsoDate(
+    new Date(ref.getFullYear(), ref.getMonth() - 1, 1),
+  );
+  const windowTo = localIsoDate(
+    new Date(ref.getFullYear(), ref.getMonth() + 2, 0),
+  );
 
   const [events, trucks, drivers, customers] = await Promise.all([
     listCalendarEvents({ fromDate: windowFrom, toDate: windowTo }),
@@ -72,8 +75,8 @@ export default async function CalendarPage({
 
       <CalendarBoard
         referenceMonth={`${ymStart.getFullYear()}-${String(ymStart.getMonth() + 1).padStart(2, "0")}`}
-        ymStartIso={ymStart.toISOString().slice(0, 10)}
-        ymEndIso={ymEnd.toISOString().slice(0, 10)}
+        ymStartIso={localIsoDate(ymStart)}
+        ymEndIso={localIsoDate(ymEnd)}
         events={events}
         trucks={trucks.map((t) => ({ id: t.id, registration: t.registration }))}
         drivers={drivers.map((d) => ({ id: d.id, fullName: d.fullName }))}

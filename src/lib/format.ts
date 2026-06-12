@@ -45,3 +45,19 @@ export function formatNumber(n: number, opts: { compact?: boolean } = {}): strin
 export function formatPercent(n: number, fractionDigits = 1): string {
   return `${(n * 100).toFixed(fractionDigits)}%`;
 }
+
+/**
+ * Format a Date as YYYY-MM-DD in LOCAL time.
+ *
+ * Never use `date.toISOString().slice(0, 10)` for calendar-day logic:
+ * toISOString converts to UTC first, so in any timezone east of UTC
+ * (Kenya is UTC+3) a local midnight becomes 21:00 of the *previous*
+ * day and every date-keyed comparison shifts by one. This helper keeps
+ * the operator's wall-clock day.
+ */
+export function localIsoDate(d: Date = new Date()): string {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
+}
