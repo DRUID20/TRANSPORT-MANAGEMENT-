@@ -3,26 +3,43 @@ import { ThemeToggle } from "@/components/layout/theme-toggle";
 import { TopbarClock } from "@/components/layout/topbar-clock";
 import { NotificationBell } from "@/components/layout/notification-bell";
 import { MobileSidebar } from "@/components/layout/mobile-sidebar";
+import { UserMenu } from "@/components/layout/user-menu";
 import { Kbd } from "@/components/ui/kbd";
 import { listNotifications } from "@/server/actions/notifications";
-import { CURRENT_USER_EMPLOYEE_ID } from "@/server/auth/current-user";
+import {
+  CURRENT_USER_EMPLOYEE_ID,
+  getCurrentEmployee,
+  getCurrentUser,
+} from "@/server/auth/current-user";
 
 /**
  * Topbar — sticky chrome above the page content.
  *
  * Layout (left to right):
- *  - Command-K search trigger (focuses to the right with a kbd hint)
- *  - Right cluster: clock, theme toggle, notifications bell, avatar
+ *  - Mobile menu trigger (md:hidden)
+ *  - Command-K search trigger
+ *  - Right cluster: clock, theme toggle, notifications bell, user menu
  *
  * The bar is translucent + backdrop-blurred so the page underneath
  * subtly bleeds through when scrolling — the Linear / Vercel feel.
  */
 export async function Topbar() {
-  const items = await listNotifications({
-    recipientId: CURRENT_USER_EMPLOYEE_ID,
-    channel: "in_app",
-    limit: 12,
-  });
+  const [items, sessionUser] = await Promise.all([
+    listNotifications({
+      recipientId: CURRENT_USER_EMPLOYEE_ID,
+      channel: "in_app",
+      limit: 12,
+    }),
+    getCurrentUser(),
+  ]);
+
+  // Identity for the user menu: prefer the signed-in user, fall back to
+  // the seed employee so the topbar still renders during the transition
+  // period while data tables migrate.
+  const fallback = getCurrentEmployee();
+  const fullName = sessionUser?.fullName ?? fallback?.fullName ?? "Nile Valley";
+  const email = sessionUser?.email ?? fallback?.email ?? "—";
+  const initials = computeInitials(fullName);
 
   return (
     <header className="sticky top-0 z-30 flex h-14 items-center gap-2 border-b border-border bg-bg-base/75 px-3 backdrop-blur-xl sm:gap-3 sm:px-4">
@@ -44,15 +61,15 @@ export async function Topbar() {
         <TopbarClock />
         <ThemeToggle />
         <NotificationBell initialItems={items} />
-
-        <button
-          type="button"
-          aria-label="Account menu"
-          className="flex size-9 items-center justify-center rounded-full bg-brand-blue/10 text-xs font-semibold text-brand-blue ring-1 ring-brand-blue/20 transition-shadow hover:ring-brand-blue/40 hover:shadow-soft"
-        >
-          NV
-        </button>
+        <UserMenu fullName={fullName} email={email} initials={initials} />
       </div>
     </header>
   );
+}
+
+function computeInitials(name: string): string {
+  const parts = name.split(/\s+/).filter(Boolean);
+  if (parts.length === 0) return "NV";
+  if (parts.length === 1) return parts[0]!.slice(0, 2).toUpperCase();
+  return (parts[0]![0]! + parts[parts.length - 1]![0]!).toUpperCase();
 }

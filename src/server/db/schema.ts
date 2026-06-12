@@ -34,21 +34,49 @@ export const organizations = pgTable("organizations", {
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
 
-// ---------- Users (mirrors Supabase auth.users via id) ----------
+// ---------- Users (custom auth — email + password + OTP recovery) ----------
 export const users = pgTable("users", {
-  id: uuid("id").primaryKey(), // Supabase auth user id
+  id: uuid("id").primaryKey().defaultRandom(),
   organizationId: uuid("organization_id")
     .notNull()
     .references(() => organizations.id, { onDelete: "cascade" }),
   email: text("email").notNull(),
   phone: varchar("phone", { length: 32 }),
   fullName: text("full_name").notNull(),
+  /** bcryptjs hash. Null only for OAuth-style users — not used today. */
+  passwordHash: text("password_hash"),
+  /** Quick-lookup role key; userRoles is the authoritative many-to-many. */
+  roleKey: varchar("role_key", { length: 32 }).notNull().default("viewer"),
   isActive: boolean("is_active").notNull().default(true),
+  lastLoginAt: timestamp("last_login_at", { withTimezone: true }),
+  failedLoginAttempts: integer("failed_login_attempts").notNull().default(0),
+  lockedUntil: timestamp("locked_until", { withTimezone: true }),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 }, (t) => ({
   byOrg: index("users_org_idx").on(t.organizationId),
   byEmail: index("users_email_idx").on(t.email),
 }));
+
+// ---------- Password reset OTPs (one-time, 15-min TTL, single-use) ----------
+export const passwordResetOtps = pgTable(
+  "password_reset_otps",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    /** bcryptjs hash of the 6-digit code (never store the code in plaintext). */
+    codeHash: text("code_hash").notNull(),
+    expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+    consumedAt: timestamp("consumed_at", { withTimezone: true }),
+    requestedIp: varchar("requested_ip", { length: 64 }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => ({
+    byUser: index("otp_user_idx").on(t.userId),
+    byExpiry: index("otp_expiry_idx").on(t.expiresAt),
+  }),
+);
 
 // ---------- Roles (RBAC primitive — full role catalogue defined later) ----------
 export const roles = pgTable("roles", {
