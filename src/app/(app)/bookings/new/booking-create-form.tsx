@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useState, useTransition } from "react";
+import { useEffect, useState, useTransition } from "react";
 import {
   Banknote,
   Droplet,
@@ -90,6 +90,23 @@ export function BookingCreateForm({
   const [notes, setNotes] = useState(INITIAL.notes);
   const [rateHint, setRateHint] = useState<string | null>(null);
   const [lookingUp, startLookup] = useTransition();
+
+  // Workspace defaults from /settings (localStorage). Applied once on
+  // mount so the dispatcher's usual depot + currency come pre-selected.
+  useEffect(() => {
+    try {
+      const depot = window.localStorage.getItem("tx.prefs.defaultDepot");
+      if (depot && (FUEL_DEPOTS as readonly string[]).includes(depot)) {
+        setOrigin(depot);
+      }
+      const cur = window.localStorage.getItem("tx.prefs.defaultCurrency");
+      if (cur && ["KES", "USD", "UGX", "TZS", "RWF"].includes(cur)) {
+        setAgreedCurrency(cur as typeof INITIAL.agreedCurrency);
+      }
+    } catch {
+      // localStorage unavailable — keep built-in defaults.
+    }
+  }, []);
 
   const finalDestination =
     destination === "Other (specify)" ? destinationOther.trim() : destination;

@@ -1,13 +1,20 @@
 "use client";
 
-import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { ArrowRight, Loader2, Phone } from "lucide-react";
+import { ArrowRight, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Logo } from "@/components/layout/logo";
 
+/**
+ * Placeholder login — accepts any credentials and forwards to the
+ * dashboard. Real email/password auth with OTP recovery ships with the
+ * Supabase integration; this page exists so the route works and the
+ * shell of the final design is in place.
+ */
 export default function LoginPage() {
+  const router = useRouter();
   const [loading, setLoading] = useState(false);
 
   return (
@@ -54,7 +61,8 @@ export default function LoginPage() {
             onSubmit={(e) => {
               e.preventDefault();
               setLoading(true);
-              setTimeout(() => setLoading(false), 1400);
+              // Placeholder auth: brief delay, then straight to the app.
+              setTimeout(() => router.push("/dashboard"), 600);
             }}
           >
             <label className="flex flex-col gap-1.5">
@@ -65,12 +73,12 @@ export default function LoginPage() {
             <label className="flex flex-col gap-1.5">
               <div className="flex items-center justify-between">
                 <span className="text-xs font-medium text-fg-secondary">Password</span>
-                <Link
-                  href="/forgot-password"
-                  className="text-xs font-medium text-brand-blue hover:underline"
+                <span
+                  className="cursor-not-allowed text-xs font-medium text-fg-tertiary"
+                  title="Password recovery arrives with account setup"
                 >
                   Forgot?
-                </Link>
+                </span>
               </div>
               <Input type="password" placeholder="••••••••" autoComplete="current-password" required />
             </label>
@@ -87,17 +95,6 @@ export default function LoginPage() {
                   <ArrowRight className="size-4" />
                 </>
               )}
-            </Button>
-
-            <div className="my-2 flex items-center gap-3 text-xs text-fg-tertiary">
-              <span className="h-px flex-1 bg-border" />
-              or
-              <span className="h-px flex-1 bg-border" />
-            </div>
-
-            <Button type="button" variant="secondary" size="lg">
-              <Phone className="size-4" />
-              Sign in with Phone (OTP)
             </Button>
           </form>
 

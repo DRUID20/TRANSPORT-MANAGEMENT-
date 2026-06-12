@@ -136,6 +136,6 @@ export const navGroups: { title: string; items: NavItem[] }[] = [
   },
   {
     title: "Admin",
-    items: [{ href: "/settings", label: "Settings", icon: Settings, badge: "soon" }],
+    items: [{ href: "/settings", label: "Settings", icon: Settings }],
   },
 ];
