@@ -29,6 +29,9 @@ so it lifts many pages at once.
   Never hardcode hex. `.kpi-number`, `.pill`, `tnum` utilities exist.
 
 ## Ordered task list
+> STATUS: all 0–11 core items DONE/substantially-done. Remaining = incremental
+> WIRING of overlays into per-page actions, + calendar hourly-grid/drag (needs backend).
+
 - [x] **0. Design tokens + fonts** (§2,§3) — `f15a206`
 - [x] **1. Sidebar** (§7) — `46baeef`
 - [x] **2. KPI cards + dashboard top** (§10,§14) — `4829f11`, fix `b69ada0`
