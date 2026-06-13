@@ -20,7 +20,6 @@ import {
   type TripDocumentKind,
 } from "@/lib/types/documents";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select } from "@/components/ui/select";
@@ -97,31 +96,31 @@ export function TripDocuments({
   }
 
   return (
-    <Card>
-      <CardHeader>
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <div>
-            <CardTitle>Documents</CardTitle>
-            <CardDescription>
-              Manifest, customs, weighbridge, POD — every paper for this trip.
-            </CardDescription>
-          </div>
-          <div className="flex items-center gap-2 font-mono text-[11px] tnum">
-            <span className="rounded-full bg-status-warning/10 px-2 py-0.5 text-status-warning ring-1 ring-status-warning/20">
-              {pendingCount} pending
-            </span>
-            <span className="rounded-full bg-status-success/10 px-2 py-0.5 text-status-success ring-1 ring-status-success/20">
-              {approvedCount} approved
-            </span>
-            {rejectedCount > 0 && (
-              <span className="rounded-full bg-status-danger/10 px-2 py-0.5 text-status-danger ring-1 ring-status-danger/20">
-                {rejectedCount} rejected
-              </span>
-            )}
-          </div>
+    <section className="surface-card overflow-hidden">
+      <header className="flex flex-wrap items-center justify-between gap-3 border-b border-border px-5 py-4">
+        <div>
+          <h2 className="text-[13px] font-semibold tracking-tight text-fg-primary">
+            Documents
+          </h2>
+          <p className="text-xs text-fg-tertiary">
+            Manifest, customs, weighbridge, POD. Every paper for this trip.
+          </p>
         </div>
-      </CardHeader>
-      <CardContent className="flex flex-col gap-6">
+        <div className="flex items-center gap-2 font-mono text-[11px] tnum">
+          <span className="rounded-full bg-status-warning/10 px-2 py-0.5 text-status-warning ring-1 ring-status-warning/20">
+            {pendingCount} pending
+          </span>
+          <span className="rounded-full bg-status-success/10 px-2 py-0.5 text-status-success ring-1 ring-status-success/20">
+            {approvedCount} approved
+          </span>
+          {rejectedCount > 0 && (
+            <span className="rounded-full bg-status-danger/10 px-2 py-0.5 text-status-danger ring-1 ring-status-danger/20">
+              {rejectedCount} rejected
+            </span>
+          )}
+        </div>
+      </header>
+      <div className="flex flex-col gap-6 px-5 py-5">
         {error && (
           <div className="rounded-md border border-status-danger/30 bg-status-danger/10 p-3 text-sm text-status-danger">
             {error}
@@ -225,12 +224,13 @@ export function TripDocuments({
             </Button>
           </div>
           <p className="mt-2 text-[10px] text-fg-tertiary">
-            Mock storage — Phase 2G + Supabase Storage will replace this with real
-            file uploads. The metadata persists until the dev server restarts.
+            Mock storage. Supabase Storage will replace this once the
+            uploads endpoint lands; metadata persists until the dev server
+            restarts.
           </p>
         </form>
-      </CardContent>
-    </Card>
+      </div>
+    </section>
   );
 }
 

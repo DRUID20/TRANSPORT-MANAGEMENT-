@@ -63,8 +63,6 @@ function tripsToRows(
     truck: trucksById.get(t.truckId)?.registration ?? "—",
     origin: t.origin,
     destination: t.destination,
-    originFlag: "",
-    destinationFlag: "",
     km: t.actualKm ?? 0,
     driver: driversById.get(t.driverId)?.fullName ?? "—",
     status: t.status,

@@ -15,7 +15,6 @@ import {
 } from "@/lib/types/borders";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select } from "@/components/ui/select";
@@ -85,15 +84,17 @@ export function TripBorders({
   }
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Cross-border crossings</CardTitle>
-        <CardDescription>
-          Border posts on the route — arrival timestamp, axle-load,
-          transit permit, charges.
-        </CardDescription>
-      </CardHeader>
-      <CardContent className="flex flex-col gap-5">
+    <section className="surface-card overflow-hidden">
+      <header className="border-b border-border px-5 py-4">
+        <h2 className="text-[13px] font-semibold tracking-tight text-fg-primary">
+          Cross-border crossings
+        </h2>
+        <p className="text-xs text-fg-tertiary">
+          Border posts on the route. Arrival timestamp, axle-load, transit
+          permit, charges.
+        </p>
+      </header>
+      <div className="flex flex-col gap-5 px-5 py-5">
         {error && (
           <div className="rounded-md border border-status-danger/30 bg-status-danger/10 p-3 text-sm text-status-danger">
             {error}
@@ -201,8 +202,8 @@ export function TripBorders({
             timestamp and lock the queue duration.
           </p>
         </form>
-      </CardContent>
-    </Card>
+      </div>
+    </section>
   );
 }
 

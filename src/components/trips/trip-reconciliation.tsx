@@ -5,13 +5,6 @@ import { useState, useTransition } from "react";
 import { CheckCircle2, Loader2 } from "lucide-react";
 import { reconcileAndCloseTrip } from "@/server/actions/trips";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -73,15 +66,17 @@ export function TripReconciliation(props: TripReconciliationProps) {
   if (props.status !== "delivered") return null;
 
   return (
-    <Card className="border-status-success/30 bg-status-success/5">
-      <CardHeader>
-        <CardTitle className="text-status-success">Reconcile & close</CardTitle>
-        <CardDescription>
+    <section className="surface-card overflow-hidden border-status-success/30 bg-status-success/5">
+      <header className="border-b border-status-success/20 px-5 py-4">
+        <h2 className="text-[13px] font-semibold tracking-tight text-status-success">
+          Reconcile and close
+        </h2>
+        <p className="text-xs text-fg-tertiary">
           Capture actual km, fuel and advance used. Once closed, the trip
           becomes ready to invoice.
-        </CardDescription>
-      </CardHeader>
-      <CardContent className="flex flex-col gap-5">
+        </p>
+      </header>
+      <div className="flex flex-col gap-5 px-5 py-5">
         {error && (
           <div className="rounded-md border border-status-danger/30 bg-status-danger/10 p-3 text-sm text-status-danger">
             {error}
@@ -175,11 +170,11 @@ export function TripReconciliation(props: TripReconciliationProps) {
         <div className="flex items-center justify-end gap-2">
           <Button variant="success" onClick={onClose} disabled={pending}>
             {pending ? <Loader2 className="size-4 animate-spin" /> : <CheckCircle2 className="size-4" />}
-            Close & Reconcile
+            Close and Reconcile
           </Button>
         </div>
-      </CardContent>
-    </Card>
+      </div>
+    </section>
   );
 }
 

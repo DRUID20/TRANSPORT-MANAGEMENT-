@@ -12,8 +12,6 @@ export type TripRow = {
   truck: string;
   origin: string;
   destination: string;
-  originFlag: string;
-  destinationFlag: string;
   km: number;
   driver: string;
   status: TripStatus;
@@ -87,8 +85,6 @@ export function OpsBoard({ initialTrips }: { initialTrips: TripRow[] }) {
                   <RouteVisual
                     origin={t.origin}
                     destination={t.destination}
-                    originFlag={t.originFlag}
-                    destinationFlag={t.destinationFlag}
                     km={t.km}
                   />
                 </td>
