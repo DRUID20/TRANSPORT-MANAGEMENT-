@@ -24,16 +24,6 @@ export const FUEL_TYPICAL_DENSITY: Record<FuelProduct, number> = {
   AGO: 0.840,
 };
 
-/** Kenyan fuel depots — used as origin / loading point for trips. */
-export const FUEL_DEPOTS = [
-  "KPC Mombasa",
-  "KPC Nairobi",
-  "KPRL Mombasa",
-  "KPC Eldoret",
-  "KPC Kisumu",
-  "KPC Nakuru",
-] as const;
-
 // ============================================================
 // Customers (fuel offtakers)
 // ============================================================
@@ -55,8 +45,9 @@ export interface Customer {
   epraLicenceNumber?: string;
   /** Where to send invoices and statements. */
   billingAddress?: string;
-  /** Currency the customer is billed in (KES base; USD common for exports). */
-  billingCurrency: "KES" | "USD";
+  /** Currency the customer is billed in. KES base; USD common for exports;
+   *  UGX for Uganda-billed customers. */
+  billingCurrency: "KES" | "USD" | "UGX";
   /** Net N days; null = on-receipt. */
   paymentTermsDays: number;
   notes?: string;
@@ -66,16 +57,16 @@ export interface Customer {
 // ============================================================
 // Rate table (destination-driven rate engine)
 // ============================================================
-export type RateBasis =
-  | "per_trip"
-  | "per_litre"
-  | "per_litre_per_km"
-  | "per_km"
-  // Legacy / general-cargo basis values — kept so existing rate seeds remain
-  // valid. New rate cards for fuel should use one of the basis values above.
-  | "per_tonne"
-  | "per_container";
-export type Currency = "KES" | "USD" | "UGX" | "TZS" | "RWF";
+/**
+ * Rate basis for fuel hauls.
+ *  - per_m3:    primary basis. Volume in cubic metres (1 m³ = 1000 L).
+ *  - per_litre: alternative volume basis for customers who price per litre.
+ *  - per_trip:  flat-fee charters.
+ */
+export type RateBasis = "per_m3" | "per_litre" | "per_trip";
+/** Operating currencies. KES is the base; USD and UGX are the
+ *  cross-border / export currencies in active use. */
+export type Currency = "KES" | "USD" | "UGX";
 
 export interface Rate {
   id: string;
@@ -273,74 +264,24 @@ export function ullageVariancePct(
 export const ULLAGE_ALERT_THRESHOLD_PCT = 0.5;
 
 /**
- * Indicative one-way road distance in km for common KPC-depot to off-take
- * destination pairs. Used to compute the projected revenue at planning time
- * for `per_km` and `per_litre_per_km` rates; once the trip closes, the
- * actual GPS-recorded km on the trip overrides this.
+ * Compute revenue for a fuel haul given the agreed rate and the cargo volume.
  *
- * Source: typical operator route plans, rounded to the nearest 10 km. Not
- * an authoritative geodetic figure — fine for revenue projection but use
- * actualKm for final invoicing.
- */
-export const KENYA_FUEL_ROUTE_KM: Record<string, number> = {
-  "KPC Mombasa->Nairobi": 480,
-  "KPC Mombasa->Eldoret": 800,
-  "KPC Mombasa->Kisumu": 820,
-  "KPC Mombasa->Nakuru": 640,
-  "KPC Mombasa->Kampala": 1170,
-  "KPC Mombasa->Kigali": 1690,
-  "KPC Mombasa->Bujumbura": 1850,
-  "KPC Mombasa->Juba": 1880,
-  "KPC Mombasa->Goma": 1850,
-  "KPC Nairobi->Eldoret": 320,
-  "KPC Nairobi->Kisumu": 350,
-  "KPC Nairobi->Nakuru": 160,
-  "KPC Nairobi->Kampala": 660,
-  "KPC Nairobi->Kigali": 1170,
-  "KPC Eldoret->Kampala": 410,
-  "KPC Eldoret->Juba": 950,
-  "KPC Kisumu->Kampala": 350,
-  "KPRL Mombasa->Nairobi": 480,
-};
-
-/** Look up the route km, returning undefined for unknown pairs. */
-export function lookupRouteKm(origin: string, destination: string): number | undefined {
-  return KENYA_FUEL_ROUTE_KM[`${origin}->${destination}`];
-}
-
-/**
- * Compute revenue for a fuel haul given the agreed rate and the route.
- *
- * - per_litre        → amount × litres
- * - per_litre_per_km → amount × litres × km
- * - per_km           → amount × km
- * - per_trip         → amount (flat)
- *
- * Legacy bases (per_tonne, per_container) still multiply by cargoQuantity
- * so existing seed data continues to value correctly.
- *
- * km is optional — when missing for a per-km variant the caller's km
- * fallback (typically lookupRouteKm) is used; if that also fails we
- * degrade gracefully to a flat amount and the caller surfaces a hint.
+ *  - per_m3:    amount × (litres / 1000)
+ *  - per_litre: amount × litres
+ *  - per_trip:  amount (flat charter fee)
  */
 export function computeFuelRevenue(input: {
   basis: RateBasis;
   amount: number;
   cargoQuantityLitres: number;
-  km?: number;
 }): number {
-  const { basis, amount, cargoQuantityLitres, km } = input;
+  const { basis, amount, cargoQuantityLitres } = input;
   switch (basis) {
+    case "per_m3":
+      return amount * (cargoQuantityLitres / 1000);
     case "per_litre":
       return amount * cargoQuantityLitres;
-    case "per_litre_per_km":
-      return amount * cargoQuantityLitres * (km ?? 0);
-    case "per_km":
-      return amount * (km ?? 0);
     case "per_trip":
       return amount;
-    case "per_tonne":
-    case "per_container":
-      return amount * cargoQuantityLitres;
   }
 }

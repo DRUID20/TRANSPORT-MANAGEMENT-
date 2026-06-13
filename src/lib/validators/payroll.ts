@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-const currencyEnum = z.enum(["KES", "USD", "UGX", "TZS", "RWF", "EUR", "GBP", "ZAR"]);
+const currencyEnum = z.enum(["KES", "USD", "UGX"]);
 
 export const payrollPeriodCreateSchema = z.object({
   yearMonth: z.string().regex(/^\d{4}-\d{2}$/, "Format YYYY-MM"),

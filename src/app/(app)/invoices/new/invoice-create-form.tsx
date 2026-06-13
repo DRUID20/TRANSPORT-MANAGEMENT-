@@ -15,7 +15,7 @@ import type { Currency } from "@/lib/types/ledger";
 type Cus = {
   id: string;
   name: string;
-  billingCurrency: "KES" | "USD";
+  billingCurrency: "KES" | "USD" | "UGX";
   paymentTermsDays: number;
 };
 type T = {
@@ -240,8 +240,6 @@ export function InvoiceCreateForm({
             <option value="KES">KES</option>
             <option value="USD">USD</option>
             <option value="UGX">UGX</option>
-            <option value="TZS">TZS</option>
-            <option value="RWF">RWF</option>
           </Select>
         </FormField>
         <FormField label="FX rate" required hint="TO KES">

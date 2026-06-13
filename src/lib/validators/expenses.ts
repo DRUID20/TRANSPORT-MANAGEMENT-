@@ -28,7 +28,7 @@ export const paymentMethodEnum = z.enum([
   "advance",
 ]);
 
-const currencyEnum = z.enum(["KES", "USD", "UGX", "TZS", "RWF"]);
+const currencyEnum = z.enum(["KES", "USD", "UGX"]);
 
 export const expenseCreateSchema = z.object({
   amountKes: z.coerce.number().positive(),

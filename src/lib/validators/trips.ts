@@ -1,15 +1,8 @@
 import { z } from "zod";
 
-const currencyEnum = z.enum(["KES", "USD", "UGX", "TZS", "RWF"]);
-// Legacy + fuel-specific basis values. Fuel rate cards use per_litre / per_litre_per_km.
-const basisEnum = z.enum([
-  "per_trip",
-  "per_litre",
-  "per_litre_per_km",
-  "per_km",
-  "per_tonne",
-  "per_container",
-]);
+const currencyEnum = z.enum(["KES", "USD", "UGX"]);
+// Fuel rate basis values. Primary is per_m3 (USD per cubic metre).
+const basisEnum = z.enum(["per_m3", "per_litre", "per_trip"]);
 const cargoUnitEnum = z.enum(["tonnes", "TEUs", "units", "litres"]);
 const productEnum = z.enum(["PMS", "AGO"]);
 const customerTypeEnum = z.enum(["service_station", "industrial", "transporter", "other"]);
@@ -23,7 +16,7 @@ export const customerCreateSchema = z.object({
   customerType: customerTypeEnum.optional(),
   epraLicenceNumber: z.string().optional(),
   billingAddress: z.string().optional(),
-  billingCurrency: z.enum(["KES", "USD"]).default("KES"),
+  billingCurrency: z.enum(["KES", "USD", "UGX"]).default("KES"),
   paymentTermsDays: z.coerce.number().int().min(0).max(180).default(30),
   notes: z.string().optional(),
 });

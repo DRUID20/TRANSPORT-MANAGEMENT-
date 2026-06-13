@@ -3,7 +3,7 @@
  * Double-entry journal entries with multi-currency support.
  */
 
-export type Currency = "KES" | "USD" | "UGX" | "TZS" | "RWF" | "EUR" | "GBP" | "ZAR";
+export type Currency = "KES" | "USD" | "UGX";
 
 export type JournalStatus = "draft" | "posted" | "reversed";
 

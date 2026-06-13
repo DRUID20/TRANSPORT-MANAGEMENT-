@@ -3,21 +3,22 @@
 import { useEffect, useState } from "react";
 import { useTheme } from "next-themes";
 import { Check, Database, Monitor, Moon, Sun } from "lucide-react";
+import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { FormField, FormSection } from "@/components/ui/form-section";
 import { SegmentedControl } from "@/components/ui/segmented-control";
-import { FUEL_DEPOTS, ULLAGE_ALERT_THRESHOLD_PCT } from "@/lib/types/trips";
+import { ULLAGE_ALERT_THRESHOLD_PCT } from "@/lib/types/trips";
 
 /**
  * Workspace preference keys. Single source of truth — the booking form
- * reads PREF_KEYS.defaultDepot / defaultCurrency to pre-fill its fields.
+ * reads PREF_KEYS.defaultLoadingPoint / defaultCurrency to pre-fill its fields.
  */
 export const PREF_KEYS = {
-  defaultDepot: "tx.prefs.defaultDepot",
+  defaultLoadingPoint: "tx.prefs.defaultLoadingPoint",
   defaultCurrency: "tx.prefs.defaultCurrency",
 } as const;
 
-const CURRENCIES = ["KES", "USD", "UGX", "TZS", "RWF"] as const;
+const CURRENCIES = ["USD", "KES", "UGX"] as const;
 
 function readPref(key: string): string | null {
   try {
@@ -38,13 +39,13 @@ function writePref(key: string, value: string) {
 export function SettingsForm() {
   const { theme, setTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
-  const [defaultDepot, setDefaultDepot] = useState<string>(FUEL_DEPOTS[0]);
-  const [defaultCurrency, setDefaultCurrency] = useState<string>("KES");
+  const [defaultLoadingPoint, setDefaultLoadingPoint] = useState<string>("");
+  const [defaultCurrency, setDefaultCurrency] = useState<string>("USD");
   const [savedFlash, setSavedFlash] = useState<string | null>(null);
 
   useEffect(() => {
-    setDefaultDepot(readPref(PREF_KEYS.defaultDepot) ?? FUEL_DEPOTS[0]);
-    setDefaultCurrency(readPref(PREF_KEYS.defaultCurrency) ?? "KES");
+    setDefaultLoadingPoint(readPref(PREF_KEYS.defaultLoadingPoint) ?? "");
+    setDefaultCurrency(readPref(PREF_KEYS.defaultCurrency) ?? "USD");
     setMounted(true);
   }, []);
 
@@ -91,26 +92,21 @@ export function SettingsForm() {
         columns={2}
       >
         <FormField
-          label="Default depot"
-          helper="Pre-selected as the origin on new bookings."
+          label="Default loading point"
+          helper="Pre-filled as the origin on new bookings. Leave blank to type per booking."
         >
           <div className="flex items-center gap-2">
-            <Select
-              value={defaultDepot}
+            <Input
+              value={defaultLoadingPoint}
               onChange={(e) => {
                 const v = e.currentTarget.value;
-                setDefaultDepot(v);
-                writePref(PREF_KEYS.defaultDepot, v);
-                flash("depot");
+                setDefaultLoadingPoint(v);
+                writePref(PREF_KEYS.defaultLoadingPoint, v);
+                flash("loadingPoint");
               }}
-            >
-              {FUEL_DEPOTS.map((d) => (
-                <option key={d} value={d}>
-                  {d}
-                </option>
-              ))}
-            </Select>
-            <SavedTick show={savedFlash === "depot"} />
+              placeholder="e.g. KPC Mombasa"
+            />
+            <SavedTick show={savedFlash === "loadingPoint"} />
           </div>
         </FormField>
         <FormField

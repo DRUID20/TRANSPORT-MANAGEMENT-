@@ -80,7 +80,7 @@ export default async function LoginPage({
 
           <div className="grid gap-3">
             <p className="font-mono text-[10px] uppercase tracking-[0.22em] text-white/40">
-              Live · last 5 movements
+              Sample feed · for illustration
             </p>
             <DispatchTicker />
           </div>

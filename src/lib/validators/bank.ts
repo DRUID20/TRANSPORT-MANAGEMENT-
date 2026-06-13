@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-const currencyEnum = z.enum(["KES", "USD", "UGX", "TZS", "RWF", "EUR", "GBP", "ZAR"]);
+const currencyEnum = z.enum(["KES", "USD", "UGX"]);
 
 export const bankTxCreateSchema = z
   .object({

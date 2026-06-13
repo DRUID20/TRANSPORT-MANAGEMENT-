@@ -20,30 +20,17 @@ import { FormField, FormSection } from "@/components/ui/form-section";
 import { FormFooter } from "@/components/ui/form-footer";
 import { SegmentedControl } from "@/components/ui/segmented-control";
 import {
-  FUEL_DEPOTS,
   FUEL_PRODUCT_LABELS,
+  type Currency,
   type FuelProduct,
   type RateBasis,
 } from "@/lib/types/trips";
 
-type Cus = { id: string; name: string; billingCurrency: "KES" | "USD" };
-
-const DESTINATIONS = [
-  "Nairobi",
-  "Kisumu",
-  "Eldoret",
-  "Nakuru",
-  "Kampala",
-  "Kigali",
-  "Bujumbura",
-  "Juba",
-  "Goma",
-  "Other (specify)",
-];
+type Cus = { id: string; name: string; billingCurrency: "KES" | "USD" | "UGX" };
 
 type Errors = Partial<
   Record<
-    "customerId" | "destination" | "cargoQuantity" | "agreedAmount" | "requestedDate",
+    "customerId" | "origin" | "destination" | "cargoQuantity" | "agreedAmount" | "requestedDate",
     string
   >
 >;
@@ -51,14 +38,15 @@ type Errors = Partial<
 const INIT = {
   customerId: "",
   product: "AGO" as FuelProduct,
-  origin: FUEL_DEPOTS[0],
-  destination: DESTINATIONS[0]!,
-  destinationOther: "",
+  origin: "",
+  destination: "",
   cargoQuantity: "",
   requestedDate: "",
   agreedAmount: "",
-  agreedBasis: "per_litre" as RateBasis,
-  agreedCurrency: "KES" as "KES" | "USD" | "UGX" | "TZS" | "RWF",
+  // Default: per cubic metre in USD — the typical cross-border fuel-haul
+  // pricing convention. Operators can override.
+  agreedBasis: "per_m3" as RateBasis,
+  agreedCurrency: "USD" as Currency,
   notes: "",
 };
 
@@ -78,41 +66,40 @@ export function BookingCreateForm({
   const [product, setProduct] = useState<FuelProduct>(INIT.product);
   const [origin, setOrigin] = useState<string>(INIT.origin);
   const [destination, setDestination] = useState<string>(INIT.destination);
-  const [destinationOther, setDestinationOther] = useState(INIT.destinationOther);
   const [cargoQuantity, setCargoQuantity] = useState(INIT.cargoQuantity);
   const [requestedDate, setRequestedDate] = useState(INIT.requestedDate);
   const [agreedAmount, setAgreedAmount] = useState(INIT.agreedAmount);
   const [agreedBasis, setAgreedBasis] = useState<RateBasis>(INIT.agreedBasis);
-  const [agreedCurrency, setAgreedCurrency] = useState<typeof INIT.agreedCurrency>(
-    INIT.agreedCurrency,
-  );
+  const [agreedCurrency, setAgreedCurrency] = useState<Currency>(INIT.agreedCurrency);
   const [notes, setNotes] = useState(INIT.notes);
   const [rateHint, setRateHint] = useState<string | null>(null);
   const [lookingUp, startLookup] = useTransition();
 
-  // Hydrate workspace defaults from /settings.
+  // Hydrate workspace defaults from /settings on first render.
   useEffect(() => {
     try {
-      const depot = window.localStorage.getItem("tx.prefs.defaultDepot");
-      if (depot && (FUEL_DEPOTS as readonly string[]).includes(depot)) setOrigin(depot);
+      const lp = window.localStorage.getItem("tx.prefs.defaultLoadingPoint");
+      if (lp) setOrigin(lp);
       const cur = window.localStorage.getItem("tx.prefs.defaultCurrency");
-      if (cur && ["KES", "USD", "UGX", "TZS", "RWF"].includes(cur)) {
-        setAgreedCurrency(cur as typeof INIT.agreedCurrency);
-      }
+      if (cur === "KES" || cur === "USD" || cur === "UGX") setAgreedCurrency(cur);
     } catch {
       // Private mode — silent fallback.
     }
   }, []);
 
-  const finalDestination =
-    destination === "Other (specify)" ? destinationOther.trim() : destination;
+  // When the user picks a customer, default the billing currency to whatever
+  // their account is billed in. Lookup still overrides this if a rate exists.
+  useEffect(() => {
+    if (!customerId) return;
+    const c = customers.find((c) => c.id === customerId);
+    if (c) setAgreedCurrency(c.billingCurrency);
+  }, [customerId, customers]);
 
   function onReset() {
     setCustomerId(preselectCustomerId ?? INIT.customerId);
     setProduct(INIT.product);
     setOrigin(INIT.origin);
     setDestination(INIT.destination);
-    setDestinationOther(INIT.destinationOther);
     setCargoQuantity(INIT.cargoQuantity);
     setRequestedDate(INIT.requestedDate);
     setAgreedAmount(INIT.agreedAmount);
@@ -129,11 +116,13 @@ export function BookingCreateForm({
     startLookup(async () => {
       const rate = await lookupRate({
         origin,
-        destination: finalDestination,
+        destination,
         customerId: customerId || undefined,
       });
       if (!rate) {
-        setRateHint(`No rate on file for ${origin} to ${finalDestination || "destination"}.`);
+        setRateHint(
+          `No saved rate for ${origin || "this origin"} to ${destination || "this destination"}. Enter the agreed rate manually.`,
+        );
         return;
       }
       setAgreedAmount(String(rate.amount));
@@ -146,9 +135,8 @@ export function BookingCreateForm({
   function validate(): boolean {
     const next: Errors = {};
     if (!customerId) next.customerId = "Required.";
-    if (destination === "Other (specify)" && !destinationOther.trim()) {
-      next.destination = "Specify the destination.";
-    }
+    if (!origin.trim()) next.origin = "Required.";
+    if (!destination.trim()) next.destination = "Required.";
     if (!cargoQuantity || Number(cargoQuantity) <= 0) {
       next.cargoQuantity = "Enter litres.";
     }
@@ -167,8 +155,8 @@ export function BookingCreateForm({
     setLoading(true);
     const result = await createBooking({
       customerId,
-      origin,
-      destination: finalDestination,
+      origin: origin.trim(),
+      destination: destination.trim(),
       product,
       cargoQuantity: Number(cargoQuantity),
       cargoUnit: "litres",
@@ -208,27 +196,24 @@ export function BookingCreateForm({
             ))}
           </Select>
         </FormField>
-        <FormField label="Origin" required>
-          <Select value={origin} onChange={(e) => setOrigin(e.currentTarget.value)} required>
-            {FUEL_DEPOTS.map((d) => <option key={d} value={d}>{d}</option>)}
-          </Select>
+        <FormField label="Loading point" required error={errors.origin}>
+          <Input
+            value={origin}
+            onChange={(e) => setOrigin(e.currentTarget.value)}
+            placeholder="e.g. KPC Mombasa"
+            required
+            error={Boolean(errors.origin)}
+          />
         </FormField>
         <FormField label="Destination" required error={errors.destination}>
-          <Select value={destination} onChange={(e) => setDestination(e.currentTarget.value)} required>
-            {DESTINATIONS.map((d) => <option key={d} value={d}>{d}</option>)}
-          </Select>
+          <Input
+            value={destination}
+            onChange={(e) => setDestination(e.currentTarget.value)}
+            placeholder="e.g. Kampala"
+            required
+            error={Boolean(errors.destination)}
+          />
         </FormField>
-        {destination === "Other (specify)" && (
-          <FormField label="Destination name" required className="sm:col-span-2" error={errors.destination}>
-            <Input
-              value={destinationOther}
-              onChange={(e) => setDestinationOther(e.currentTarget.value)}
-              placeholder="Lokichogio"
-              error={Boolean(errors.destination)}
-              required
-            />
-          </FormField>
-        )}
       </FormSection>
 
       <FormSection title="Product and volume" columns={3}>
@@ -275,7 +260,7 @@ export function BookingCreateForm({
             variant="secondary"
             size="sm"
             onClick={onLookupRate}
-            disabled={lookingUp || !origin || !finalDestination}
+            disabled={lookingUp || !origin.trim() || !destination.trim()}
           >
             {lookingUp ? <Loader2 className="size-3.5 animate-spin" /> : <Sparkles className="size-3.5" />}
             Lookup
@@ -290,27 +275,31 @@ export function BookingCreateForm({
             type="number"
             min={0}
             step="0.0001"
-            placeholder={agreedBasis === "per_litre_per_km" ? "0.0125" : "8.4250"}
+            placeholder={agreedBasis === "per_m3" ? "85" : agreedBasis === "per_litre" ? "8.50" : "350000"}
             className="font-mono tnum"
             error={Boolean(errors.agreedAmount)}
             leadingIcon={<Banknote />}
           />
         </FormField>
         <FormField label="Basis" required>
-          <Select value={agreedBasis} onChange={(e) => setAgreedBasis(e.currentTarget.value as RateBasis)}>
+          <Select
+            value={agreedBasis}
+            onChange={(e) => {
+              const next = e.currentTarget.value as RateBasis;
+              setAgreedBasis(next);
+              if (next === "per_m3") setAgreedCurrency("USD");
+            }}
+          >
+            <option value="per_m3">Per m³ (USD)</option>
             <option value="per_litre">Per litre</option>
-            <option value="per_litre_per_km">Per litre per km</option>
             <option value="per_trip">Per trip</option>
-            <option value="per_km">Per km</option>
           </Select>
         </FormField>
         <FormField label="Currency" required>
-          <Select value={agreedCurrency} onChange={(e) => setAgreedCurrency(e.currentTarget.value as never)}>
-            <option value="KES">KES</option>
+          <Select value={agreedCurrency} onChange={(e) => setAgreedCurrency(e.currentTarget.value as Currency)}>
             <option value="USD">USD</option>
+            <option value="KES">KES</option>
             <option value="UGX">UGX</option>
-            <option value="TZS">TZS</option>
-            <option value="RWF">RWF</option>
           </Select>
         </FormField>
         {rateHint && (

@@ -17,12 +17,9 @@ import { BookingStatusPill } from "@/components/trips/booking-status-pill";
 import { cn } from "@/lib/utils";
 
 const basisShort = {
-  per_trip: "trip",
+  per_m3: "m³",
   per_litre: "L",
-  per_litre_per_km: "L·km",
-  per_km: "km",
-  per_tonne: "t",
-  per_container: "TEU",
+  per_trip: "trip",
 } as const;
 
 export default async function BookingsPage() {

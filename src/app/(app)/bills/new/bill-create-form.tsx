@@ -147,8 +147,6 @@ export function BillCreateForm({
               <option value="KES">KES</option>
               <option value="USD">USD</option>
               <option value="UGX">UGX</option>
-              <option value="TZS">TZS</option>
-              <option value="RWF">RWF</option>
             </Select>
           </Field>
           <Field label="Issue date">

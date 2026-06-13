@@ -7,7 +7,7 @@ export interface ReceiptExtraction {
   vendor: string;
   amountKes: number;
   originalAmount?: number;
-  originalCurrency?: "KES" | "USD" | "UGX" | "TZS" | "RWF";
+  originalCurrency?: "KES" | "USD" | "UGX";
   /** Best guess; driver can override. */
   categoryGuess: ExpenseCategory;
   /** ISO date (yyyy-mm-dd). */

@@ -11,8 +11,8 @@ import { Label } from "@/components/ui/label";
 import { Select } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import {
-  FUEL_DEPOTS,
   FUEL_PRODUCT_LABELS,
+  type Currency,
   type FuelProduct,
   type RateBasis,
 } from "@/lib/types/trips";
@@ -20,37 +20,24 @@ import {
 type Cus = { id: string; name: string };
 
 /**
- * Tiny helper that previews what the agreed amount works out to for a
- * standard 40 000 L tanker over a representative distance. Helps the
- * commercial team sanity-check a per-litre rate before they save it.
- *
- *  per_litre        → amount × 40 000
- *  per_litre_per_km → amount × 40 000 × 600 km (Mombasa-Nairobi reference)
- *  per_trip         → amount
- *  per_km           → amount × 600
+ * Sanity-check preview: what does this rate work out to for a standard
+ * 40 m³ (40 000 L) tanker load?
  */
 function previewRevenue(basis: RateBasis, amount: number): string {
   if (!Number.isFinite(amount) || amount <= 0) return "—";
+  const REFERENCE_M3 = 40;
   const REFERENCE_LITRES = 40_000;
-  const REFERENCE_KM = 600;
   let r: number;
   switch (basis) {
+    case "per_m3":
+      r = amount * REFERENCE_M3;
+      break;
     case "per_litre":
       r = amount * REFERENCE_LITRES;
-      break;
-    case "per_litre_per_km":
-      r = amount * REFERENCE_LITRES * REFERENCE_KM;
-      break;
-    case "per_km":
-      r = amount * REFERENCE_KM;
       break;
     case "per_trip":
       r = amount;
       break;
-    default:
-      // Legacy bases (per_tonne, per_container) — no preview, the form
-      // is for fuel rates and these shouldn't be picked here.
-      return "—";
   }
   return r.toLocaleString();
 }
@@ -60,9 +47,10 @@ export function RateCreateForm({ customers }: { customers: Cus[] }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const [basis, setBasis] = useState<RateBasis>("per_litre");
+  const [basis, setBasis] = useState<RateBasis>("per_m3");
   const [amount, setAmount] = useState<string>("");
-  const [currency, setCurrency] = useState<"KES" | "USD" | "UGX" | "TZS" | "RWF">("KES");
+  // Default to USD because the primary basis (per cubic metre) is USD-priced.
+  const [currency, setCurrency] = useState<Currency>("USD");
   const [product, setProduct] = useState<FuelProduct | "">("");
 
   const preview = previewRevenue(basis, Number(amount));
@@ -102,20 +90,16 @@ export function RateCreateForm({ customers }: { customers: Cus[] }) {
         <CardHeader>
           <CardTitle>Route</CardTitle>
           <CardDescription>
-            Origin must be a fuel depot. Destination is the customer's offtake
-            point — same string used on the booking form.
+            Loading point and destination are free text — type the depot or
+            offtake location exactly as it will appear on the booking.
           </CardDescription>
         </CardHeader>
         <CardContent className="grid gap-4 sm:grid-cols-2">
-          <Field label="Origin (depot)">
-            <Select name="origin" required defaultValue={FUEL_DEPOTS[0]}>
-              {FUEL_DEPOTS.map((d) => (
-                <option key={d} value={d}>{d}</option>
-              ))}
-            </Select>
+          <Field label="Loading point">
+            <Input name="origin" required placeholder="e.g. KPC Mombasa" />
           </Field>
           <Field label="Destination">
-            <Input name="destination" required placeholder="Nairobi" />
+            <Input name="destination" required placeholder="e.g. Kampala" />
           </Field>
           <Field label="Customer (optional)" hint="Leave blank for default rate on this route" className="sm:col-span-2">
             <Select name="customerId" defaultValue="">
@@ -157,20 +141,26 @@ export function RateCreateForm({ customers }: { customers: Cus[] }) {
             Pricing
           </CardTitle>
           <CardDescription>
-            Per-litre is the typical Kenyan fuel-haul basis. Per-litre-per-km
-            is for long-distance contracts that explicitly bill on distance.
+            Per cubic metre (m³) in USD is the standard cross-border fuel-haul
+            basis. Use per litre or a flat per-trip charter only when the
+            contract explicitly calls for it.
           </CardDescription>
         </CardHeader>
         <CardContent className="grid gap-4 sm:grid-cols-3">
           <Field label="Basis">
             <Select
               value={basis}
-              onChange={(e) => setBasis(e.currentTarget.value as RateBasis)}
+              onChange={(e) => {
+                const next = e.currentTarget.value as RateBasis;
+                setBasis(next);
+                // If they switch to per_m3, push currency back to USD so the
+                // form reflects the canonical pricing convention.
+                if (next === "per_m3") setCurrency("USD");
+              }}
             >
+              <option value="per_m3">Per m³ (USD)</option>
               <option value="per_litre">Per litre</option>
-              <option value="per_litre_per_km">Per litre per km</option>
               <option value="per_trip">Per trip (flat)</option>
-              <option value="per_km">Per km</option>
             </Select>
           </Field>
           <Field label="Amount">
@@ -181,24 +171,19 @@ export function RateCreateForm({ customers }: { customers: Cus[] }) {
               step="0.0001"
               value={amount}
               onChange={(e) => setAmount(e.currentTarget.value)}
-              placeholder={basis === "per_litre_per_km" ? "0.012" : "8.50"}
+              placeholder={basis === "per_litre" ? "8.50" : basis === "per_m3" ? "85" : "350000"}
               className="font-mono tnum"
             />
           </Field>
           <Field label="Currency">
-            <Select value={currency} onChange={(e) => setCurrency(e.currentTarget.value as never)}>
-              <option value="KES">KES</option>
+            <Select value={currency} onChange={(e) => setCurrency(e.currentTarget.value as Currency)}>
               <option value="USD">USD</option>
+              <option value="KES">KES</option>
               <option value="UGX">UGX</option>
-              <option value="TZS">TZS</option>
-              <option value="RWF">RWF</option>
             </Select>
           </Field>
           <div className="sm:col-span-3 rounded-md border border-dashed border-border bg-bg-base/40 p-3 text-[11px] text-fg-tertiary">
-            <span>40 000 L</span>
-            {basis === "per_litre_per_km" || basis === "per_km"
-              ? <span> over 600 km reference (Mombasa-Nairobi)</span>
-              : null}
+            <span>{basis === "per_m3" ? "40 m³ (40 000 L)" : "40 000 L"} reference load</span>
             <span> at this rate ≈ </span>
             <span className="font-mono tnum font-semibold text-fg-primary">
               {preview} {currency}

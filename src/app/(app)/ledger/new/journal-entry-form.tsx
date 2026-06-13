@@ -232,10 +232,6 @@ export function JournalEntryForm({ accounts }: { accounts: AccOpt[] }) {
                         <option value="KES">KES</option>
                         <option value="USD">USD</option>
                         <option value="UGX">UGX</option>
-                        <option value="TZS">TZS</option>
-                        <option value="RWF">RWF</option>
-                        <option value="EUR">EUR</option>
-                        <option value="GBP">GBP</option>
                       </Select>
                     </td>
                     <td className="px-3 py-2">

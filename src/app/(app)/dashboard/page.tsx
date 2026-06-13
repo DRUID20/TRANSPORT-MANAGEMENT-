@@ -10,6 +10,10 @@ import {
 } from "lucide-react";
 import { getComplianceSummary } from "@/server/actions/compliance";
 import { getCurrentUser } from "@/server/auth/current-user";
+import { listTrips } from "@/server/actions/trips";
+import { listTrucks } from "@/server/actions/trucks";
+import { listDrivers } from "@/server/actions/drivers";
+import { listInvoices } from "@/server/actions/ar";
 import { AreaChartCard } from "@/components/dashboard/area-chart-card";
 import { TodaysDispatch } from "@/components/dashboard/todays-dispatch";
 import { formatMoney } from "@/lib/format";
@@ -30,30 +34,59 @@ import { OpsBoard, type TripRow } from "./ops-board";
  * separators. Numbers are tabular-numeric monospace throughout.
  */
 
-// Sample data — kept while the Postgres trips table is being wired.
-const allTrips: TripRow[] = [
-  { id: "TRP-2026-0142", truck: "KCB 421R", origin: "Mombasa",  destination: "Kampala",       originFlag: "🇰🇪", destinationFlag: "🇺🇬", km: 1180, driver: "Joseph Mwangi",    status: "in_transit", revenue: 685000 },
-  { id: "TRP-2026-0141", truck: "KDA 117K", origin: "Nairobi",  destination: "Juba",          originFlag: "🇰🇪", destinationFlag: "🇸🇸", km: 1640, driver: "Ali Hassan",       status: "at_border",  revenue: 1240000 },
-  { id: "TRP-2026-0140", truck: "KBW 882P", origin: "Mombasa",  destination: "Kigali",        originFlag: "🇰🇪", destinationFlag: "🇷🇼", km: 1640, driver: "Daniel Otieno",    status: "delivered",  revenue: 920000 },
-  { id: "TRP-2026-0139", truck: "KCT 559M", origin: "Mombasa",  destination: "Goma",          originFlag: "🇰🇪", destinationFlag: "🇨🇩", km: 2080, driver: "Mwangi Kamau",     status: "delayed",    revenue: 1580000 },
-  { id: "TRP-2026-0138", truck: "KDD 304L", origin: "Nairobi",  destination: "Bujumbura",     originFlag: "🇰🇪", destinationFlag: "🇧🇮", km: 1920, driver: "Patrick Waweru",   status: "closed",     revenue: 845000 },
-  { id: "TRP-2026-0137", truck: "KCC 209N", origin: "Nairobi",  destination: "Dar es Salaam", originFlag: "🇰🇪", destinationFlag: "🇹🇿", km: 1340, driver: "Stephen Njoroge",  status: "loading",    revenue: 720000 },
-  { id: "TRP-2026-0136", truck: "KDB 612J", origin: "Mombasa",  destination: "Mwanza",        originFlag: "🇰🇪", destinationFlag: "🇹🇿", km: 1480, driver: "Hassan Omar",      status: "planned",    revenue: 695000 },
-];
+function buildRevenueChart(invoices: Awaited<ReturnType<typeof listInvoices>>) {
+  const days = 30;
+  const today = new Date();
+  const buckets = new Array(days).fill(0).map(() => ({ revenue: 0, costs: 0 }));
+  for (const inv of invoices) {
+    const issued = new Date(inv.issueDate);
+    const ageDays = Math.floor(
+      (today.getTime() - issued.getTime()) / (1000 * 60 * 60 * 24),
+    );
+    if (ageDays < 0 || ageDays >= days) continue;
+    buckets[days - 1 - ageDays]!.revenue += inv.total * inv.fxRate;
+  }
+  return buckets.map((b, i) => ({
+    day: String(i + 1).padStart(2, "0"),
+    "Freight Revenue": Math.round(b.revenue),
+    "Direct Costs": Math.round(b.costs),
+  }));
+}
 
-const revenueChart = Array.from({ length: 30 }, (_, i) => ({
-  day: String(i + 1).padStart(2, "0"),
-  "Freight Revenue": Math.round(380000 + Math.sin(i * 0.4) * 120000 + Math.random() * 40000),
-  "Direct Costs": Math.round(220000 + Math.sin(i * 0.5) * 80000 + Math.random() * 30000),
-}));
+function tripsToRows(
+  trips: Awaited<ReturnType<typeof listTrips>>,
+  trucksById: Map<string, { registration: string }>,
+  driversById: Map<string, { fullName: string }>,
+): TripRow[] {
+  return trips.map((t) => ({
+    id: t.number,
+    truck: trucksById.get(t.truckId)?.registration ?? "—",
+    origin: t.origin,
+    destination: t.destination,
+    originFlag: "",
+    destinationFlag: "",
+    km: t.actualKm ?? 0,
+    driver: driversById.get(t.driverId)?.fullName ?? "—",
+    status: t.status,
+    revenue: t.revenueAmount,
+  }));
+}
 
 export default async function DashboardPage() {
-  const [me, compliance] = await Promise.all([
+  const [me, compliance, trips, trucks, drivers, invoices] = await Promise.all([
     getCurrentUser(),
     getComplianceSummary(),
+    listTrips(),
+    listTrucks(),
+    listDrivers(),
+    listInvoices(),
   ]);
 
   const firstName = (me?.fullName ?? "Operator").split(" ")[0]!;
+  const trucksById = new Map(trucks.map((t) => [t.id, { registration: t.registration }]));
+  const driversById = new Map(drivers.map((d) => [d.id, { fullName: d.fullName }]));
+  const allTrips = tripsToRows(trips, trucksById, driversById);
+  const revenueChart = buildRevenueChart(invoices);
 
   // East Africa Time greeting (UTC+3) — server may be in any TZ.
   const eatHourString = new Date().toLocaleString("en-GB", {
@@ -80,8 +113,15 @@ export default async function DashboardPage() {
   const atBorder = allTrips.filter((t) => t.status === "at_border").length;
   const delayed = allTrips.filter((t) => t.status === "delayed").length;
   const deliveredMtd = allTrips.filter((t) => t.status === "delivered").length;
-  const revenueMtd = 14_800_000;
-  const fleetSize = 52;
+  // Revenue MTD is the sum of all invoices issued this calendar month, in
+  // KES equivalent. Zero is the correct read when no invoices exist yet.
+  const monthStart = new Date();
+  monthStart.setDate(1);
+  monthStart.setHours(0, 0, 0, 0);
+  const revenueMtd = invoices
+    .filter((i) => new Date(i.issueDate) >= monthStart)
+    .reduce((s, i) => s + i.total * i.fxRate, 0);
+  const fleetSize = trucks.length;
 
   // Needs-attention rows from real compliance summary (Postgres lands later).
   const attention = buildAttention(compliance);
@@ -123,7 +163,6 @@ export default async function DashboardPage() {
             label="Revenue MTD"
             value={formatMoney(revenueMtd, "KES", { compact: true }).replace("KSh ", "")}
             unit="KES"
-            sub="approx. $114,728"
             wide
           />
         </div>

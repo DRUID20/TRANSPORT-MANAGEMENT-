@@ -40,7 +40,7 @@ export interface Expense {
   /** When captured in foreign currency, original amount + currency are kept
    *  for the audit trail. */
   originalAmount?: number;
-  originalCurrency?: "KES" | "USD" | "UGX" | "TZS" | "RWF";
+  originalCurrency?: "KES" | "USD" | "UGX";
   category: ExpenseCategory;
   description: string;
   /** Where the cost was incurred (free text; "Mombasa", "Malaba", etc.). */

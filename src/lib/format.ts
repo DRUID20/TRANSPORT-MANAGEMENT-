@@ -2,14 +2,12 @@
  * Money formatting for TX System.
  * KES is base; USD shows alongside on reports.
  */
-export type Currency = "KES" | "USD" | "UGX" | "TZS" | "RWF";
+export type Currency = "KES" | "USD" | "UGX";
 
 const symbols: Record<Currency, string> = {
   KES: "KSh",
   USD: "$",
   UGX: "USh",
-  TZS: "TSh",
-  RWF: "RF",
 };
 
 export function formatMoney(

@@ -16,12 +16,9 @@ import {
 import { PageHeader } from "@/components/layout/page-header";
 
 const basisLabel = {
-  per_trip: "per trip",
+  per_m3: "per m³",
   per_litre: "per litre",
-  per_litre_per_km: "per litre per km",
-  per_km: "per km",
-  per_tonne: "per tonne",
-  per_container: "per container",
+  per_trip: "per trip",
 } as const;
 
 export default async function RatesPage() {

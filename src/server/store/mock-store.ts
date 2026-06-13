@@ -35,7 +35,6 @@ import {
   allowedTransitions,
   computeFuelRevenue,
   isTerminal,
-  lookupRouteKm,
 } from "@/lib/types/trips";
 import type {
   TripDocument,
@@ -154,6 +153,15 @@ import { STATUS_ORDER as PACK_STATUS_ORDER } from "@/lib/types/management-pack";
 import { ageBucket as computeAgeBucket } from "@/lib/types/ar";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
+
+/**
+ * Master switch for illustrative seed data. The TMS ships with an empty
+ * workspace by default — every truck, customer, rate, booking, trip,
+ * supplier, employee, journal entry and notification you see started life
+ * here as a seed array. Flip this to `true` to repopulate the in-memory
+ * store with the full demo dataset (useful when building UI in isolation).
+ */
+const DEMO_DATA = false;
 
 // Seed subcontractors
 const subcontractorSeed: Subcontractor[] = [
@@ -322,9 +330,11 @@ const truckSeed: Truck[] = [
 ];
 
 // Module-level state (persists across requests in same process)
-const trucks = new Map<string, Truck>(truckSeed.map((t) => [t.id, t]));
+const trucks = new Map<string, Truck>(
+  DEMO_DATA ? truckSeed.map((t) => [t.id, t]) : [],
+);
 const subcontractors = new Map<string, Subcontractor>(
-  subcontractorSeed.map((s) => [s.id, s]),
+  DEMO_DATA ? subcontractorSeed.map((s) => [s.id, s]) : [],
 );
 
 // ============================================================
@@ -480,7 +490,9 @@ const trailerSeed: Trailer[] = [
   },
 ];
 
-const trailers = new Map<string, Trailer>(trailerSeed.map((t) => [t.id, t]));
+const trailers = new Map<string, Trailer>(
+  DEMO_DATA ? trailerSeed.map((t) => [t.id, t]) : [],
+);
 
 export function listTrailers(): Trailer[] {
   return [...trailers.values()].sort((a, b) =>
@@ -630,7 +642,9 @@ const driverSeed: Driver[] = [
   },
 ];
 
-const drivers = new Map<string, Driver>(driverSeed.map((d) => [d.id, d]));
+const drivers = new Map<string, Driver>(
+  DEMO_DATA ? driverSeed.map((d) => [d.id, d]) : [],
+);
 
 export function listDrivers(): Driver[] {
   return [...drivers.values()].sort((a, b) => a.fullName.localeCompare(b.fullName));
@@ -727,7 +741,9 @@ const supplierSeed: Supplier[] = [
   },
 ];
 
-const suppliers = new Map<string, Supplier>(supplierSeed.map((s) => [s.id, s]));
+const suppliers = new Map<string, Supplier>(
+  DEMO_DATA ? supplierSeed.map((s) => [s.id, s]) : [],
+);
 
 export function listSuppliers(): Supplier[] {
   return [...suppliers.values()].sort((a, b) => a.name.localeCompare(b.name));
@@ -969,7 +985,7 @@ function seedJobCards() {
 
   jobCardCounter = 4;
 }
-seedJobCards();
+if (DEMO_DATA) seedJobCards();
 
 export function listJobCards(filterStatus?: JobCardStatus): JobCard[] {
   const all = [...jobCards.values()].sort(
@@ -1206,7 +1222,9 @@ const customerSeed: Customer[] = [
   },
 ];
 
-const customers = new Map<string, Customer>(customerSeed.map((c) => [c.id, c]));
+const customers = new Map<string, Customer>(
+  DEMO_DATA ? customerSeed.map((c) => [c.id, c]) : [],
+);
 
 export function listCustomers(): Customer[] {
   return [...customers.values()].sort((a, b) => a.name.localeCompare(b.name));
@@ -1232,21 +1250,23 @@ export function updateCustomer(id: string, patch: Partial<Customer>): Customer |
 // ============================================================
 const rateSeed: Rate[] = [
   // Default routes (no customer override)
-  { id: "rate-001", origin: "Mombasa", destination: "Kampala", basis: "per_tonne", amount: 95,    currency: "USD", createdAt: "2025-01-01T08:00:00Z" },
-  { id: "rate-002", origin: "Mombasa", destination: "Kigali",  basis: "per_tonne", amount: 145,   currency: "USD", createdAt: "2025-01-01T08:00:00Z" },
-  { id: "rate-003", origin: "Mombasa", destination: "Goma",    basis: "per_tonne", amount: 195,   currency: "USD", createdAt: "2025-01-01T08:00:00Z" },
-  { id: "rate-004", origin: "Mombasa", destination: "Bujumbura", basis: "per_tonne", amount: 175, currency: "USD", createdAt: "2025-01-01T08:00:00Z" },
-  { id: "rate-005", origin: "Nairobi", destination: "Juba",    basis: "per_tonne", amount: 220,   currency: "USD", createdAt: "2025-01-01T08:00:00Z" },
-  { id: "rate-006", origin: "Nairobi", destination: "Dar es Salaam", basis: "per_tonne", amount: 75, currency: "USD", createdAt: "2025-01-01T08:00:00Z" },
-  { id: "rate-007", origin: "Mombasa", destination: "Mwanza",  basis: "per_tonne", amount: 85,    currency: "USD", createdAt: "2025-01-01T08:00:00Z" },
-  { id: "rate-008", origin: "Mombasa", destination: "Nairobi", basis: "per_tonne", amount: 18,    currency: "USD", createdAt: "2025-01-01T08:00:00Z" },
+  { id: "rate-001", origin: "Mombasa", destination: "Kampala", basis: "per_m3", amount: 95,    currency: "USD", createdAt: "2025-01-01T08:00:00Z" },
+  { id: "rate-002", origin: "Mombasa", destination: "Kigali",  basis: "per_m3", amount: 145,   currency: "USD", createdAt: "2025-01-01T08:00:00Z" },
+  { id: "rate-003", origin: "Mombasa", destination: "Goma",    basis: "per_m3", amount: 195,   currency: "USD", createdAt: "2025-01-01T08:00:00Z" },
+  { id: "rate-004", origin: "Mombasa", destination: "Bujumbura", basis: "per_m3", amount: 175, currency: "USD", createdAt: "2025-01-01T08:00:00Z" },
+  { id: "rate-005", origin: "Nairobi", destination: "Juba",    basis: "per_m3", amount: 220,   currency: "USD", createdAt: "2025-01-01T08:00:00Z" },
+  { id: "rate-006", origin: "Nairobi", destination: "Dar es Salaam", basis: "per_m3", amount: 75, currency: "USD", createdAt: "2025-01-01T08:00:00Z" },
+  { id: "rate-007", origin: "Mombasa", destination: "Mwanza",  basis: "per_m3", amount: 85,    currency: "USD", createdAt: "2025-01-01T08:00:00Z" },
+  { id: "rate-008", origin: "Mombasa", destination: "Nairobi", basis: "per_m3", amount: 18,    currency: "USD", createdAt: "2025-01-01T08:00:00Z" },
   // Customer-specific override (Pearl of Africa Coffee gets a discounted Mombasa→Kampala)
-  { id: "rate-009", origin: "Mombasa", destination: "Kampala", customerId: "cus-002", basis: "per_tonne", amount: 88, currency: "USD", notes: "Volume agreement", createdAt: "2025-02-15T08:00:00Z" },
+  { id: "rate-009", origin: "Mombasa", destination: "Kampala", customerId: "cus-002", basis: "per_m3", amount: 88, currency: "USD", notes: "Volume agreement", createdAt: "2025-02-15T08:00:00Z" },
   // Container-class
-  { id: "rate-010", origin: "Mombasa", destination: "Kigali",  cargoClass: "containerised", basis: "per_container", amount: 3200, currency: "USD", createdAt: "2025-01-01T08:00:00Z" },
+  { id: "rate-010", origin: "Mombasa", destination: "Kigali",  cargoClass: "containerised", basis: "per_m3", amount: 3200, currency: "USD", createdAt: "2025-01-01T08:00:00Z" },
 ];
 
-const rates = new Map<string, Rate>(rateSeed.map((r) => [r.id, r]));
+const rates = new Map<string, Rate>(
+  DEMO_DATA ? rateSeed.map((r) => [r.id, r]) : [],
+);
 
 export function listRates(): Rate[] {
   return [...rates.values()].sort((a, b) => {
@@ -1314,7 +1334,7 @@ function seedBookings() {
       cargoUnit: "tonnes",
       requestedDate: "2026-05-12",
       agreedAmount: 88,
-      agreedBasis: "per_tonne",
+      agreedBasis: "per_m3",
       agreedCurrency: "USD",
       status: "planned",
       notes: "Load at Mombasa container freight station",
@@ -1329,7 +1349,7 @@ function seedBookings() {
       cargoUnit: "tonnes",
       requestedDate: "2026-05-14",
       agreedAmount: 220,
-      agreedBasis: "per_tonne",
+      agreedBasis: "per_m3",
       agreedCurrency: "USD",
       status: "planned",
     },
@@ -1343,7 +1363,7 @@ function seedBookings() {
       cargoUnit: "TEUs",
       requestedDate: "2026-05-15",
       agreedAmount: 3200,
-      agreedBasis: "per_container",
+      agreedBasis: "per_m3",
       agreedCurrency: "USD",
       status: "confirmed",
     },
@@ -1357,7 +1377,7 @@ function seedBookings() {
       cargoUnit: "tonnes",
       requestedDate: "2026-05-22",
       agreedAmount: 240,
-      agreedBasis: "per_tonne",
+      agreedBasis: "per_m3",
       agreedCurrency: "USD",
       status: "draft",
       notes: "Customer to confirm dimensions before we plan",
@@ -1372,7 +1392,7 @@ function seedBookings() {
       cargoUnit: "tonnes",
       requestedDate: "2026-05-10",
       agreedAmount: 18,
-      agreedBasis: "per_tonne",
+      agreedBasis: "per_m3",
       agreedCurrency: "USD",
       status: "confirmed",
     },
@@ -1389,7 +1409,7 @@ function seedBookings() {
   });
   bookingCounter = seeds.length + 1;
 }
-seedBookings();
+if (DEMO_DATA) seedBookings();
 
 export function listBookings(filterStatus?: BookingStatus): Booking[] {
   const all = [...bookings.values()].sort(
@@ -1459,7 +1479,7 @@ function seedTrips() {
         basis: b.agreedBasis,
         amount: b.agreedAmount,
         cargoQuantityLitres: b.cargoQuantity,
-        km: lookupRouteKm(b.origin, b.destination),
+
       }),
       revenueCurrency: b.agreedCurrency,
       driverAdvanceKes: 35000,
@@ -1473,7 +1493,7 @@ function seedTrips() {
   });
   tripCounter = plannedBookings.length + 1;
 }
-seedTrips();
+if (DEMO_DATA) seedTrips();
 
 /**
  * F-6 demo data — fuel loading + discharge observations on a few seeded
@@ -1542,7 +1562,7 @@ function seedFuelObservations() {
     });
   }
 }
-seedFuelObservations();
+if (DEMO_DATA) seedFuelObservations();
 
 export function listTrips(filterStatus?: TripStatus): Trip[] {
   const all = [...trips.values()].sort(
@@ -1591,7 +1611,7 @@ export function planTrip(input: {
     basis: booking.agreedBasis,
     amount: booking.agreedAmount,
     cargoQuantityLitres: booking.cargoQuantity,
-    km: lookupRouteKm(booking.origin, booking.destination),
+
   });
   const trip: Trip = {
     id,
@@ -1651,7 +1671,7 @@ function seedTripEvents() {
     });
   }
 }
-seedTripEvents();
+if (DEMO_DATA) seedTripEvents();
 
 export function eventsForTrip(tripId: string): TripStatusEvent[] {
   return [...tripEvents.values()]
@@ -1892,7 +1912,7 @@ function seedTripDocuments() {
     tripDocuments.set(id, { ...s, id });
   });
 }
-seedTripDocuments();
+if (DEMO_DATA) seedTripDocuments();
 
 export function listTripDocuments(tripId: string): TripDocument[] {
   return [...tripDocuments.values()]
@@ -1986,7 +2006,7 @@ function seedBorderCrossings() {
     createdAt: new Date(baseAt + 36 * 3600_000).toISOString(),
   });
 }
-seedBorderCrossings();
+if (DEMO_DATA) seedBorderCrossings();
 
 export function listBorderCrossings(tripId: string): BorderCrossing[] {
   return [...borderCrossings.values()]
@@ -2173,7 +2193,7 @@ function seedExpenses() {
   });
   expenseCounter = seeds.length + 1;
 }
-seedExpenses();
+if (DEMO_DATA) seedExpenses();
 
 export function listExpenses(filter?: {
   status?: ExpenseStatus;
@@ -2345,7 +2365,7 @@ function seedFuelLogs() {
   });
   fuelCounter = seeds.length + 1;
 }
-seedFuelLogs();
+if (DEMO_DATA) seedFuelLogs();
 
 export function listFuelLogs(filter?: { tripId?: string; truckId?: string }): FuelLog[] {
   let all = [...fuelLogs.values()];
@@ -2865,7 +2885,7 @@ function seedOpeningBalances() {
     });
   }
 }
-seedOpeningBalances();
+if (DEMO_DATA) seedOpeningBalances();
 
 export function listJournalEntries(filter?: {
   status?: JournalStatus;
@@ -4781,7 +4801,9 @@ const departmentSeed: Department[] = [
   { id: "dept-it",  name: "IT & Systems", code: "IT", costCentre: "CC-500", description: "TX System, telematics, integrations." },
   { id: "dept-mgmt", name: "Management", code: "MGMT", costCentre: "CC-900", description: "Executive leadership." },
 ];
-const departments = new Map<string, Department>(departmentSeed.map((d) => [d.id, d]));
+const departments = new Map<string, Department>(
+  DEMO_DATA ? departmentSeed.map((d) => [d.id, d]) : [],
+);
 
 const employeeSeed: Employee[] = [
   // Management
@@ -5048,7 +5070,9 @@ const employeeSeed: Employee[] = [
     createdAt: "2024-01-08T08:00:00Z",
   },
 ];
-const employees = new Map<string, Employee>(employeeSeed.map((e) => [e.id, e]));
+const employees = new Map<string, Employee>(
+  DEMO_DATA ? employeeSeed.map((e) => [e.id, e]) : [],
+);
 
 // Set department heads now that employees exist
 departments.set("dept-mgmt", { ...departments.get("dept-mgmt")!, headEmployeeId: "emp-001" });
@@ -5212,7 +5236,9 @@ const contractSeed: Contract[] = [
     createdAt: "2024-01-08T08:00:00Z",
   },
 ];
-const contracts = new Map<string, Contract>(contractSeed.map((c) => [c.id, c]));
+const contracts = new Map<string, Contract>(
+  DEMO_DATA ? contractSeed.map((c) => [c.id, c]) : [],
+);
 
 // ----- Departments -----
 export function listDepartments(): Department[] {
@@ -5482,7 +5508,7 @@ function seedComplianceFromDrivers() {
     });
   }
 }
-seedComplianceFromDrivers();
+if (DEMO_DATA) seedComplianceFromDrivers();
 
 export function listComplianceRecords(filter?: {
   employeeId?: string;
@@ -5629,7 +5655,7 @@ function seedLeaveRequests() {
     });
   }
 }
-seedLeaveRequests();
+if (DEMO_DATA) seedLeaveRequests();
 
 function seedAttendance() {
   // Last 7 working days for office staff (emp-001..007). Drivers are tracked
@@ -5673,7 +5699,7 @@ function seedAttendance() {
     }
   }
 }
-seedAttendance();
+if (DEMO_DATA) seedAttendance();
 
 // ----- Leave -----
 export function listLeaveRequests(filter?: {
@@ -6016,8 +6042,8 @@ function seedLoans() {
     });
   }
 }
-seedLoans();
-seedPayroll();
+if (DEMO_DATA) seedLoans();
+if (DEMO_DATA) seedPayroll();
 
 // ----- Periods & inputs -----
 export function listPayrollPeriods(): PayrollPeriod[] {
@@ -6372,7 +6398,7 @@ function seedAppraisals() {
     appraisalReviews.set(review.id, review);
   }
 }
-seedAppraisals();
+if (DEMO_DATA) seedAppraisals();
 
 export function listAppraisalCycles(): AppraisalCycle[] {
   return [...appraisalCycles.values()].sort((a, b) => b.year - a.year);
@@ -7288,7 +7314,7 @@ function seedSampleNotifications() {
     });
   }
 }
-seedSampleNotifications();
+if (DEMO_DATA) seedSampleNotifications();
 
 // ----- Templates -----
 export function listNotificationTemplates(): NotificationTemplate[] {
@@ -7489,7 +7515,7 @@ function seedManagementPacks() {
     createdAt: new Date().toISOString(),
   });
 }
-seedManagementPacks();
+if (DEMO_DATA) seedManagementPacks();
 
 export function listManagementPacks(): ManagementPack[] {
   return [...managementPacks.values()].sort((a, b) => b.yearMonth.localeCompare(a.yearMonth));
