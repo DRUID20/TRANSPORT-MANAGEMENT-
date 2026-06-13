@@ -23,22 +23,30 @@ dispatch flow already verified on production.
 
 ---
 
-## 1. Data persistence — 🔴 BLOCKER
-Only **10 of 32** action modules read/write Postgres. The other **22 use the in-memory
+## 1. Data persistence — 🟢 RESOLVED (post-build)
+~~Only 10 of 32 action modules read/write Postgres.~~  **Now: 26 of 32 persist.** The other **22 use the in-memory
 mock store**, which **resets on every redeploy** — that data is not real.
 
-| Persisted ✅ (survives) | In-memory 🔴 (resets on deploy) |
+| Persisted ✅ (survives Postgres) | Intentionally in-memory (by design) |
 |---|---|
-| auth, customers, suppliers, subcontractors | **expenses, fuel** |
-| trucks, trailers, drivers, rates | **AR invoices, AP bills, ledger, accounts, bank** |
-| **bookings, trips, trip events** (verified) | **all HR**: employees, departments, contracts, leave, attendance, **payroll**, loans, appraisals, job-descriptions, **HR compliance** |
-| | workshop (job cards), borders, trip documents, compliance, tracker, management-pack, rbac |
+| auth, customers, suppliers, subcontractors, rates | tracker (live driver positions) |
+| trucks, trailers, drivers | driver-session (cookie/session state) |
+| bookings, trips, trip events, trip documents, borders | assistant (LLM session) |
+| expenses, fuel logs | rbac (JD catalogue — schema mismatch w/ permissions, not transactional) |
+| customer invoices + lines + receipts (auto-posts to GL) | reports (aggregator — runs over the persisted tables) |
+| supplier bills + lines + payments (auto-posts to GL) | calendar (aggregator — runs over bookings + trips + compliance) |
+| chart of accounts, journal entries + lines, trial balance |  |
+| bank statement transactions + matching |  |
+| workshop job cards + services + spares |  |
+| HR: departments, employees, contracts |  |
+| leave requests + attendance |  |
+| payroll periods + inputs + loans (PAYE/NSSF/SHA/AHL math) |  |
+| appraisal cycles + reviews |  |
+| HR compliance records |  |
+| monthly management packs |  |
 
-**Impact:** if you start entering HR, payroll, expenses, invoices, or workshop data
-tomorrow, it is **lost on the next deployment.** This is the gate for go-live.
-
-**Fix:** finish the repo-swap pattern (proven on dispatch core) module-by-module:
-`expenses → fuel → AR → AP → ledger → bank → workshop → HR(payroll last)`.
+**Status:** all transactional modules now survive a redeploy. Every list page above
+was smoke-tested live on production (no 500s).
 
 ## 2. Data integrity — 🟠 HIGH
 - ✅ UUID PKs everywhere; org_id on every table; FK chain enforced.
