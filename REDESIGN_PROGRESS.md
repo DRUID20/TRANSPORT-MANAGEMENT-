@@ -50,10 +50,12 @@ so it lifts many pages at once.
        DEFERRED (high blast-radius, needs verified pass): custom **Select** (native banned §15;
        27 consumers, 14 controlled — drop-in must support value/onChange + name/defaultValue +
        FormData hidden input) and custom **DatePicker** (native date inputs banned §15).
-- [ ] **6. Slide-overs + modals + toasts + menus** (§12) — new right-panel detail pattern
-       (520px, 250ms, scrim, tabs Details/Documents/History/Costs, sticky footer). Modals
-       (scale-in, type-to-confirm destructive). Toasts (bottom-right, undo, auto-dismiss).
-       Wire list rows → slide-over.
+- [~] **6. Slide-overs + modals + toasts** (§12) — PRIMITIVES BUILT + showcased in /design,
+       verified: Toaster (store-based `toast()`, bottom-right, variants, undo action, progress,
+       stack≤3, mounted in app-shell); Modal + ConfirmDialog (radix-dialog, scale-in,
+       type-to-confirm destructive); SlideOver + SlideOverRow (520px right panel, scrim,
+       sticky footer). REMAINING: dropdown Menu primitive; WIRING into real actions
+       (delete→ConfirmDialog+toast, list rows→SlideOver) — incremental per page.
 - [x] **7. Status pills** (§8,§2) — canonical `Badge` (ui/badge.tsx) + trip `StatusPill`
        (dashboard/status-pill.tsx): tinted bg + leading dot + colored text. Verified in /design.
        (Domain statuses — invoice/bill/payroll/leave — should use Badge; spot-check if revisited.)

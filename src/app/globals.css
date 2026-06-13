@@ -303,3 +303,9 @@
     margin: 16mm 14mm;
   }
 }
+
+/* Toast progress bar (DESIGN.md §12) — shrinks over the auto-dismiss window. */
+@keyframes toastProgress {
+  from { width: 100%; }
+  to { width: 0%; }
+}

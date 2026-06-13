@@ -2,6 +2,7 @@ import { Sidebar } from "@/components/layout/sidebar";
 import { Topbar } from "@/components/layout/topbar";
 import type { SidebarUserInfo } from "@/components/layout/sidebar-user";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { Toaster } from "@/components/ui/toast";
 import { getCurrentEmployee, getCurrentUser } from "@/server/auth/current-user";
 
 function computeInitials(name: string): string {
@@ -39,6 +40,7 @@ export async function AppShell({ children }: { children: React.ReactNode }) {
           </main>
         </div>
       </div>
+      <Toaster />
     </TooltipProvider>
   );
 }

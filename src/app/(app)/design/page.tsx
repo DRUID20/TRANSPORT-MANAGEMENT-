@@ -1,7 +1,11 @@
 "use client";
 
+import { useState } from "react";
 import { CheckCircle2, AlertTriangle, XCircle, Info, Activity, Truck } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Modal, ConfirmDialog } from "@/components/ui/modal";
+import { SlideOver, SlideOverRow } from "@/components/ui/slide-over";
+import { toast } from "@/components/ui/toast";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
@@ -66,6 +70,10 @@ function Section({ title, children }: { title: string; children: React.ReactNode
 }
 
 export default function DesignPage() {
+  const [modalOpen, setModalOpen] = useState(false);
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [slideOpen, setSlideOpen] = useState(false);
+
   return (
     <div className="flex flex-col gap-10">
       <header>
@@ -161,6 +169,90 @@ export default function DesignPage() {
             ))}
           </DataTableBody>
         </DataTable>
+      </Section>
+
+      <Section title="Overlays & feedback">
+        <div className="flex flex-wrap gap-3 rounded-lg border border-border bg-bg-elevated p-6">
+          <Button
+            variant="secondary"
+            onClick={() =>
+              toast.success("Trip closed", { description: "TRP-2026-0142 marked delivered." })
+            }
+          >
+            Success toast
+          </Button>
+          <Button
+            variant="secondary"
+            onClick={() =>
+              toast.error("Upload failed", {
+                description: "POD scan could not be saved.",
+                action: { label: "Retry", onClick: () => toast.info("Retrying…") },
+              })
+            }
+          >
+            Error toast + undo
+          </Button>
+          <Button variant="secondary" onClick={() => setModalOpen(true)}>
+            Open modal
+          </Button>
+          <Button variant="danger" onClick={() => setConfirmOpen(true)}>
+            Confirm delete
+          </Button>
+          <Button variant="secondary" onClick={() => setSlideOpen(true)}>
+            Open slide-over
+          </Button>
+        </div>
+
+        <Modal
+          open={modalOpen}
+          onOpenChange={setModalOpen}
+          title="Assign trailer"
+          description="Pick a trailer to couple to KCB 234L for this trip."
+          footer={
+            <>
+              <Button variant="ghost" onClick={() => setModalOpen(false)}>Cancel</Button>
+              <Button onClick={() => { setModalOpen(false); toast.success("Trailer assigned"); }}>
+                Assign
+              </Button>
+            </>
+          }
+        >
+          <p className="text-sm text-fg-secondary">
+            Modal body content goes here — forms, summaries, anything.
+          </p>
+        </Modal>
+
+        <ConfirmDialog
+          open={confirmOpen}
+          onOpenChange={setConfirmOpen}
+          title="Delete this truck?"
+          description="This permanently removes KCB 234L and its history. This cannot be undone."
+          confirmLabel="Delete truck"
+          typeToConfirm="KCB 234L"
+          onConfirm={() => { setConfirmOpen(false); toast.success("Truck deleted"); }}
+        />
+
+        <SlideOver
+          open={slideOpen}
+          onOpenChange={setSlideOpen}
+          title="TRP-2026-0142"
+          subtitle="Mombasa → Kampala"
+          headerExtra={<StatusPill status="in_transit" />}
+          footer={
+            <>
+              <Button variant="ghost" onClick={() => setSlideOpen(false)}>Close</Button>
+              <Button onClick={() => { setSlideOpen(false); toast.success("Saved"); }}>Save changes</Button>
+            </>
+          }
+        >
+          <div className="flex flex-col">
+            <SlideOverRow label="Truck" mono>KCB 234L</SlideOverRow>
+            <SlideOverRow label="Driver">Joseph Mwangi</SlideOverRow>
+            <SlideOverRow label="Cargo" mono>38,000 litres</SlideOverRow>
+            <SlideOverRow label="Revenue" mono>KSh 1,240,000</SlideOverRow>
+            <SlideOverRow label="Departure" mono>13 Jun 2026</SlideOverRow>
+          </div>
+        </SlideOver>
       </Section>
 
       <Section title="Form inputs">
