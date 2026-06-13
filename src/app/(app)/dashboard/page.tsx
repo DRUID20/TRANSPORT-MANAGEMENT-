@@ -126,37 +126,34 @@ export default async function DashboardPage() {
   const attention = buildAttention(compliance);
 
   return (
-    <div className="relative isolate -m-4 p-4 sm:-m-6 sm:p-6">
-      <div className="aurora-bg" aria-hidden="true" />
-      <div className="aurora-scope stagger-children relative z-10 flex flex-col gap-8">
+    <div className="stagger-children flex flex-col gap-8">
       {/* HERO — greeting + dominant live metric */}
-      <section className="flex flex-col gap-7 pt-2">
+      <section className="flex flex-col gap-6 pt-1">
         <div className="flex flex-wrap items-baseline justify-between gap-3">
-          <p className="font-mono text-[11px] uppercase tracking-[0.18em] text-fg-tertiary">
+          <p className="font-mono text-[11px] uppercase tracking-[0.16em] text-fg-tertiary">
             {todayLine}
           </p>
-          <p className="font-mono text-[11px] uppercase tracking-[0.18em] text-fg-tertiary">
+          <p className="font-mono text-[11px] uppercase tracking-[0.16em] text-fg-tertiary">
             Nairobi · EAT
           </p>
         </div>
 
-        <div className="grid gap-4">
-          <h1 className="font-display text-[34px] font-semibold leading-[1.03] tracking-tight text-fg-primary sm:text-[46px]">
-            {greeting},{" "}
-            <span className="aurora-text">{firstName}.</span>
+        <div className="grid gap-3">
+          <h1 className="font-display text-[26px] font-semibold leading-[1.1] tracking-[-0.02em] text-fg-primary">
+            {greeting}, {firstName}.
           </h1>
-          <p className="max-w-2xl text-[17px] leading-snug text-fg-secondary sm:text-[19px]">
-            <span className="font-display tnum font-semibold text-fg-primary">
+          <p className="max-w-2xl text-[15px] leading-relaxed text-fg-secondary">
+            <span className="font-mono tnum font-semibold text-fg-primary">
               <CountUp value={onRoad} />
             </span>{" "}
             trucks on the road right now, of{" "}
-            <span className="font-display tnum text-fg-primary">{fleetSize}</span>{" "}
+            <span className="font-mono tnum text-fg-primary">{fleetSize}</span>{" "}
             in the fleet.
           </p>
         </div>
 
         {/* Dense live-ops strip */}
-        <div className="surface-card grid grid-cols-2 divide-x divide-y divide-white/30 sm:grid-cols-3 sm:divide-y-0 lg:grid-cols-5">
+        <div className="surface-card grid grid-cols-2 divide-x divide-y divide-border sm:grid-cols-3 sm:divide-y-0 lg:grid-cols-5">
           <StripCell label="In transit" value={inTransit} tone="info" countUp />
           <StripCell label="At border" value={atBorder} tone="warning" countUp />
           <StripCell label="Delayed" value={delayed} tone="danger" countUp />
@@ -237,7 +234,6 @@ export default async function DashboardPage() {
       </div>
 
       <OpsBoard initialTrips={allTrips} />
-      </div>
     </div>
   );
 }
@@ -280,7 +276,7 @@ function StripCell({
         {label}
       </span>
       <span className="flex items-baseline gap-1.5">
-        <span className={cn("font-display tnum text-2xl font-semibold", colour)}>
+        <span className={cn("font-mono tnum text-[28px] font-semibold leading-none", colour)}>
           {countUp && typeof value === "number" ? <CountUp value={value} /> : value}
         </span>
         {unit && (

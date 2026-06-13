@@ -43,28 +43,28 @@
   }
 
   .dark {
-    /* Dark mode (SpaceX-grade — kept for power users; light is the default) */
-    --bg-base: 8 11 18;
-    --bg-surface: 14 18 28;
-    --bg-elevated: 22 28 41;
-    --bg-elevated-2: 28 35 51;
-    --border: 30 41 59;
-    --border-strong: 51 65 85;
-    --text-primary: 248 250 252;
-    --text-secondary: 203 213 225;
-    --text-tertiary: 148 163 184;
+    /* Dark control-tower theme — DESIGN.md §2 (the primary theme). */
+    --bg-base: 10 14 20;           /* #0A0E14 app background */
+    --bg-surface: 16 21 30;        /* #10151E cards / sidebar */
+    --bg-elevated: 22 29 41;       /* #161D29 nested / inputs / table header */
+    --bg-elevated-2: 28 36 51;     /* #1C2433 hover */
+    --border: 30 39 53;            /* #1E2735 subtle 1px borders */
+    --border-strong: 44 56 80;     /* #2C3850 focused / dividers */
+    --text-primary: 237 241 247;   /* #EDF1F7 */
+    --text-secondary: 148 163 184; /* #94A3B8 */
+    --text-tertiary: 91 107 130;   /* #5B6B82 muted */
     --text-disabled: 71 85 105;
 
     --brand-navy: 59 130 246;
-    --brand-blue: 96 165 250;
-    --brand-blue-hover: 147 197 253;
-    --brand-cyan: 56 189 248;
+    --brand-blue: 59 130 246;       /* #3B82F6 electric accent */
+    --brand-blue-hover: 96 165 250; /* #60A5FA */
+    --brand-cyan: 96 165 250;
 
-    --status-success: 52 211 153;
-    --status-warning: 251 191 36;
-    --status-danger: 248 113 113;
-    --status-info: 34 211 238;     /* cyan-400 — distinct from brand-blue CTA in dark */
-    --status-neutral: 148 163 184;
+    --status-success: 16 185 129;  /* #10B981 */
+    --status-warning: 245 158 11;  /* #F59E0B */
+    --status-danger: 239 68 68;    /* #EF4444 */
+    --status-info: 139 92 246;     /* #8B5CF6 violet — scheduled/planned */
+    --status-neutral: 91 107 130;
 
     color-scheme: dark;
   }
@@ -153,21 +153,19 @@
     @apply inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-medium;
   }
 
-  /* Surface card — base card surface with consistent shadow */
+  /* Surface card — DESIGN.md §4: depth from 1px borders, NOT shadows. */
   .surface-card {
-    background: rgb(var(--bg-elevated));
+    background: rgb(var(--bg-surface));
     border: 1px solid rgb(var(--border));
-    border-radius: 12px;
-    box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+    border-radius: 10px;
   }
 
-  /* Interactive surface — lifts subtly on hover */
+  /* Interactive surface — border brightens on hover (no shadow). */
   .surface-interactive {
-    transition: transform 160ms ease, box-shadow 160ms ease, border-color 160ms ease;
+    transition: border-color 150ms cubic-bezier(0.2, 0, 0, 1), background-color 150ms ease;
   }
   .surface-interactive:hover {
     border-color: rgb(var(--border-strong));
-    box-shadow: 0 4px 16px rgba(15, 23, 42, 0.06);
   }
 
   /* Section header — used inside form sections / card heads */
@@ -241,114 +239,5 @@
     );
     background-size: 200% 100%;
     animation: shimmer 1.6s linear infinite;
-  }
-}
-
-/* ============================================================
-   AURORA — flagship glassmorphic theme primitives
-   Mesh-gradient ambient background + frosted glass cards.
-   Used by the dashboard now; becomes a selectable aesthetic next.
-   ============================================================ */
-@layer utilities {
-  /* Animated aurora mesh — sits behind content, blurred + drifting.
-     Absolute within a positioned wrapper so it stays contained to the
-     dashboard region and never fights the sidebar's solid surface. */
-  .aurora-bg {
-    position: absolute;
-    inset: -8% -4%;
-    z-index: 0;
-    overflow: hidden;
-    pointer-events: none;
-  }
-  .aurora-bg::before {
-    content: "";
-    position: absolute;
-    inset: -25%;
-    background:
-      radial-gradient(38% 38% at 18% 22%, rgba(251, 146, 60, 0.55), transparent 60%),
-      radial-gradient(40% 40% at 82% 18%, rgba(139, 92, 246, 0.50), transparent 62%),
-      radial-gradient(45% 45% at 75% 80%, rgba(52, 211, 153, 0.50), transparent 60%),
-      radial-gradient(42% 42% at 25% 85%, rgba(59, 130, 246, 0.50), transparent 62%);
-    filter: saturate(1.25) blur(40px);
-    animation: auroraDrift 22s ease-in-out infinite alternate;
-  }
-  .aurora-bg::after {
-    content: "";
-    position: absolute;
-    inset: 0;
-    /* subtle grain/veil so glass reads against the mesh */
-    background: radial-gradient(120% 90% at 50% 0%, rgba(255, 255, 255, 0.55), rgba(255, 255, 255, 0.78) 70%);
-  }
-  .dark .aurora-bg::after {
-    background: radial-gradient(120% 90% at 50% 0%, rgba(8, 11, 18, 0.35), rgba(8, 11, 18, 0.72) 70%);
-  }
-
-  /* Frosted glass card — the Aurora surface. */
-  .glass-card {
-    position: relative;
-    border-radius: 22px;
-    background: rgba(255, 255, 255, 0.55);
-    backdrop-filter: blur(20px) saturate(1.4);
-    -webkit-backdrop-filter: blur(20px) saturate(1.4);
-    border: 1px solid rgba(255, 255, 255, 0.7);
-    box-shadow:
-      0 10px 36px -12px rgba(31, 38, 135, 0.28),
-      inset 0 1px 0 0 rgba(255, 255, 255, 0.9);
-  }
-  .dark .glass-card {
-    background: rgba(20, 24, 36, 0.5);
-    border: 1px solid rgba(255, 255, 255, 0.12);
-    box-shadow:
-      0 10px 36px -12px rgba(0, 0, 0, 0.6),
-      inset 0 1px 0 0 rgba(255, 255, 255, 0.12);
-  }
-  .glass-card-hover {
-    transition: transform 220ms cubic-bezier(0.22, 1, 0.36, 1), box-shadow 220ms ease;
-  }
-  .glass-card-hover:hover {
-    transform: translateY(-3px);
-    box-shadow:
-      0 22px 50px -16px rgba(31, 38, 135, 0.36),
-      inset 0 1px 0 0 rgba(255, 255, 255, 0.95);
-  }
-
-  /* Gradient ink for hero text. */
-  .aurora-text {
-    background: linear-gradient(100deg, #f97316 0%, #8b5cf6 40%, #3b82f6 70%, #10b981 100%);
-    -webkit-background-clip: text;
-    background-clip: text;
-    color: transparent;
-  }
-}
-
-@keyframes auroraDrift {
-  0%   { transform: translate3d(0, 0, 0) rotate(0deg) scale(1); }
-  50%  { transform: translate3d(2%, -3%, 0) rotate(8deg) scale(1.08); }
-  100% { transform: translate3d(-2%, 2%, 0) rotate(-6deg) scale(1.05); }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .aurora-bg::before { animation: none; }
-}
-
-/* Dashboard Aurora scope: every .surface-card inside becomes frosted glass,
-   so the whole page picks up the aesthetic with no per-card edits. */
-@layer components {
-  .aurora-scope .surface-card {
-    border-radius: 22px;
-    background: rgba(255, 255, 255, 0.55);
-    backdrop-filter: blur(20px) saturate(1.4);
-    -webkit-backdrop-filter: blur(20px) saturate(1.4);
-    border: 1px solid rgba(255, 255, 255, 0.7);
-    box-shadow:
-      0 10px 36px -14px rgba(31, 38, 135, 0.26),
-      inset 0 1px 0 0 rgba(255, 255, 255, 0.9);
-  }
-  .dark .aurora-scope .surface-card {
-    background: rgba(20, 24, 36, 0.5);
-    border: 1px solid rgba(255, 255, 255, 0.12);
-    box-shadow:
-      0 10px 36px -14px rgba(0, 0, 0, 0.6),
-      inset 0 1px 0 0 rgba(255, 255, 255, 0.12);
   }
 }

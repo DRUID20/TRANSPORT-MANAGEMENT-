@@ -1,28 +1,28 @@
-import { Sora, Plus_Jakarta_Sans } from "next/font/google";
-import { GeistMono } from "geist/font/mono";
+import { Outfit, Inter, JetBrains_Mono } from "next/font/google";
 
 /**
- * Project fonts.
- *
- * - Display (Sora): geometric, premium, distinctive — headings, hero
- *   numbers, section titles.
- * - Body/UI (Plus Jakarta Sans): warm high-end grotesque — everything else.
- * - Mono (Geist Mono): tabular figures for data/tables.
- *
- * Loaded via next/font so they self-host with zero layout shift.
+ * Fonts per DESIGN.md §3.
+ * - Display/headings: Outfit (500/600/700 — 700 logo only)
+ * - Body/UI: Inter
+ * - Data/numbers: JetBrains Mono (tabular figures)
  */
-export const fontDisplay = Sora({
+export const fontDisplay = Outfit({
   subsets: ["latin"],
-  weight: ["400", "500", "600", "700"],
+  weight: ["500", "600", "700"],
   variable: "--font-display",
   display: "swap",
 });
 
-export const fontSans = Plus_Jakarta_Sans({
+export const fontSans = Inter({
   subsets: ["latin"],
-  weight: ["400", "500", "600", "700"],
+  weight: ["400", "500", "600"],
   variable: "--font-sans",
   display: "swap",
 });
 
-export const fontMono = GeistMono;
+export const fontMono = JetBrains_Mono({
+  subsets: ["latin"],
+  weight: ["400", "500", "600"],
+  variable: "--font-mono",
+  display: "swap",
+});
