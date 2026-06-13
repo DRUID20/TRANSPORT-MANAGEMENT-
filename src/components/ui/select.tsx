@@ -20,10 +20,10 @@ export const Select = React.forwardRef<HTMLSelectElement, SelectProps>(
         className={cn(
           "flex h-9 w-full appearance-none rounded-lg border bg-bg-elevated pl-3 pr-9 py-2 text-sm shadow-soft transition-all",
           "text-fg-primary",
-          "focus-visible:outline-none",
+          "focus-visible:outline-none focus-visible:ring-[3px]",
           error
-            ? "border-status-danger/60 focus-visible:border-status-danger"
-            : "border-border hover:border-border-strong focus-visible:border-brand-blue",
+            ? "border-status-danger/60 focus-visible:border-status-danger focus-visible:ring-status-danger/20"
+            : "border-border hover:border-border-strong focus-visible:border-brand-blue focus-visible:ring-brand-blue/25",
           "disabled:cursor-not-allowed disabled:bg-bg-surface disabled:opacity-60",
           className,
         )}

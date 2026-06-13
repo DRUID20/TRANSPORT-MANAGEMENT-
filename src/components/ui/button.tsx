@@ -22,7 +22,8 @@ const buttonVariants = cva(
     "rounded-lg text-[13px] font-medium leading-none tracking-[-0.005em]",
     "transition-[transform,box-shadow,background-color,border-color,color] duration-150 ease-out",
     "motion-reduce:transition-none motion-reduce:transform-none",
-    "focus-visible:outline-none",
+    // Always-visible focus ring (§5/§14) — bg-independent, no offset band.
+    "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-blue/55",
     "disabled:pointer-events-none disabled:opacity-50",
     "[&_svg]:size-3.5 [&_svg]:shrink-0 [&_svg]:transition-transform",
   ].join(" "),

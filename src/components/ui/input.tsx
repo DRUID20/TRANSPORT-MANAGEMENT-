@@ -16,10 +16,11 @@ export const Input = React.forwardRef<HTMLInputElement, InputProps>(
       "flex h-9 w-full rounded-lg border bg-bg-elevated px-3 py-2 text-sm text-fg-primary shadow-soft transition-all",
       "placeholder:text-fg-tertiary",
       "disabled:cursor-not-allowed disabled:bg-bg-surface disabled:opacity-60",
-      "focus-visible:outline-none",
+      // Focus → border accent + 3px accent-glow ring (§6).
+      "focus-visible:outline-none focus-visible:ring-[3px]",
       error
-        ? "border-status-danger/60 focus-visible:border-status-danger"
-        : "border-border hover:border-border-strong focus-visible:border-brand-blue",
+        ? "border-status-danger/60 focus-visible:border-status-danger focus-visible:ring-status-danger/20"
+        : "border-border hover:border-border-strong focus-visible:border-brand-blue focus-visible:ring-brand-blue/25",
       leadingIcon && "pl-9",
       trailingIcon && "pr-9",
       className,

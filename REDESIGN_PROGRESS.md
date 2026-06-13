@@ -43,10 +43,11 @@ so it lifts many pages at once.
 - [x] **4. Topbar + Cmd+K palette** (§7,§14) — `components/layout/topbar.tsx` + new command
        palette (Linear style, Esc/Enter, fuzzy nav across all routes). Breadcrumb left,
        search pill center w/ ⌘K keycap, bell + mono date right.
-- [ ] **5. Buttons + Forms/Inputs** (§5,§6) — audit `button.tsx`, `input.tsx`, `select.tsx`,
-       `textarea.tsx`, `label.tsx`, `form-section/footer`. 38px inputs, focus accent+glow ring,
-       label-above, custom selects (no native), toggle/checkbox/radio, sticky form footer.
-       Lifts every `/new` + `/[id]` edit page.
+- [~] **5. Buttons + Forms/Inputs** (§5,§6) — DONE: always-visible focus ring on Button;
+       3px accent-glow focus ring on Input/Select/Textarea; label-above + sticky footer already good.
+       DEFERRED (high blast-radius, needs verified pass): custom **Select** (native banned §15;
+       27 consumers, 14 controlled — drop-in must support value/onChange + name/defaultValue +
+       FormData hidden input) and custom **DatePicker** (native date inputs banned §15).
 - [ ] **6. Slide-overs + modals + toasts + menus** (§12) — new right-panel detail pattern
        (520px, 250ms, scrim, tabs Details/Documents/History/Costs, sticky footer). Modals
        (scale-in, type-to-confirm destructive). Toasts (bottom-right, undo, auto-dismiss).
