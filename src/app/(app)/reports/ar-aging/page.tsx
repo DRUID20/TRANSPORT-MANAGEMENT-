@@ -1,4 +1,3 @@
-import { Download } from "lucide-react";
 import { arAgingByCustomer } from "@/server/actions/reports";
 import { Card, CardContent } from "@/components/ui/card";
 import { PageHeader } from "@/components/layout/page-header";
