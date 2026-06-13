@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
 import { Menu, X } from "lucide-react";
 import { SidebarBody } from "@/components/layout/sidebar-body";
+import type { SidebarUserInfo } from "@/components/layout/sidebar-user";
 
 /**
  * MobileSidebar — hamburger trigger + slide-in drawer. Renders only on
@@ -14,7 +15,7 @@ import { SidebarBody } from "@/components/layout/sidebar-body";
  *   (handled by SidebarBody's onNavigate prop)
  * - Locks body scroll while open so the drawer's overflow controls scroll
  */
-export function MobileSidebar() {
+export function MobileSidebar({ user }: { user?: SidebarUserInfo }) {
   const [open, setOpen] = useState(false);
   const pathname = usePathname();
 
@@ -62,7 +63,7 @@ export function MobileSidebar() {
             aria-label="Primary navigation"
             className="fixed inset-y-0 left-0 z-50 flex w-72 max-w-[85vw] flex-col border-r border-border bg-bg-surface shadow-modal animate-content-in md:hidden"
           >
-            <SidebarBody onNavigate={() => setOpen(false)} />
+            <SidebarBody user={user} onNavigate={() => setOpen(false)} />
             <button
               type="button"
               onClick={() => setOpen(false)}

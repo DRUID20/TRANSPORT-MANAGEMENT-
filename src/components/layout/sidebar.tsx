@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { PanelLeftClose, PanelLeftOpen } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { SidebarBody } from "@/components/layout/sidebar-body";
+import type { SidebarUserInfo } from "@/components/layout/sidebar-user";
 
 const STORAGE_KEY = "tx.sidebar.collapsed";
 
@@ -12,7 +13,7 @@ const STORAGE_KEY = "tx.sidebar.collapsed";
  * toggles between 240px (expanded) and 68px (icon-only). State is
  * persisted to localStorage so users only choose once.
  */
-export function Sidebar() {
+export function Sidebar({ user }: { user?: SidebarUserInfo }) {
   const [collapsed, setCollapsed] = useState(false);
   const [hydrated, setHydrated] = useState(false);
 
@@ -43,7 +44,7 @@ export function Sidebar() {
       )}
       aria-label="Primary navigation"
     >
-      <SidebarBody collapsed={collapsed} />
+      <SidebarBody collapsed={collapsed} user={user} />
 
       {/* Collapse toggle — pinned to the right edge so it's reachable
           regardless of the sidebar's expanded state. */}

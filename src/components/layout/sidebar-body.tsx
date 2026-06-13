@@ -5,17 +5,19 @@ import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { Logo } from "@/components/layout/logo";
 import { navGroups } from "@/components/layout/nav-data";
+import { SidebarUser, type SidebarUserInfo } from "@/components/layout/sidebar-user";
 
 /**
- * SidebarBody — the bare nav rendered inside both the desktop Sidebar
- * (with collapse) and the mobile drawer (always expanded). Lives in its
- * own component so we only own the nav markup once.
+ * SidebarBody — nav rendered inside both the desktop Sidebar (collapsible)
+ * and the mobile drawer. Styled to DESIGN.md §7.
  */
 export function SidebarBody({
   collapsed = false,
+  user,
   onNavigate,
 }: {
   collapsed?: boolean;
+  user?: SidebarUserInfo;
   /** Fired after a nav link is clicked. Used by the mobile drawer to close itself. */
   onNavigate?: () => void;
 }) {
@@ -23,18 +25,19 @@ export function SidebarBody({
 
   return (
     <>
+      {/* Brand */}
       <div className="flex h-14 items-center gap-2 border-b border-border px-3">
         <Link
           href="/dashboard"
           onClick={onNavigate}
           className={cn(
-            "inline-flex items-center gap-2 rounded-md px-1 py-1 transition-colors hover:bg-bg-elevated",
+            "inline-flex items-center gap-2 rounded-lg px-1 py-1 transition-colors hover:bg-bg-elevated-2",
             collapsed && "w-full justify-center px-0",
           )}
         >
           {collapsed ? (
             <span
-              className="grid size-8 place-items-center rounded-md bg-brand-blue text-[11px] font-semibold tracking-wide text-white shadow-soft"
+              className="grid size-8 place-items-center rounded-lg bg-brand-blue text-[11px] font-semibold tracking-wide text-white"
               aria-label="Nile Valley"
             >
               NV
@@ -45,11 +48,12 @@ export function SidebarBody({
         </Link>
       </div>
 
-      <nav className="flex-1 overflow-y-auto py-4">
+      {/* Nav */}
+      <nav className="flex-1 overflow-y-auto py-3">
         {navGroups.map((group) => (
-          <div key={group.title} className={cn("mb-5", collapsed ? "px-2" : "px-3")}>
+          <div key={group.title} className={cn("mb-1 mt-5 first:mt-1", collapsed ? "px-2" : "px-3")}>
             {!collapsed ? (
-              <div className="mb-1.5 px-2 text-[10px] font-semibold uppercase tracking-[0.16em] text-fg-tertiary">
+              <div className="mb-1 px-2 text-[11px] font-semibold uppercase tracking-[0.08em] text-fg-tertiary">
                 {group.title}
               </div>
             ) : (
@@ -67,12 +71,13 @@ export function SidebarBody({
                     href={item.href}
                     onClick={onNavigate}
                     title={collapsed ? item.label : undefined}
+                    aria-current={active ? "page" : undefined}
                     className={cn(
-                      "group relative flex items-center gap-2.5 rounded-md text-sm transition-all",
-                      collapsed ? "justify-center px-0 py-2" : "px-2.5 py-1.5",
+                      "group relative flex h-9 items-center gap-2.5 rounded-lg text-[13px] font-medium transition-colors duration-150",
+                      collapsed ? "justify-center px-0" : "px-2.5",
                       active
-                        ? "bg-brand-blue/10 text-fg-primary"
-                        : "text-fg-secondary hover:bg-bg-elevated hover:text-fg-primary",
+                        ? "bg-bg-elevated-2 text-fg-primary"
+                        : "text-fg-secondary hover:bg-bg-elevated-2 hover:text-fg-primary",
                     )}
                   >
                     {active && !collapsed && (
@@ -82,18 +87,17 @@ export function SidebarBody({
                       />
                     )}
                     <Icon
+                      strokeWidth={1.5}
                       className={cn(
-                        "size-4 shrink-0 transition-colors",
-                        active
-                          ? "text-brand-blue"
-                          : "text-fg-tertiary group-hover:text-fg-secondary",
+                        "size-[18px] shrink-0 transition-colors",
+                        active ? "text-brand-blue" : "text-fg-tertiary group-hover:text-fg-secondary",
                       )}
                     />
                     {!collapsed && (
                       <>
                         <span className="flex-1 truncate">{item.label}</span>
                         {item.badge && (
-                          <span className="rounded-full bg-bg-surface px-1.5 py-0.5 font-mono text-[9px] uppercase tracking-wider text-fg-tertiary ring-1 ring-border">
+                          <span className="rounded-full bg-status-danger/15 px-1.5 py-0.5 font-mono text-[10px] font-medium tabular-nums text-status-danger">
                             {item.badge}
                           </span>
                         )}
@@ -107,6 +111,8 @@ export function SidebarBody({
         ))}
       </nav>
 
+      {/* User */}
+      {user && <SidebarUser user={user} collapsed={collapsed} onNavigate={onNavigate} />}
     </>
   );
 }
