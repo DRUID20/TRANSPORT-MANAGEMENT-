@@ -65,7 +65,6 @@ export default async function BillsPage({
       <PageHeader
         eyebrow="Finance · AP"
         title="Supplier bills"
-        description="Bills from suppliers (spares, fuel, repairs). Auto-posts to expense + AP on send."
         actions={
           <>
             <Button asChild variant="outline" size="sm">

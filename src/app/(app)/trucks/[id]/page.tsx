@@ -4,13 +4,10 @@ import {
   Container,
   Droplet,
   FileText,
-  Fuel,
   Gauge,
-  Layers,
   Phone,
   Plus,
   ShieldCheck,
-  Truck as TruckIcon,
   Wrench,
 } from "lucide-react";
 import { getTruck } from "@/server/actions/trucks";

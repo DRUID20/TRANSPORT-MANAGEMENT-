@@ -31,7 +31,6 @@ export default async function DriversPage() {
       <PageHeader
         eyebrow="HR & Staff"
         title="Drivers"
-        description="Driver register — licences, medicals, passports, COMESA permits, default truck."
         actions={
           <Button asChild>
             <Link href="/drivers/new">

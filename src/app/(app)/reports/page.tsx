@@ -147,7 +147,7 @@ export default function ReportsIndexPage() {
       <PageHeader
         eyebrow="Reports"
         title="Reports library"
-        description="Drill-down financial + operational reports built from the General Ledger and operational logs."
+        description="Built from the General Ledger and operational logs."
       />
 
       {GROUPS.map((g) => {

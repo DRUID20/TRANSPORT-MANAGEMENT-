@@ -44,7 +44,6 @@ export default async function TripsPage() {
       <PageHeader
         eyebrow="Operations"
         title="Trips"
-        description="Active and historical fuel hauls. Plan a trip from a confirmed booking."
         actions={
           <Button asChild size="sm">
             <Link href="/bookings/new">

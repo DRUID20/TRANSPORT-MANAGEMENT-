@@ -61,7 +61,6 @@ export default async function InvoicesPage({
       <PageHeader
         eyebrow="Finance · AR"
         title="Customer invoices"
-        description="Generated from closed trips. Auto-posts to AR + Revenue on send."
         actions={
           <>
             <Button asChild variant="outline" size="sm">

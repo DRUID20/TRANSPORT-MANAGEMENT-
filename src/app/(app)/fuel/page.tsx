@@ -56,7 +56,6 @@ export default async function FuelPage() {
       <PageHeader
         eyebrow="Operations"
         title="Fuel"
-        description="Per-truck engine fuel logs feeding the Performance Tracker. Drives km/L efficiency, cost-per-km, and per-country split."
         actions={
           <Button asChild>
             <Link href="/fuel/new">

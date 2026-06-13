@@ -38,7 +38,6 @@ export default async function BookingsPage() {
       <PageHeader
         eyebrow="Operations"
         title="Bookings"
-        description="Customer orders. Confirm a booking, then plan a trip from it."
         actions={
           <Button asChild>
             <Link href="/bookings/new">

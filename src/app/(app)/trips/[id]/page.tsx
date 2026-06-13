@@ -1,18 +1,14 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import {
-  ArrowRight,
   ArrowUpRight,
-  Banknote,
   Building2,
-  Calendar,
   CheckCircle2,
   ClipboardList,
   Container,
   Droplet,
   Fuel as FuelIcon,
   IdCard as IdCardIcon,
-  Package,
   Thermometer,
   Truck as TruckIcon,
 } from "lucide-react";

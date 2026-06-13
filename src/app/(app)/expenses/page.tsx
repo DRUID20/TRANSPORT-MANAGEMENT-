@@ -65,7 +65,6 @@ export default async function ExpensesPage({
       <PageHeader
         eyebrow="Operations"
         title="Expenses"
-        description="Driver-submitted and dispatcher-captured trip expenses. Approve to release for reimbursement."
         actions={
           <Button asChild>
             <Link href="/expenses/new">

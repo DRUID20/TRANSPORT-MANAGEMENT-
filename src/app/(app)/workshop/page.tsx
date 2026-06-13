@@ -26,7 +26,6 @@ export default async function WorkshopPage() {
       <PageHeader
         eyebrow="Workshop"
         title="Job cards"
-        description="Every yard service generates a job card. Spares post to the truck; supplier AP statements auto-build."
         actions={
           <Button asChild>
             <Link href="/workshop/new">

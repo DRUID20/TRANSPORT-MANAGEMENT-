@@ -17,7 +17,6 @@ export default async function CustomersPage() {
       <PageHeader
         eyebrow="Partners"
         title="Customers"
-        description="Export shippers and domestic customers Nile Valley hauls for."
         actions={
           <Button asChild>
             <Link href="/customers/new">

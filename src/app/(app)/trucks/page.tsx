@@ -33,7 +33,6 @@ export default async function TrucksPage() {
       <PageHeader
         eyebrow="Fleet"
         title="Trucks"
-        description="Asset register for company-owned and subcontractor tankers operating under Nile Valley."
         actions={
           <Button asChild>
             <Link href="/trucks/new">

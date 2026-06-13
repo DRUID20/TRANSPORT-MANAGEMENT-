@@ -33,7 +33,6 @@ export default async function RatesPage() {
       <PageHeader
         eyebrow="Operations"
         title="Rate table"
-        description="Destination-driven rates. Customer-specific rates override the default for the same route."
         actions={
           <Button asChild>
             <Link href="/rates/new">
