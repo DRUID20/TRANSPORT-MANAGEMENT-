@@ -2,24 +2,24 @@
 
 import { revalidatePath } from "next/cache";
 import {
-  createBooking as storeCreate,
+  createBooking as repoCreate,
   getBooking,
-  getCustomer,
-  listBookings as storeList,
-  updateBookingStatus as storeUpdateStatus,
-} from "@/server/store/mock-store";
+  listBookings as repoList,
+  updateBookingStatus as repoUpdateStatus,
+} from "@/server/repos/bookings";
+import { getCustomer } from "@/server/repos/customers";
 import type { BookingStatus } from "@/lib/types/trips";
 import { FUEL_PRODUCT_LABELS } from "@/lib/types/trips";
 import { bookingCreateSchema, type BookingCreateInput } from "@/lib/validators/trips";
 
 export async function listBookings(filterStatus?: BookingStatus) {
-  return storeList(filterStatus);
+  return repoList(filterStatus);
 }
 
 export async function getBookingById(id: string) {
-  const b = getBooking(id);
+  const b = await getBooking(id);
   if (!b) return undefined;
-  const customer = getCustomer(b.customerId);
+  const customer = await getCustomer(b.customerId);
   return { ...b, customer };
 }
 
@@ -31,10 +31,9 @@ export async function createBooking(input: BookingCreateInput): Promise<ActionRe
     return { ok: false, error: parsed.error.errors.map((e) => e.message).join("; ") };
   }
   // Fuel-only TMS — default to AGO when the caller hasn't specified yet.
-  // F-2 rewrites the booking form to make product an explicit pick.
   const product = parsed.data.product ?? "AGO";
   const cargoType = parsed.data.cargoType ?? FUEL_PRODUCT_LABELS[product];
-  const created = storeCreate({
+  const created = await repoCreate({
     customerId: parsed.data.customerId,
     origin: parsed.data.origin,
     destination: parsed.data.destination,
@@ -53,7 +52,7 @@ export async function createBooking(input: BookingCreateInput): Promise<ActionRe
 }
 
 export async function setBookingStatus(id: string, status: BookingStatus) {
-  storeUpdateStatus(id, status);
+  await repoUpdateStatus(id, status);
   revalidatePath("/bookings");
   revalidatePath(`/bookings/${id}`);
 }

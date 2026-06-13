@@ -3,21 +3,21 @@
 import { revalidatePath } from "next/cache";
 import {
   eventsForTrip,
-  getBooking,
-  getCustomer,
-  getDriver,
-  getTrailer,
   getTrip,
-  getTruck,
-  listTrips as storeList,
-  planTrip as storePlan,
-  reconcileAndCloseTrip as storeReconcile,
-  transitionTrip as storeTransition,
-  tripBorderCharges as storeBorderCharges,
-  tripsForDriver as storeForDriver,
-  tripsForTruck as storeForTruck,
-  updateTrip as storeUpdateTrip,
-} from "@/server/store/mock-store";
+  listTrips as repoList,
+  planTrip as repoPlan,
+  reconcileAndCloseTrip as repoReconcile,
+  transitionTrip as repoTransition,
+  tripBorderCharges as repoBorderCharges,
+  tripsForDriver as repoForDriver,
+  tripsForTruck as repoForTruck,
+  updateTrip as repoUpdateTrip,
+} from "@/server/repos/trips";
+import { getBooking } from "@/server/repos/bookings";
+import { getCustomer } from "@/server/repos/customers";
+import { getTruck } from "@/server/repos/trucks";
+import { getTrailer } from "@/server/repos/trailers";
+import { getDriver } from "@/server/repos/drivers";
 import {
   correctVolumeTo20C,
   isTerminal,
@@ -36,27 +36,29 @@ import {
 } from "@/lib/validators/trips";
 
 export async function listTrips(filterStatus?: TripStatus) {
-  return storeList(filterStatus);
+  return repoList(filterStatus);
 }
 
 export async function getTripById(id: string) {
-  const t = getTrip(id);
+  const t = await getTrip(id);
   if (!t) return undefined;
-  const booking = getBooking(t.bookingId);
-  const customer = booking ? getCustomer(booking.customerId) : undefined;
-  const truck = getTruck(t.truckId);
-  const trailer = t.trailerId ? getTrailer(t.trailerId) : undefined;
-  const driver = getDriver(t.driverId);
-  const events = eventsForTrip(t.id);
-  const borderChargesKes = storeBorderCharges(t.id);
+  const booking = await getBooking(t.bookingId);
+  const [customer, truck, trailer, driver, events, borderChargesKes] = await Promise.all([
+    booking ? getCustomer(booking.customerId) : Promise.resolve(undefined),
+    getTruck(t.truckId),
+    t.trailerId ? getTrailer(t.trailerId) : Promise.resolve(undefined),
+    getDriver(t.driverId),
+    eventsForTrip(t.id),
+    repoBorderCharges(t.id),
+  ]);
   return { ...t, booking, customer, truck, trailer, driver, events, borderChargesKes };
 }
 
 export async function tripsForTruck(truckId: string) {
-  return storeForTruck(truckId);
+  return repoForTruck(truckId);
 }
 export async function tripsForDriver(driverId: string) {
-  return storeForDriver(driverId);
+  return repoForDriver(driverId);
 }
 
 export type ActionResult = { ok: true; id: string } | { ok: false; error: string };
@@ -68,7 +70,7 @@ export async function reconcileAndCloseTrip(
   if (!parsed.success) {
     return { ok: false, error: parsed.error.errors.map((e) => e.message).join("; ") };
   }
-  const result = storeReconcile(parsed.data);
+  const result = await repoReconcile(parsed.data);
   if ("error" in result) return { ok: false, error: result.error };
   revalidatePath("/trips");
   revalidatePath(`/trips/${input.tripId}`);
@@ -87,7 +89,7 @@ export async function transitionTrip(input: {
   note?: string;
   location?: string;
 }): Promise<TransitionResult> {
-  const result = storeTransition(input);
+  const result = await repoTransition(input);
   if ("error" in result) return { ok: false, error: result.error };
   revalidatePath("/trips");
   revalidatePath(`/trips/${input.tripId}`);
@@ -102,7 +104,7 @@ export async function planTrip(input: TripPlanInput): Promise<ActionResult> {
   if (!parsed.success) {
     return { ok: false, error: parsed.error.errors.map((e) => e.message).join("; ") };
   }
-  const trip = storePlan(parsed.data);
+  const trip = await repoPlan(parsed.data);
   if (!trip) {
     return { ok: false, error: "Booking not found or already planned/cancelled." };
   }
@@ -129,7 +131,7 @@ export async function captureTripLoading(
   if (!parsed.success) {
     return { ok: false, error: parsed.error.errors.map((e) => e.message).join("; ") };
   }
-  const trip = getTrip(tripId);
+  const trip = await getTrip(tripId);
   if (!trip) return { ok: false, error: "Trip not found." };
   if (isTerminal(trip.status)) {
     return {
@@ -154,7 +156,7 @@ export async function captureTripLoading(
       ? ullageVariancePct(loaded20C, trip.dischargedLitres20C)
       : trip.ullagePct;
 
-  storeUpdateTrip(tripId, {
+  await repoUpdateTrip(tripId, {
     loadedLitres: parsed.data.loadedLitres,
     loadingTempC: parsed.data.loadingTempC,
     density15C: parsed.data.density15C,
@@ -180,7 +182,7 @@ export async function captureTripDischarge(
   if (!parsed.success) {
     return { ok: false, error: parsed.error.errors.map((e) => e.message).join("; ") };
   }
-  const trip = getTrip(tripId);
+  const trip = await getTrip(tripId);
   if (!trip) return { ok: false, error: "Trip not found." };
   if (isTerminal(trip.status)) {
     return {
@@ -207,7 +209,7 @@ export async function captureTripDischarge(
   );
   const ullage = ullageVariancePct(trip.loadedLitres20C, discharged20C);
 
-  storeUpdateTrip(tripId, {
+  await repoUpdateTrip(tripId, {
     dischargedLitres: parsed.data.dischargedLitres,
     dischargeTempC: parsed.data.dischargeTempC,
     dischargedLitres20C: discharged20C,

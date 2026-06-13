@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { bookingsForCustomer } from "@/server/store/mock-store";
+import { bookingsForCustomer } from "@/server/repos/bookings";
 import {
   createCustomer as repoCreate,
   getCustomer as repoGet,
@@ -17,8 +17,7 @@ export async function listCustomers() {
 export async function getCustomerById(id: string) {
   const c = await repoGet(id);
   if (!c) return undefined;
-  // Bookings still live in the in-memory store (Phase 2 of the DB build).
-  return { ...c, bookings: bookingsForCustomer(id) };
+  return { ...c, bookings: await bookingsForCustomer(id) };
 }
 
 export type ActionResult = { ok: true; id: string } | { ok: false; error: string };

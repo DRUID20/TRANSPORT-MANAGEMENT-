@@ -1,14 +1,11 @@
 "use server";
 
-import {
-  getBooking,
-  getCustomer,
-  getDriver,
-  getTruck,
-  listTrips,
-  listComplianceRecords,
-  getEmployee,
-} from "@/server/store/mock-store";
+import { listTrips } from "@/server/repos/trips";
+import { listBookings } from "@/server/repos/bookings";
+import { listTrucks } from "@/server/repos/trucks";
+import { listDrivers } from "@/server/repos/drivers";
+import { listCustomers } from "@/server/repos/customers";
+import { listComplianceRecords, getEmployee } from "@/server/store/mock-store";
 import { KIND_LABELS, type ComplianceKind } from "@/lib/types/hr-compliance";
 
 /**
@@ -77,11 +74,23 @@ export async function listCalendarEvents(window?: {
     return d >= from && d <= to;
   };
 
-  for (const t of listTrips()) {
-    const truck = t.truckId ? getTruck(t.truckId) : undefined;
-    const driver = t.driverId ? getDriver(t.driverId) : undefined;
-    const booking = t.bookingId ? getBooking(t.bookingId) : undefined;
-    const customer = booking?.customerId ? getCustomer(booking.customerId) : undefined;
+  const [trips, trucks, drivers, customers, bookings] = await Promise.all([
+    listTrips(),
+    listTrucks(),
+    listDrivers(),
+    listCustomers(),
+    listBookings(),
+  ]);
+  const truckMap = new Map(trucks.map((x) => [x.id, x]));
+  const driverMap = new Map(drivers.map((x) => [x.id, x]));
+  const customerMap = new Map(customers.map((x) => [x.id, x]));
+  const bookingMap = new Map(bookings.map((x) => [x.id, x]));
+
+  for (const t of trips) {
+    const truck = t.truckId ? truckMap.get(t.truckId) : undefined;
+    const driver = t.driverId ? driverMap.get(t.driverId) : undefined;
+    const booking = t.bookingId ? bookingMap.get(t.bookingId) : undefined;
+    const customer = booking?.customerId ? customerMap.get(booking.customerId) : undefined;
     const route = `${t.origin} → ${t.destination}`;
 
     const isDelivered = t.status === "delivered" || t.status === "closed";

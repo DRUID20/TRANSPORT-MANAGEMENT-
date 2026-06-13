@@ -7,16 +7,16 @@ import {
   fleetProfitAndLoss as storeFleetPnL,
   fleetUtilisation as storeFleetUtil,
   fuelEfficiencyByTruck as storeFuelEff,
-  getBooking,
-  getCustomer,
-  getDriver,
-  getTruck,
-  listTrips,
   profitAndLoss as storePnL,
   statementOfFinancialPosition as storeSfp,
   tripProfitability as storeTripProfit,
   truckProfitAndLoss as storeTruckPnL,
 } from "@/server/store/mock-store";
+import { listTrips } from "@/server/repos/trips";
+import { listBookings } from "@/server/repos/bookings";
+import { listTrucks } from "@/server/repos/trucks";
+import { listDrivers } from "@/server/repos/drivers";
+import { listCustomers } from "@/server/repos/customers";
 import { ULLAGE_ALERT_THRESHOLD_PCT } from "@/lib/types/trips";
 
 export async function profitAndLoss(range?: { fromDate?: string; toDate?: string }) {
@@ -98,8 +98,20 @@ export async function ullageReport(range?: {
   const from = range?.fromDate ? new Date(range.fromDate) : new Date(0);
   const to = range?.toDate ? new Date(range.toDate) : new Date(8_640_000_000_000_000);
 
+  const [trips, trucks, drivers, customers, bookings] = await Promise.all([
+    listTrips(),
+    listTrucks(),
+    listDrivers(),
+    listCustomers(),
+    listBookings(),
+  ]);
+  const truckMap = new Map(trucks.map((x) => [x.id, x]));
+  const driverMap = new Map(drivers.map((x) => [x.id, x]));
+  const customerMap = new Map(customers.map((x) => [x.id, x]));
+  const bookingMap = new Map(bookings.map((x) => [x.id, x]));
+
   const rows: UllageRow[] = [];
-  for (const trip of listTrips()) {
+  for (const trip of trips) {
     if (trip.loadedLitres20C === undefined || trip.dischargedLitres20C === undefined) {
       continue;
     }
@@ -107,10 +119,10 @@ export async function ullageReport(range?: {
     const d = new Date(ref);
     if (d < from || d > to) continue;
 
-    const truck = trip.truckId ? getTruck(trip.truckId) : undefined;
-    const driver = trip.driverId ? getDriver(trip.driverId) : undefined;
-    const booking = trip.bookingId ? getBooking(trip.bookingId) : undefined;
-    const customer = booking?.customerId ? getCustomer(booking.customerId) : undefined;
+    const truck = trip.truckId ? truckMap.get(trip.truckId) : undefined;
+    const driver = trip.driverId ? driverMap.get(trip.driverId) : undefined;
+    const booking = trip.bookingId ? bookingMap.get(trip.bookingId) : undefined;
+    const customer = booking?.customerId ? customerMap.get(booking.customerId) : undefined;
 
     rows.push({
       tripId: trip.id,
