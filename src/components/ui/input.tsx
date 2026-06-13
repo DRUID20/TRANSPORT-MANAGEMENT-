@@ -1,5 +1,6 @@
 import * as React from "react";
 import { cn } from "@/lib/utils";
+import { DatePicker } from "@/components/ui/date-picker";
 
 export interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> {
   /** Marks the field as error — overrides the default border with danger red. */
@@ -12,6 +13,10 @@ export interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> 
 
 export const Input = React.forwardRef<HTMLInputElement, InputProps>(
   ({ className, type, error, leadingIcon, trailingIcon, ...props }, ref) => {
+    // Native date inputs are banned (§15) — route to the custom calendar.
+    if (type === "date") {
+      return <DatePicker ref={ref} error={error} className={className} {...props} />;
+    }
     const baseInput = cn(
       "flex h-9 w-full rounded-lg border bg-bg-elevated px-3 py-2 text-sm text-fg-primary shadow-soft transition-all",
       "placeholder:text-fg-tertiary",

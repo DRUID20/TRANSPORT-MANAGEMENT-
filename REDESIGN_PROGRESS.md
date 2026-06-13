@@ -43,7 +43,9 @@ so it lifts many pages at once.
 - [x] **4. Topbar + Cmd+K palette** (§7,§14) — `components/layout/topbar.tsx` + new command
        palette (Linear style, Esc/Enter, fuzzy nav across all routes). Breadcrumb left,
        search pill center w/ ⌘K keycap, bell + mono date right.
-- [~] **5. Buttons + Forms/Inputs** (§5,§6) — DONE: always-visible focus ring on Button;
+- [x] **5. Buttons + Forms/Inputs** (§5,§6) — DONE incl. custom controls now:
+       custom **Select** (hidden real select source of truth, portal listbox, search>8) and
+       custom **DatePicker** (Input type=date auto-delegates; portal month-grid). Focus ring on Button;
        3px accent-glow focus ring on Input/Select/Textarea; label-above + sticky footer already good.
        DEFERRED (high blast-radius, needs verified pass): custom **Select** (native banned §15;
        27 consumers, 14 controlled — drop-in must support value/onChange + name/defaultValue +
