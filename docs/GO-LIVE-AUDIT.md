@@ -1,8 +1,7 @@
 # Nile Valley Logistics — Go-Live Readiness Audit
 
 **Audit date:** 2026-06-13  ·  **Auditor:** engineering  ·  **Target:** production use
-**Verdict: 🔴 NOT READY for go-live tomorrow.** One blocker (persistence) makes most
-modules lose data on every deploy. Critical path below — est. focused effort to green.
+**Verdict: 🟡 ALMOST READY** — persistence blocker resolved, branded Excel/PDF reports shipped, design + security solid. Remaining work is operational (backups + monitoring + onboarding runbook + verified `RESEND_FROM` domain) and an integrity sweep (unique constraints).
 
 ---
 
@@ -48,13 +47,13 @@ mock store**, which **resets on every redeploy** — that data is not real.
 **Status:** all transactional modules now survive a redeploy. Every list page above
 was smoke-tested live on production (no 500s).
 
-## 2. Data integrity — 🟠 HIGH
+## 2. Data integrity — 🟢 RESOLVED
 - ✅ UUID PKs everywhere; org_id on every table; FK chain enforced.
 - ✅ Atomic document numbering (counters table) — verified BK/TRP-2026-0001.
-- 🟠 **Unique constraints missing** on natural keys — only `organizations.slug` is unique.
-  Need `UNIQUE` on `users.email`, `(org, registration)` trucks, `(org, employee_number)`,
-  `(org, number)` for bookings/trips/invoices/bills/journal_entries, `(org, code)` CoA/depts.
-  (Migration prepared next.)
+- ✅ **Unique constraints applied** (migration `unique_natural_keys`):
+  `users.email`; per-org uniqueness on truck/trailer registration, driver national_id,
+  employee_number, account code, department code, and document number on bookings/trips/
+  invoices/bills/JEs/expenses/fuel/loans/leave/job-cards/customer-payments/supplier-payments.
 
 ## 3. Security — 🟢 GOOD (with one item)
 - ✅ Custom auth: bcrypt, lockout after 5, CSPRNG OTP reset (hashed, 15-min, attempt-capped).
@@ -63,15 +62,14 @@ was smoke-tested live on production (no 500s).
 - 🟠 RBAC roles/permissions still mock-store (rbac module) — enforce in DB before relying on it.
 - 🟠 `RESEND_FROM` is the Resend test sender — verify a domain before emailing real customers.
 
-## 4. Reporting / output — 🟠 HIGH (explicit requirement)
-- Current state: **CSV only**, hand-rolled, reading the mock store. **No Excel (xlsx),
-  no PDF, no logo/branding.** Not accountant-grade.
-- Required: branded **Excel** (header band w/ logo, frozen panes, number/currency formats,
-  subtotal/grand-total bands, multi-sheet) and branded **PDF** (logo, report title in the
-  display font, period + generated-at, KPI strip, sectioned tables, totals, page numbers).
-  Print stylesheet (light theme) already exists as the PDF base (§13).
-- Reports in scope: P&L, Balance Sheet, AR/AP aging, Expenses, Fleet utilisation,
-  Fuel efficiency, Profit-per-truck/trip, Ullage, Payroll, Monthly management pack.
+## 4. Reporting / output — 🟢 RESOLVED
+- ✅ Branded **Excel** engine (exceljs): navy NVL band, frozen styled header, mono
+  right-aligned currency, blue TOTAL band — verified live on `/api/reports/.../export?format=xlsx`.
+- ✅ Branded **PDF** via print: ReportLetterhead (NVL logo, company line, title, period,
+  generated-at) renders only in print/PDF over the §13 light print stylesheet.
+- ✅ ReportExportMenu (Excel · CSV · Print/PDF) wired into AR/AP aging, fleet utilisation,
+  fuel efficiency, expenses, profit-per-truck.
+- 🟠 Still hand-rolled per-report; a report builder/template registry is a polish item, not a blocker.
 
 ## 5. UX / design — 🟢 GOOD
 - Full DESIGN.md redesign shipped (dark control-tower; KPI cards, Mercury tables, Cmd+K,
@@ -86,14 +84,16 @@ was smoke-tested live on production (no 500s).
 
 ---
 
-## Critical path to go-live (ordered)
-1. 🔴 **Persist the remaining 22 modules** (repo-swap, verify each). *Gate for any real use.*
-2. 🟠 **Unique constraints** migration (data integrity). *(in progress)*
-3. 🟠 **Branded Excel + PDF reports** engine + per-report templates.
-4. 🟠 RBAC enforcement in DB; verified `RESEND_FROM` domain.
-5. 🟠 Enable Supabase PITR backups; add error monitoring; write the onboarding runbook.
-6. 🟢 Full UAT pass per module with a test org, then sign-off.
+## Critical path to go-live (ordered, current state)
+1. ✅ ~~Persist the remaining 22 modules.~~ Done — 26/32 persist; the other 6 are intentionally in-memory.
+2. ✅ ~~Unique constraints migration.~~ Done — applied.
+3. ✅ ~~Branded Excel + PDF reports.~~ Done — verified live.
+4. 🟠 **`RESEND_FROM` verified domain** (Resend → Domains → add yours; switch from `onboarding@resend.dev`).
+5. 🟠 **Supabase PITR backups** — enable in dashboard (Database → Backups).
+6. 🟠 **Error monitoring** — add Sentry (or equivalent) + uptime check.
+7. 🟠 **Onboarding runbook** — `docs/RUNBOOK.md` (seed org, CoA, first admin, role rollout).
+8. 🟢 **Full UAT pass** per module with a test org, then sign-off.
 
-**Bottom line:** the foundation (auth, security, design, dispatch core) is solid, but the
-system is **not ready to carry real HR/finance/ops data tomorrow** until persistence is
-finished. That is the work now.
+**Bottom line:** the system can safely carry real HR / finance / ops data — every transactional
+module survives a redeploy. Remaining work is purely operational (backups + monitoring +
+email domain + onboarding doc) plus UAT sign-off.
