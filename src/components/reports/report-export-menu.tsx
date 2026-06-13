@@ -18,7 +18,7 @@ export function ReportExportMenu({ exportPath }: { exportPath: string }) {
       <MenuTrigger asChild>
         <button
           type="button"
-          className="inline-flex items-center gap-1.5 rounded-md border border-border bg-bg-elevated px-3 py-2 text-xs font-medium text-fg-secondary transition-colors hover:border-border-strong hover:text-fg-primary"
+          className="no-print inline-flex items-center gap-1.5 rounded-md border border-border bg-bg-elevated px-3 py-2 text-xs font-medium text-fg-secondary transition-colors hover:border-border-strong hover:text-fg-primary"
         >
           <Download className="size-3.5" /> Export <ChevronDown className="size-3" />
         </button>
