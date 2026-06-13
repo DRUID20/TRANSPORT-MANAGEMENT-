@@ -1,8 +1,10 @@
 import Link from "next/link";
-import { Download, Fuel } from "lucide-react";
+import { Fuel } from "lucide-react";
 import { fuelEfficiencyByTruck } from "@/server/actions/reports";
 import { Card, CardContent } from "@/components/ui/card";
 import { PageHeader } from "@/components/layout/page-header";
+import { ReportExportMenu } from "@/components/reports/report-export-menu";
+import { ReportLetterhead } from "@/components/reports/report-letterhead";
 
 export default async function FuelEfficiencyPage({
   searchParams,
@@ -33,14 +35,11 @@ export default async function FuelEfficiencyPage({
         title="Fuel Efficiency"
         description={`Per-truck consumption (L/100km), KES per km, average price. ${fromDate} → ${toDate}.`}
         actions={
-          <Link
-            href={`/api/reports/fuel-efficiency/export?from=${fromDate}&to=${toDate}`}
-            className="inline-flex items-center gap-1.5 rounded-md border border-border bg-bg-elevated px-3 py-2 text-xs font-medium text-fg-secondary transition-colors hover:border-border-strong hover:text-fg-primary"
-          >
-            <Download className="size-3.5" /> CSV
-          </Link>
+          <ReportExportMenu exportPath={`/api/reports/fuel-efficiency/export?from=${fromDate}&to=${toDate}`} />
         }
       />
+
+      <ReportLetterhead title="Fuel Efficiency by Truck" period={`${fromDate} → ${toDate}`} />
 
       <Card>
         <CardContent className="!p-5">

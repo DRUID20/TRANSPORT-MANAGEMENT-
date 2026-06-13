@@ -1,8 +1,9 @@
-import Link from "next/link";
 import { Download } from "lucide-react";
 import { expenseBreakdown } from "@/server/actions/reports";
 import { Card, CardContent } from "@/components/ui/card";
 import { PageHeader } from "@/components/layout/page-header";
+import { ReportExportMenu } from "@/components/reports/report-export-menu";
+import { ReportLetterhead } from "@/components/reports/report-letterhead";
 
 type Dimension = "category" | "truck" | "currency";
 const DIMENSIONS: Dimension[] = ["category", "truck", "currency"];
@@ -39,14 +40,11 @@ export default async function ExpensesReportPage({
         title="Expense Breakdown"
         description={`Approved + reimbursed expenses, ${fromDate} → ${toDate}. KES base.`}
         actions={
-          <Link
-            href={`/api/reports/expenses/export?from=${fromDate}&to=${toDate}&dim=${dimension}`}
-            className="inline-flex items-center gap-1.5 rounded-md border border-border bg-bg-elevated px-3 py-2 text-xs font-medium text-fg-secondary transition-colors hover:border-border-strong hover:text-fg-primary"
-          >
-            <Download className="size-3.5" /> CSV
-          </Link>
+          <ReportExportMenu exportPath={`/api/reports/expenses/export?from=${fromDate}&to=${toDate}&dim=${dimension}`} />
         }
       />
+
+      <ReportLetterhead title="Expense Breakdown" period={`${fromDate} → ${toDate}`} />
 
       <Card>
         <CardContent className="!p-5">
