@@ -2,17 +2,17 @@
 
 import { revalidatePath } from "next/cache";
 import {
-  approveLeaveRequest as storeApprove,
-  cancelLeaveRequest as storeCancel,
-  createLeaveRequest as storeCreate,
-  getEmployee,
+  approveLeaveRequest as repoApprove,
+  cancelLeaveRequest as repoCancel,
+  createLeaveRequest as repoCreate,
   getLeaveRequest,
-  leaveBalances as storeBalances,
-  listAttendance as storeAttendance,
-  listLeaveRequests as storeList,
-  logAttendance as storeLogAttendance,
-  rejectLeaveRequest as storeReject,
-} from "@/server/store/mock-store";
+  leaveBalances as repoBalances,
+  listAttendance as repoAttendance,
+  listLeaveRequests as repoList,
+  logAttendance as repoLogAttendance,
+  rejectLeaveRequest as repoReject,
+} from "@/server/repos/leave";
+import { getEmployee } from "@/server/repos/hr";
 import type { LeaveStatus, LeaveType } from "@/lib/types/leave";
 import {
   attendanceCreateSchema,
@@ -28,19 +28,21 @@ export async function listLeaveRequests(filter?: {
   status?: LeaveStatus;
   leaveType?: LeaveType;
 }) {
-  return storeList(filter);
+  return repoList(filter);
 }
 
 export async function getLeaveRequestById(id: string) {
-  const r = getLeaveRequest(id);
+  const r = await getLeaveRequest(id);
   if (!r) return undefined;
-  const employee = getEmployee(r.employeeId);
-  const approver = r.approvedById ? getEmployee(r.approvedById) : undefined;
+  const [employee, approver] = await Promise.all([
+    getEmployee(r.employeeId),
+    r.approvedById ? getEmployee(r.approvedById) : Promise.resolve(undefined),
+  ]);
   return { ...r, employee, approver };
 }
 
 export async function leaveBalances(employeeId: string) {
-  return storeBalances(employeeId);
+  return repoBalances(employeeId);
 }
 
 export async function listAttendance(filter?: {
@@ -48,7 +50,7 @@ export async function listAttendance(filter?: {
   fromDate?: string;
   toDate?: string;
 }) {
-  return storeAttendance(filter);
+  return repoAttendance(filter);
 }
 
 export type ActionResult = { ok: true; id: string } | { ok: false; error: string };
@@ -58,7 +60,7 @@ export async function createLeaveRequest(input: LeaveRequestCreateInput): Promis
   if (!parsed.success) {
     return { ok: false, error: parsed.error.errors.map((e) => e.message).join("; ") };
   }
-  const r = storeCreate(parsed.data);
+  const r = await repoCreate(parsed.data);
   if ("error" in r) return { ok: false, error: r.error };
   revalidatePath("/hr/leave");
   revalidatePath(`/hr/employees/${parsed.data.employeeId}`);
@@ -66,8 +68,7 @@ export async function createLeaveRequest(input: LeaveRequestCreateInput): Promis
 }
 
 export async function approveLeaveRequest(id: string): Promise<ActionResult> {
-  // For demo: HR Manager (emp-004) is the approver.
-  const r = storeApprove(id, HR_MANAGER_ID);
+  const r = await repoApprove(id, HR_MANAGER_ID);
   if ("error" in r) return { ok: false, error: r.error };
   revalidatePath("/hr/leave");
   revalidatePath(`/hr/leave/${id}`);
@@ -77,7 +78,7 @@ export async function approveLeaveRequest(id: string): Promise<ActionResult> {
 
 export async function rejectLeaveRequest(id: string, reason: string): Promise<ActionResult> {
   if (!reason.trim()) return { ok: false, error: "Rejection reason required" };
-  const r = storeReject(id, reason, HR_MANAGER_ID);
+  const r = await repoReject(id, reason, HR_MANAGER_ID);
   if ("error" in r) return { ok: false, error: r.error };
   revalidatePath("/hr/leave");
   revalidatePath(`/hr/leave/${id}`);
@@ -85,7 +86,7 @@ export async function rejectLeaveRequest(id: string, reason: string): Promise<Ac
 }
 
 export async function cancelLeaveRequest(id: string): Promise<ActionResult> {
-  const r = storeCancel(id);
+  const r = await repoCancel(id);
   if ("error" in r) return { ok: false, error: r.error };
   revalidatePath("/hr/leave");
   revalidatePath(`/hr/leave/${id}`);
@@ -97,7 +98,7 @@ export async function logAttendance(input: AttendanceCreateInput): Promise<Actio
   if (!parsed.success) {
     return { ok: false, error: parsed.error.errors.map((e) => e.message).join("; ") };
   }
-  const r = storeLogAttendance(parsed.data);
+  const r = await repoLogAttendance(parsed.data);
   revalidatePath("/hr/attendance");
   return { ok: true, id: r.id };
 }

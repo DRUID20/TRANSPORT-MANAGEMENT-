@@ -2,12 +2,12 @@
 
 import { revalidatePath } from "next/cache";
 import {
-  advanceManagementPack as storeAdvance,
-  createManagementPack as storeCreate,
+  advanceManagementPack as repoAdvance,
+  createManagementPack as repoCreate,
   getManagementPack,
-  listManagementPacks as storeList,
-  updateManagementPackNarrative as storeUpdate,
-} from "@/server/store/mock-store";
+  listManagementPacks as repoList,
+  updateManagementPackNarrative as repoUpdate,
+} from "@/server/repos/management-pack";
 import type { ManagementPackStatus } from "@/lib/types/management-pack";
 import {
   packCreateSchema,
@@ -18,7 +18,7 @@ import {
 import { CURRENT_USER_EMPLOYEE_ID } from "@/server/auth/current-user";
 
 export async function listManagementPacks() {
-  return storeList();
+  return repoList();
 }
 export async function getManagementPackById(id: string) {
   return getManagementPack(id);
@@ -31,7 +31,7 @@ export async function createManagementPack(input: PackCreateInput): Promise<Acti
   if (!parsed.success) {
     return { ok: false, error: parsed.error.errors.map((e) => e.message).join("; ") };
   }
-  const r = storeCreate(parsed.data.yearMonth);
+  const r = await repoCreate(parsed.data.yearMonth);
   if ("error" in r) return { ok: false, error: r.error };
   revalidatePath("/management-pack");
   return { ok: true, id: r.id };
@@ -42,19 +42,16 @@ export async function saveNarrative(input: PackNarrativeInput): Promise<ActionRe
   if (!parsed.success) {
     return { ok: false, error: parsed.error.errors.map((e) => e.message).join("; ") };
   }
-  const r = storeUpdate(parsed.data);
+  const r = await repoUpdate(parsed.data);
   if ("error" in r) return { ok: false, error: r.error };
   revalidatePath(`/management-pack/${parsed.data.id}`);
   return { ok: true, id: r.id };
 }
 
-export async function advancePack(
-  id: string,
-  to: ManagementPackStatus,
-): Promise<ActionResult> {
-  const r = storeAdvance(id, to, CURRENT_USER_EMPLOYEE_ID);
+export async function advancePack(id: string, to: ManagementPackStatus): Promise<ActionResult> {
+  const r = await repoAdvance(id, to, CURRENT_USER_EMPLOYEE_ID);
   if ("error" in r) return { ok: false, error: r.error };
-  revalidatePath(`/management-pack/${id}`);
   revalidatePath("/management-pack");
+  revalidatePath(`/management-pack/${id}`);
   return { ok: true, id: r.id };
 }

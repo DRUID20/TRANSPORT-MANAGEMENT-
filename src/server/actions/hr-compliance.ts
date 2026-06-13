@@ -2,11 +2,11 @@
 
 import { revalidatePath } from "next/cache";
 import {
-  createComplianceRecord as storeCreate,
-  deleteComplianceRecord as storeDelete,
+  createComplianceRecord as repoCreate,
+  deleteComplianceRecord as repoDelete,
   getComplianceRecord,
-  listComplianceRecords as storeList,
-} from "@/server/store/mock-store";
+  listComplianceRecords as repoList,
+} from "@/server/repos/hr-compliance";
 import type { ComplianceKind } from "@/lib/types/hr-compliance";
 import {
   complianceCreateSchema,
@@ -17,7 +17,7 @@ export async function listComplianceRecords(filter?: {
   employeeId?: string;
   kind?: ComplianceKind;
 }) {
-  return storeList(filter);
+  return repoList(filter);
 }
 
 export async function getComplianceRecordById(id: string) {
@@ -31,7 +31,7 @@ export async function createComplianceRecord(input: ComplianceCreateInput): Prom
   if (!parsed.success) {
     return { ok: false, error: parsed.error.errors.map((e) => e.message).join("; ") };
   }
-  const r = storeCreate(parsed.data);
+  const r = await repoCreate(parsed.data);
   revalidatePath("/hr/compliance");
   revalidatePath(`/hr/employees/${parsed.data.employeeId}`);
   return { ok: true, id: r.id };
@@ -41,7 +41,7 @@ export async function deleteComplianceRecord(
   id: string,
   employeeId: string,
 ): Promise<ActionResult> {
-  const ok = storeDelete(id);
+  const ok = await repoDelete(id);
   if (!ok) return { ok: false, error: "Not found" };
   revalidatePath("/hr/compliance");
   revalidatePath(`/hr/employees/${employeeId}`);

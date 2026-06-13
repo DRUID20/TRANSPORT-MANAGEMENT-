@@ -2,16 +2,16 @@
 
 import { revalidatePath } from "next/cache";
 import {
-  advanceAppraisalReview as storeAdvance,
-  createAppraisalCycle as storeCreateCycle,
+  advanceAppraisalReview as repoAdvance,
+  createAppraisalCycle as repoCreateCycle,
   getAppraisalCycle,
   getAppraisalReview,
-  listAppraisalCycles as storeListCycles,
-  listReviewsForCycle as storeListReviews,
-  reviewsForEmployee as storeReviewsForEmployee,
-  setAppraisalCycleStatus as storeSetCycleStatus,
-  updateAppraisalReview as storeUpdate,
-} from "@/server/store/mock-store";
+  listAppraisalCycles as repoListCycles,
+  listReviewsForCycle as repoListReviews,
+  reviewsForEmployee as repoReviewsForEmployee,
+  setAppraisalCycleStatus as repoSetCycleStatus,
+  updateAppraisalReview as repoUpdate,
+} from "@/server/repos/appraisal";
 import type { AppraisalCycleStatus, AppraisalReviewStatus } from "@/lib/types/appraisal";
 import {
   cycleCreateSchema,
@@ -21,19 +21,19 @@ import {
 } from "@/lib/validators/appraisal";
 
 export async function listAppraisalCycles() {
-  return storeListCycles();
+  return repoListCycles();
 }
 export async function getAppraisalCycleById(id: string) {
   return getAppraisalCycle(id);
 }
 export async function listReviewsForCycle(cycleId: string) {
-  return storeListReviews(cycleId);
+  return repoListReviews(cycleId);
 }
 export async function getAppraisalReviewById(cycleId: string, employeeId: string) {
   return getAppraisalReview(cycleId, employeeId);
 }
 export async function reviewsForEmployee(employeeId: string) {
-  return storeReviewsForEmployee(employeeId);
+  return repoReviewsForEmployee(employeeId);
 }
 
 export type ActionResult = { ok: true; id: string } | { ok: false; error: string };
@@ -43,7 +43,7 @@ export async function createAppraisalCycle(input: CycleCreateInput): Promise<Act
   if (!parsed.success) {
     return { ok: false, error: parsed.error.errors.map((e) => e.message).join("; ") };
   }
-  const r = storeCreateCycle(parsed.data);
+  const r = await repoCreateCycle(parsed.data);
   if ("error" in r) return { ok: false, error: r.error };
   revalidatePath("/hr/appraisals");
   return { ok: true, id: r.id };
@@ -53,7 +53,7 @@ export async function setAppraisalCycleStatus(
   id: string,
   status: AppraisalCycleStatus,
 ): Promise<ActionResult> {
-  const r = storeSetCycleStatus(id, status);
+  const r = await repoSetCycleStatus(id, status);
   if (!r) return { ok: false, error: "Not found" };
   revalidatePath("/hr/appraisals");
   revalidatePath(`/hr/appraisals/${id}`);
@@ -65,7 +65,7 @@ export async function updateReview(input: ReviewUpdateInput): Promise<ActionResu
   if (!parsed.success) {
     return { ok: false, error: parsed.error.errors.map((e) => e.message).join("; ") };
   }
-  const r = storeUpdate({
+  const r = await repoUpdate({
     ...parsed.data,
     competencies: parsed.data.competencies.map((c) => ({
       competency: c.competency,
@@ -85,7 +85,7 @@ export async function advanceReview(
   employeeId: string,
   to: AppraisalReviewStatus,
 ): Promise<ActionResult> {
-  const r = storeAdvance(cycleId, employeeId, to);
+  const r = await repoAdvance(cycleId, employeeId, to);
   if ("error" in r) return { ok: false, error: r.error };
   revalidatePath(`/hr/appraisals/${cycleId}`);
   revalidatePath(`/hr/appraisals/${cycleId}/${employeeId}`);

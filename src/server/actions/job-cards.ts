@@ -2,18 +2,18 @@
 
 import { revalidatePath } from "next/cache";
 import {
-  addJobCardService as storeAddSvc,
-  addJobCardSpare as storeAddSpare,
-  closeJobCard as storeClose,
-  createJobCard as storeCreate,
+  addJobCardService as repoAddSvc,
+  addJobCardSpare as repoAddSpare,
+  closeJobCard as repoClose,
+  createJobCard as repoCreate,
   getJobCard,
-  jobCardsForTruck as storeForTruck,
-  listJobCards as storeList,
-  removeJobCardService as storeRemoveSvc,
-  removeJobCardSpare as storeRemoveSpare,
-  setJobCardStatus as storeSetStatus,
-  updateJobCardAnalysis as storeUpdateAnalysis,
-} from "@/server/store/mock-store";
+  jobCardsForTruck as repoForTruck,
+  listJobCards as repoList,
+  removeJobCardService as repoRemoveSvc,
+  removeJobCardSpare as repoRemoveSpare,
+  setJobCardStatus as repoSetStatus,
+  updateJobCardAnalysis as repoUpdateAnalysis,
+} from "@/server/repos/workshop";
 import type { JobCardStatus } from "@/lib/types/workshop";
 import {
   jobCardCloseSchema,
@@ -27,7 +27,7 @@ import {
 } from "@/lib/validators/workshop";
 
 export async function listJobCards(filterStatus?: JobCardStatus) {
-  return storeList(filterStatus);
+  return repoList(filterStatus);
 }
 
 export async function getJobCardById(id: string) {
@@ -35,7 +35,7 @@ export async function getJobCardById(id: string) {
 }
 
 export async function jobCardsForTruck(truckId: string) {
-  return storeForTruck(truckId);
+  return repoForTruck(truckId);
 }
 
 export type ActionResult =
@@ -47,7 +47,7 @@ export async function createJobCard(input: JobCardCreateInput): Promise<ActionRe
   if (!parsed.success) {
     return { ok: false, error: parsed.error.errors.map((e) => e.message).join("; ") };
   }
-  const created = storeCreate(parsed.data);
+  const created = await repoCreate(parsed.data);
   revalidatePath("/workshop");
   revalidatePath("/trucks");
   revalidatePath(`/trucks/${parsed.data.truckId}`);
@@ -55,13 +55,13 @@ export async function createJobCard(input: JobCardCreateInput): Promise<ActionRe
 }
 
 export async function setStatus(jobCardId: string, status: JobCardStatus) {
-  storeSetStatus(jobCardId, status);
+  await repoSetStatus(jobCardId, status);
   revalidatePath("/workshop");
   revalidatePath(`/workshop/${jobCardId}`);
 }
 
 export async function updateAnalysis(jobCardId: string, analysis: string) {
-  storeUpdateAnalysis(jobCardId, analysis);
+  await repoUpdateAnalysis(jobCardId, analysis);
   revalidatePath(`/workshop/${jobCardId}`);
 }
 
@@ -73,13 +73,13 @@ export async function addService(
   if (!parsed.success) {
     return { ok: false, error: parsed.error.errors.map((e) => e.message).join("; ") };
   }
-  const svc = storeAddSvc({ jobCardId, ...parsed.data });
+  const svc = await repoAddSvc({ jobCardId, ...parsed.data });
   revalidatePath(`/workshop/${jobCardId}`);
   return { ok: true, id: svc.id };
 }
 
 export async function removeService(jobCardId: string, serviceId: string) {
-  storeRemoveSvc(serviceId);
+  await repoRemoveSvc(serviceId);
   revalidatePath(`/workshop/${jobCardId}`);
 }
 
@@ -91,13 +91,13 @@ export async function addSpare(
   if (!parsed.success) {
     return { ok: false, error: parsed.error.errors.map((e) => e.message).join("; ") };
   }
-  const spare = storeAddSpare({ jobCardId, ...parsed.data });
+  const spare = await repoAddSpare({ jobCardId, ...parsed.data });
   revalidatePath(`/workshop/${jobCardId}`);
   return { ok: true, id: spare.id };
 }
 
 export async function removeSpare(jobCardId: string, spareId: string) {
-  storeRemoveSpare(spareId);
+  await repoRemoveSpare(spareId);
   revalidatePath(`/workshop/${jobCardId}`);
 }
 
@@ -109,7 +109,7 @@ export async function closeJobCard(
   if (!parsed.success) {
     return { ok: false, error: parsed.error.errors.map((e) => e.message).join("; ") };
   }
-  const jc = storeClose({ jobCardId, ...parsed.data });
+  const jc = await repoClose({ jobCardId, ...parsed.data });
   if (!jc) return { ok: false, error: "Job card not found" };
   revalidatePath("/workshop");
   revalidatePath(`/workshop/${jobCardId}`);

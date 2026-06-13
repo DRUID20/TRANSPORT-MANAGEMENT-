@@ -2,24 +2,23 @@
 
 import { revalidatePath } from "next/cache";
 import {
-  activeContractFor as storeActiveContract,
-  createContract as storeCreateContract,
-  createDepartment as storeCreateDept,
-  createEmployee as storeCreateEmployee,
+  activeContractFor as repoActiveContract,
+  createContract as repoCreateContract,
+  createDepartment as repoCreateDept,
+  createEmployee as repoCreateEmployee,
   getContract,
   getDepartment,
-  getDriver,
   getEmployee,
   getEmployeeByDriverId,
-  listContracts as storeListContracts,
-  listDepartments as storeListDepartments,
-  listDrivers,
-  listEmployees as storeListEmployees,
-  monthlyCostForEmployee as storeMonthlyCost,
-  nextEmployeeNumber,
-  terminateContract as storeTerminateContract,
-  updateEmployee as storeUpdateEmployee,
-} from "@/server/store/mock-store";
+  listContracts as repoListContracts,
+  listDepartments as repoListDepartments,
+  listEmployees as repoListEmployees,
+  monthlyCostForEmployee as repoMonthlyCost,
+  nextEmployeeNumber as repoNextEmpNumber,
+  terminateContract as repoTerminateContract,
+  updateEmployee as repoUpdateEmployee,
+} from "@/server/repos/hr";
+import { getDriver, listDrivers } from "@/server/repos/drivers";
 import type { EmployeeStatus, ContractStatus } from "@/lib/types/hr";
 import {
   contractCreateSchema,
@@ -31,7 +30,7 @@ import {
 } from "@/lib/validators/hr";
 
 export async function listDepartments() {
-  return storeListDepartments();
+  return repoListDepartments();
 }
 export async function getDepartmentById(id: string) {
   return getDepartment(id);
@@ -42,18 +41,20 @@ export async function listEmployees(filter?: {
   status?: EmployeeStatus;
   search?: string;
 }) {
-  return storeListEmployees(filter);
+  return repoListEmployees(filter);
 }
 
 export async function getEmployeeById(id: string) {
-  const employee = getEmployee(id);
+  const employee = await getEmployee(id);
   if (!employee) return undefined;
-  const department = getDepartment(employee.departmentId);
-  const lineManager = employee.lineManagerId ? getEmployee(employee.lineManagerId) : undefined;
-  const driver = employee.driverId ? getDriver(employee.driverId) : undefined;
-  const activeContract = storeActiveContract(employee.id);
-  const monthlyCost = storeMonthlyCost(employee.id);
-  const allContracts = storeListContracts({ employeeId: employee.id });
+  const [department, lineManager, driver, activeContract, monthlyCost, contracts] = await Promise.all([
+    getDepartment(employee.departmentId),
+    employee.lineManagerId ? getEmployee(employee.lineManagerId) : Promise.resolve(undefined),
+    employee.driverId ? getDriver(employee.driverId) : Promise.resolve(undefined),
+    repoActiveContract(employee.id),
+    repoMonthlyCost(employee.id),
+    repoListContracts({ employeeId: employee.id }),
+  ]);
   return {
     ...employee,
     department,
@@ -61,7 +62,7 @@ export async function getEmployeeById(id: string) {
     driver,
     activeContract,
     monthlyCost,
-    contracts: allContracts,
+    contracts,
   };
 }
 
@@ -70,21 +71,22 @@ export async function getEmployeeForDriver(driverId: string) {
 }
 
 export async function getNextEmployeeNumber() {
-  return nextEmployeeNumber();
+  return repoNextEmpNumber();
 }
 
 export async function listManagerCandidates() {
-  // Anyone active in management or department-head positions
-  return storeListEmployees({ status: "active" }).map((e) => ({
-    id: e.id,
-    name: `${e.fullName} — ${e.jobTitle}`,
-  }));
+  const all = await repoListEmployees({ status: "active" });
+  return all.map((e) => ({ id: e.id, name: `${e.fullName} — ${e.jobTitle}` }));
 }
 
 export async function listUnlinkedDrivers() {
-  // Drivers without an Employee record
-  const all = listDrivers();
-  return all.filter((d) => !getEmployeeByDriverId(d.id));
+  const all = await listDrivers();
+  const result: typeof all = [];
+  for (const d of all) {
+    const emp = await getEmployeeByDriverId(d.id);
+    if (!emp) result.push(d);
+  }
+  return result;
 }
 
 export type ActionResult = { ok: true; id: string } | { ok: false; error: string };
@@ -94,7 +96,7 @@ export async function createEmployee(input: EmployeeCreateInput): Promise<Action
   if (!parsed.success) {
     return { ok: false, error: parsed.error.errors.map((e) => e.message).join("; ") };
   }
-  const e = storeCreateEmployee({
+  const e = await repoCreateEmployee({
     ...parsed.data,
     email: parsed.data.email || undefined,
   });
@@ -104,7 +106,7 @@ export async function createEmployee(input: EmployeeCreateInput): Promise<Action
 }
 
 export async function updateEmployeeStatus(id: string, status: EmployeeStatus): Promise<ActionResult> {
-  const updated = storeUpdateEmployee(id, { status });
+  const updated = await repoUpdateEmployee(id, { status });
   if (!updated) return { ok: false, error: "Not found" };
   revalidatePath("/hr/employees");
   revalidatePath(`/hr/employees/${id}`);
@@ -116,13 +118,13 @@ export async function createDepartment(input: DepartmentCreateInput): Promise<Ac
   if (!parsed.success) {
     return { ok: false, error: parsed.error.errors.map((e) => e.message).join("; ") };
   }
-  const d = storeCreateDept(parsed.data);
+  const d = await repoCreateDept(parsed.data);
   revalidatePath("/hr/departments");
   return { ok: true, id: d.id };
 }
 
 export async function listContracts(filter?: { employeeId?: string; status?: ContractStatus }) {
-  return storeListContracts(filter);
+  return repoListContracts(filter);
 }
 export async function getContractById(id: string) {
   return getContract(id);
@@ -133,13 +135,13 @@ export async function createContract(input: ContractCreateInput): Promise<Action
   if (!parsed.success) {
     return { ok: false, error: parsed.error.errors.map((e) => e.message).join("; ") };
   }
-  const c = storeCreateContract({ ...parsed.data, status: "active" });
+  const c = await repoCreateContract({ ...parsed.data, status: "active" });
   revalidatePath(`/hr/employees/${parsed.data.employeeId}`);
   return { ok: true, id: c.id };
 }
 
 export async function terminateContract(id: string, employeeId: string): Promise<ActionResult> {
-  const c = storeTerminateContract(id);
+  const c = await repoTerminateContract(id);
   if (!c) return { ok: false, error: "Not found" };
   revalidatePath(`/hr/employees/${employeeId}`);
   return { ok: true, id };

@@ -2,20 +2,20 @@
 
 import { revalidatePath } from "next/cache";
 import {
-  cancelLoan as storeCancelLoan,
-  createLoan as storeCreateLoan,
-  createPayrollPeriod as storeCreatePeriod,
-  getEmployee,
+  cancelLoan as repoCancelLoan,
+  createLoan as repoCreateLoan,
+  createPayrollPeriod as repoCreatePeriod,
   getLoan,
   getPayrollInput,
   getPayrollPeriod,
-  listLoans as storeListLoans,
-  listPayrollInputs as storeListInputs,
-  listPayrollPeriods as storeListPeriods,
-  payrollTotals as storeTotals,
-  setPayrollPeriodStatus as storeSetStatus,
-  updatePayrollInput as storeUpdateInput,
-} from "@/server/store/mock-store";
+  listLoans as repoListLoans,
+  listPayrollInputs as repoListInputs,
+  listPayrollPeriods as repoListPeriods,
+  payrollTotals as repoTotals,
+  setPayrollPeriodStatus as repoSetStatus,
+  updatePayrollInput as repoUpdateInput,
+} from "@/server/repos/payroll";
+import { getEmployee } from "@/server/repos/hr";
 import type { LoanStatus, PayrollPeriodStatus } from "@/lib/types/payroll";
 import {
   loanCreateSchema,
@@ -27,19 +27,19 @@ import {
 } from "@/lib/validators/payroll";
 
 export async function listPayrollPeriods() {
-  return storeListPeriods();
+  return repoListPeriods();
 }
 export async function getPayrollPeriodById(id: string) {
   return getPayrollPeriod(id);
 }
 export async function listPayrollInputs(periodId: string) {
-  return storeListInputs(periodId);
+  return repoListInputs(periodId);
 }
 export async function getPayrollInputById(periodId: string, employeeId: string) {
   return getPayrollInput(periodId, employeeId);
 }
 export async function payrollTotals(periodId: string) {
-  return storeTotals(periodId);
+  return repoTotals(periodId);
 }
 
 export type ActionResult = { ok: true; id: string } | { ok: false; error: string };
@@ -49,7 +49,7 @@ export async function createPayrollPeriod(input: PayrollPeriodCreateInput): Prom
   if (!parsed.success) {
     return { ok: false, error: parsed.error.errors.map((e) => e.message).join("; ") };
   }
-  const r = storeCreatePeriod(parsed.data);
+  const r = await repoCreatePeriod(parsed.data);
   if ("error" in r) return { ok: false, error: r.error };
   revalidatePath("/hr/payroll");
   return { ok: true, id: r.id };
@@ -59,7 +59,7 @@ export async function setPayrollPeriodStatus(
   id: string,
   status: PayrollPeriodStatus,
 ): Promise<ActionResult> {
-  const r = storeSetStatus(id, status);
+  const r = await repoSetStatus(id, status);
   if (!r) return { ok: false, error: "Not found" };
   revalidatePath("/hr/payroll");
   revalidatePath(`/hr/payroll/${id}`);
@@ -72,21 +72,20 @@ export async function updatePayrollInput(input: PayrollInputUpdateInput): Promis
   if (!parsed.success) {
     return { ok: false, error: parsed.error.errors.map((e) => e.message).join("; ") };
   }
-  const r = storeUpdateInput(parsed.data);
+  const r = await repoUpdateInput(parsed.data);
   if ("error" in r) return { ok: false, error: r.error };
   revalidatePath(`/hr/payroll/${parsed.data.periodId}`);
   revalidatePath(`/hr/payroll/${parsed.data.periodId}/${parsed.data.employeeId}`);
   return { ok: true, id: r.id };
 }
 
-// ---- Loans ----
 export async function listLoans(filter?: { employeeId?: string; status?: LoanStatus }) {
-  return storeListLoans(filter);
+  return repoListLoans(filter);
 }
 export async function getLoanById(id: string) {
-  const l = getLoan(id);
+  const l = await getLoan(id);
   if (!l) return undefined;
-  const employee = getEmployee(l.employeeId);
+  const employee = await getEmployee(l.employeeId);
   return { ...l, employee };
 }
 export async function createLoan(input: LoanCreateInput): Promise<ActionResult> {
@@ -94,14 +93,14 @@ export async function createLoan(input: LoanCreateInput): Promise<ActionResult> 
   if (!parsed.success) {
     return { ok: false, error: parsed.error.errors.map((e) => e.message).join("; ") };
   }
-  const r = storeCreateLoan(parsed.data);
+  const r = await repoCreateLoan(parsed.data);
   if ("error" in r) return { ok: false, error: r.error };
   revalidatePath("/hr/loans");
   revalidatePath(`/hr/employees/${parsed.data.employeeId}`);
   return { ok: true, id: r.id };
 }
 export async function cancelLoan(id: string): Promise<ActionResult> {
-  const r = storeCancelLoan(id);
+  const r = await repoCancelLoan(id);
   if ("error" in r) return { ok: false, error: r.error };
   revalidatePath("/hr/loans");
   revalidatePath(`/hr/loans/${id}`);
