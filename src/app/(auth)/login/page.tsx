@@ -3,14 +3,18 @@ import { redirect } from "next/navigation";
 import { Logo } from "@/components/layout/logo";
 import { getCurrentUser } from "@/server/auth/current-user";
 import { LoginForm } from "./login-form";
+import { DispatchTicker } from "./dispatch-ticker";
 
 /**
- * Login page — public, server-rendered shell. The interactive form
- * (and the server action call) live in <LoginForm /> as a client
- * component so we can show field-level errors without a full reload.
+ * Login page — two-pane operations command. The left pane is a dark
+ * editorial panel that communicates the product domain (fuel haul in
+ * East Africa) with a live status ticker. The right pane is a focused
+ * white sign-in surface. On mobile the dark pane collapses to a thin
+ * brand band above the form so the form stays the primary action.
  *
- * Already-signed-in users get bounced to the dashboard so /login isn't
- * a dead-end after a previous session.
+ * Reading: B2B login for technical operators (dispatchers, accountants),
+ * Linear-restraint with a Mercury-cool palette. Single accent
+ * (brand-blue) on the form CTA, status colors only on the live ticker.
  */
 export default async function LoginPage({
   searchParams,
@@ -24,64 +28,116 @@ export default async function LoginPage({
   }
 
   return (
-    <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-black px-4">
-      <div
-        aria-hidden="true"
-        className="pointer-events-none absolute inset-0"
-        style={{
-          background:
-            "radial-gradient(ellipse 80% 50% at 50% -10%, rgba(37,99,235,0.20), transparent 60%), radial-gradient(ellipse 60% 40% at 50% 110%, rgba(15,76,129,0.20), transparent 60%)",
-        }}
-      />
-      <div
-        aria-hidden="true"
-        className="absolute inset-0 opacity-[0.04]"
-        style={{
-          backgroundImage:
-            "linear-gradient(rgba(255,255,255,1) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,1) 1px, transparent 1px)",
-          backgroundSize: "48px 48px",
-        }}
-      />
+    <div className="grid min-h-[100dvh] grid-cols-1 bg-bg-base lg:grid-cols-[1.05fr_minmax(420px,0.95fr)]">
+      {/* LEFT — editorial brand pane (always dark) */}
+      <section className="relative isolate hidden flex-col justify-between overflow-hidden bg-[#0B0F1A] px-10 py-8 text-white lg:flex lg:px-14 lg:py-12">
+        {/* Atmospheric layers — restrained, no AI mesh */}
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute inset-0"
+          style={{
+            backgroundImage:
+              "radial-gradient(60% 60% at 10% 0%, rgba(37,99,235,0.10), transparent 60%), radial-gradient(70% 70% at 90% 110%, rgba(14,165,233,0.08), transparent 60%)",
+          }}
+        />
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute inset-0 opacity-[0.05]"
+          style={{
+            backgroundImage:
+              "linear-gradient(rgba(255,255,255,1) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,1) 1px, transparent 1px)",
+            backgroundSize: "56px 56px",
+          }}
+        />
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute -top-1/4 left-1/2 size-[640px] -translate-x-1/2 rounded-full bg-[radial-gradient(closest-side,rgba(37,99,235,0.18),transparent_70%)] blur-2xl"
+        />
 
-      <div className="relative z-10 w-full max-w-md">
-        <div className="glass animate-content-in rounded-xl p-8 shadow-modal">
-          <div className="mb-8 flex flex-col items-center gap-3 text-center">
-            <Logo variant="horizontal" />
-            <div className="mt-2 font-mono text-xs uppercase tracking-[0.18em] text-fg-tertiary">
-              Transport Management System
-            </div>
+        {/* Brand mark */}
+        <div className="relative z-10 flex items-center gap-3">
+          <Logo variant="horizontal" />
+        </div>
+
+        {/* Headline + ticker */}
+        <div className="relative z-10 grid max-w-[28rem] gap-10">
+          <div>
+            <p className="font-mono text-[10px] uppercase tracking-[0.22em] text-white/45">
+              Nile Valley Logistics
+            </p>
+            <h1 className="mt-3 text-[36px] font-medium leading-[1.08] tracking-tight text-white sm:text-[42px]">
+              Dispatch fuel.
+              <br />
+              <span className="text-white/65">Track every litre.</span>
+              <br />
+              Get paid clean.
+            </h1>
+            <p className="mt-5 max-w-md text-[15px] leading-relaxed text-white/55">
+              The operations workspace for fuel hauliers running KPC, KPRL
+              and cross-border loads across East Africa.
+            </p>
           </div>
 
-          <h1 className="mb-1 text-center text-xl font-semibold tracking-tight text-fg-primary">
-            Sign in
-          </h1>
-          <p className="mb-6 text-center text-sm text-fg-secondary">
-            Use the email and password your admin issued you.
-          </p>
+          <div className="grid gap-3">
+            <p className="font-mono text-[10px] uppercase tracking-[0.22em] text-white/40">
+              Live · last 5 movements
+            </p>
+            <DispatchTicker />
+          </div>
+        </div>
+
+        {/* Footer line */}
+        <div className="relative z-10 flex items-center justify-between font-mono text-[10px] uppercase tracking-[0.22em] text-white/35">
+          <span>Mombasa · Nairobi · Kampala · Kigali</span>
+          <span>EAT</span>
+        </div>
+      </section>
+
+      {/* RIGHT — focused form pane */}
+      <section className="relative flex flex-col items-center justify-center px-6 py-10 sm:px-10">
+        {/* Compact brand row for mobile */}
+        <div className="mb-10 flex items-center gap-3 lg:hidden">
+          <Logo variant="horizontal" />
+        </div>
+
+        <div className="w-full max-w-[380px]">
+          <div className="mb-8">
+            <p className="font-mono text-[10px] uppercase tracking-[0.18em] text-fg-tertiary">
+              Sign in
+            </p>
+            <h2 className="mt-2 text-[26px] font-semibold leading-tight tracking-tight text-fg-primary">
+              Welcome back.
+            </h2>
+            <p className="mt-2 text-sm text-fg-secondary">
+              Use the credentials your administrator issued you.
+            </p>
+          </div>
 
           {error === "session_unconfigured" && (
-            <div className="mb-4 rounded-lg border border-status-danger/30 bg-status-danger/10 px-3 py-2 text-xs text-status-danger">
-              Server session is misconfigured. Contact your admin.
+            <div className="mb-4 rounded-lg border border-status-danger/30 bg-status-danger/5 px-3 py-2 text-xs text-status-danger">
+              Server session is misconfigured. Contact your administrator.
             </div>
           )}
 
           <LoginForm returnTo={returnTo} />
 
-          <p className="mt-6 text-center text-xs text-fg-tertiary">
-            Accounts are issued by an administrator.{" "}
+          <div className="mt-6 flex items-center justify-between text-xs">
             <Link
               href="/forgot-password"
-              className="text-brand-blue hover:underline"
+              className="text-fg-secondary transition-colors hover:text-brand-blue"
             >
               Forgot password?
             </Link>
-          </p>
+            <span className="text-fg-tertiary">
+              Accounts issued by admin only
+            </span>
+          </div>
         </div>
 
-        <div className="mt-4 text-center font-mono text-[10px] uppercase tracking-[0.18em] text-fg-tertiary">
-          tx-system · v0.1
-        </div>
-      </div>
+        <p className="absolute inset-x-0 bottom-6 text-center font-mono text-[10px] uppercase tracking-[0.18em] text-fg-tertiary">
+          Nile Valley TMS
+        </p>
+      </section>
     </div>
   );
 }
