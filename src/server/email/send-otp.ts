@@ -20,38 +20,102 @@ export async function sendPasswordResetOtp(args: {
   const { to, fullName, code } = args;
 
   await resend.emails.send({
-    from: `Nile Valley TMS <${from}>`,
+    from: `Nile Valley Logistics <${from}>`,
     to,
-    subject: `Your password reset code: ${code}`,
+    subject: `${code} is your Nile Valley password reset code`,
     text: [
       `Hi ${fullName},`,
       "",
-      `Your one-time password reset code is: ${code}`,
+      `Your verification code is: ${code}`,
       "",
-      "This code expires in 15 minutes and can only be used once.",
+      "Enter it on the password-reset screen to set a new password.",
+      "It expires in 15 minutes and can only be used once.",
       "",
-      "If you didn't request this, you can safely ignore this email.",
+      "Didn't request this? Ignore this email — your password won't change.",
+      "Never share this code with anyone.",
       "",
-      "— Nile Valley Logistics TMS",
+      "Nile Valley Logistics · Cross-border fuel haulage, East Africa",
+      "This is an automated message — please don't reply.",
     ].join("\n"),
     html: otpHtml({ fullName, code }),
   });
 }
 
 function otpHtml({ fullName, code }: { fullName: string; code: string }): string {
+  const name = escapeHtml(fullName);
   return `<!doctype html>
-<html><body style="margin:0;padding:32px 16px;background:#f7f9fc;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;color:#0f172a">
-  <table width="100%" cellpadding="0" cellspacing="0" style="max-width:480px;margin:0 auto">
-    <tr><td style="padding:24px;background:#ffffff;border-radius:12px;border:1px solid #e2e8f0;box-shadow:0 1px 2px rgba(15,23,42,.04)">
-      <div style="font-size:10px;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:#2563eb;margin-bottom:8px">Password reset</div>
-      <h1 style="font-size:20px;font-weight:600;margin:0 0 8px;letter-spacing:-.01em">Your one-time code</h1>
-      <p style="font-size:14px;color:#475569;margin:0 0 24px">Hi ${escapeHtml(fullName)}, use this code to set a new password.</p>
-      <div style="font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:32px;font-weight:600;letter-spacing:.32em;text-align:center;padding:16px;background:#f1f4f9;border-radius:10px;color:#0f172a">${code}</div>
-      <p style="font-size:12px;color:#64748b;margin:20px 0 0">This code expires in 15 minutes and can only be used once. If you didn't request this, you can safely ignore this email.</p>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="color-scheme" content="light only">
+<meta name="supported-color-schemes" content="light">
+<title>Your password reset code</title>
+</head>
+<body style="margin:0;padding:0;background:#eef2f7;-webkit-font-smoothing:antialiased;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;">
+  <!-- preheader (hidden preview text) -->
+  <div style="display:none;max-height:0;overflow:hidden;opacity:0;color:#eef2f7;font-size:1px;line-height:1px;">
+    Your one-time password reset code expires in 15 minutes. &nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;
+  </div>
+
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#eef2f7;padding:32px 16px;">
+    <tr><td align="center">
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:480px;width:100%;">
+
+        <!-- Brand header -->
+        <tr><td style="padding:0 4px 20px;">
+          <table role="presentation" cellpadding="0" cellspacing="0">
+            <tr>
+              <td style="background:#2563eb;border-radius:8px;width:36px;height:36px;text-align:center;vertical-align:middle;color:#ffffff;font-size:13px;font-weight:700;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.02em;">NVL</td>
+              <td style="padding-left:10px;vertical-align:middle;">
+                <span style="font-size:15px;font-weight:700;color:#0f172a;letter-spacing:-.01em;">Nile Valley Logistics</span>
+              </td>
+            </tr>
+          </table>
+        </td></tr>
+
+        <!-- Card -->
+        <tr><td style="background:#ffffff;border:1px solid #e2e8f0;border-radius:14px;padding:32px;">
+          <div style="font-size:11px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:#2563eb;">Password reset</div>
+          <h1 style="font-size:22px;line-height:1.25;font-weight:600;margin:8px 0 0;color:#0f172a;letter-spacing:-.02em;">Your verification code</h1>
+          <p style="font-size:14px;line-height:1.6;color:#475569;margin:12px 0 0;">
+            Hi ${name}, use the code below to set a new password for your account. It is valid for <strong style="color:#0f172a;">15 minutes</strong>.
+          </p>
+
+          <!-- Code block -->
+          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:24px 0;">
+            <tr><td align="center" style="background:#f1f5f9;border:1px solid #e2e8f0;border-radius:12px;padding:22px 16px;">
+              <div style="font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:38px;line-height:1;font-weight:700;letter-spacing:.3em;color:#0f172a;padding-left:.3em;">${code}</div>
+            </td></tr>
+          </table>
+
+          <table role="presentation" cellpadding="0" cellspacing="0">
+            <tr>
+              <td style="font-size:13px;line-height:1.6;color:#64748b;">
+                Enter this code on the password-reset screen, then choose a new password. The code can only be used once.
+              </td>
+            </tr>
+          </table>
+
+          <div style="border-top:1px solid #eef2f7;margin:24px 0 0;padding-top:16px;">
+            <p style="font-size:12px;line-height:1.6;color:#94a3b8;margin:0;">
+              Didn't request this? You can safely ignore this email — your password won't change.
+              For your security, never share this code with anyone.
+            </p>
+          </div>
+        </td></tr>
+
+        <!-- Footer -->
+        <tr><td style="padding:20px 8px 0;text-align:center;">
+          <p style="font-size:12px;color:#94a3b8;margin:0;">Nile Valley Logistics · Cross-border fuel haulage, East Africa</p>
+          <p style="font-size:11px;color:#cbd5e1;margin:6px 0 0;">This is an automated message — please don't reply.</p>
+        </td></tr>
+
+      </table>
     </td></tr>
-    <tr><td style="padding:16px;text-align:center;font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:#94a3b8;font-family:ui-monospace,monospace">Nile Valley TMS</td></tr>
   </table>
-</body></html>`;
+</body>
+</html>`;
 }
 
 function escapeHtml(s: string): string {
