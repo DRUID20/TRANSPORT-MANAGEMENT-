@@ -36,7 +36,7 @@
     --status-success: 16 185 129;  /* #10B981 emerald */
     --status-warning: 245 158 11;  /* #F59E0B amber */
     --status-danger: 239 68 68;    /* #EF4444 */
-    --status-info: 37 99 235;
+    --status-info: 8 145 178;      /* #0891B2 cyan-600 — distinct from brand-blue CTA */
     --status-neutral: 100 116 139;
 
     color-scheme: light;
@@ -63,7 +63,7 @@
     --status-success: 52 211 153;
     --status-warning: 251 191 36;
     --status-danger: 248 113 113;
-    --status-info: 96 165 250;
+    --status-info: 34 211 238;     /* cyan-400 — distinct from brand-blue CTA in dark */
     --status-neutral: 148 163 184;
 
     color-scheme: dark;

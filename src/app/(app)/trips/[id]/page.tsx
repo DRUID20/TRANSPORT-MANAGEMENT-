@@ -30,6 +30,7 @@ import { TripReconciliation } from "@/components/trips/trip-reconciliation";
 import { TripExpensesCard } from "@/components/trips/trip-expenses-card";
 import { TripInvoiceCard } from "@/components/trips/trip-invoice-card";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import {
   StatusPipeline,
   TRIP_PIPELINE,
@@ -362,13 +363,12 @@ function NextActionPanel({
             Trip closed and reconciled. Issue the invoice to post AR.
           </p>
         </div>
-        <Link
-          href={`/invoices/new?trip=${trip.id}`}
-          className="inline-flex items-center gap-1.5 rounded-lg bg-brand-blue px-3 py-1.5 text-[12px] font-medium text-white shadow-soft transition-colors hover:bg-brand-blue-hover"
-        >
-          Generate invoice
-          <ArrowUpRight className="size-3.5" />
-        </Link>
+        <Button asChild size="sm">
+          <Link href={`/invoices/new?trip=${trip.id}`}>
+            Generate invoice
+            <ArrowUpRight className="size-3.5" />
+          </Link>
+        </Button>
       </section>
     );
   }

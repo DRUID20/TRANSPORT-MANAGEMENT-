@@ -86,11 +86,8 @@ export default async function LoginPage({
           </div>
         </div>
 
-        {/* Footer line */}
-        <div className="relative z-10 flex items-center justify-between font-mono text-[10px] uppercase tracking-[0.22em] text-white/35">
-          <span>Mombasa · Nairobi · Kampala · Kigali</span>
-          <span>EAT</span>
-        </div>
+        {/* Footer spacer — keeps the headline/ticker visually centred */}
+        <div className="relative z-10" />
       </section>
 
       {/* RIGHT — focused form pane */}
@@ -134,9 +131,6 @@ export default async function LoginPage({
           </div>
         </div>
 
-        <p className="absolute inset-x-0 bottom-6 text-center font-mono text-[10px] uppercase tracking-[0.18em] text-fg-tertiary">
-          Nile Valley TMS
-        </p>
       </section>
     </div>
   );

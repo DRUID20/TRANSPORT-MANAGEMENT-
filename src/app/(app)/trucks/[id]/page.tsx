@@ -17,6 +17,7 @@ import { jobCardsForTruck } from "@/server/actions/job-cards";
 import { JobCardStatusPill } from "@/components/workshop/job-card-status-pill";
 import { TruckFuelCard } from "@/components/fleet/truck-fuel-card";
 import { PageHeader } from "@/components/layout/page-header";
+import { Button } from "@/components/ui/button";
 import { OwnerPill } from "@/components/fleet/owner-pill";
 import { TruckStatusPill } from "@/components/fleet/truck-status-pill";
 import { ExpiryChip } from "@/components/fleet/expiry-chip";
@@ -206,13 +207,12 @@ export default async function TruckDetailPage({
             <Wrench className="size-3.5 text-fg-tertiary" />
             Service history
           </h2>
-          <Link
-            href={{ pathname: "/workshop/new", query: { truck: truck.id } }}
-            className="inline-flex items-center gap-1 rounded-lg border border-border bg-bg-elevated px-2.5 py-1 text-[11px] font-medium text-fg-secondary shadow-soft transition-colors hover:border-border-strong hover:text-fg-primary"
-          >
-            <Plus className="size-3" />
-            New job card
-          </Link>
+          <Button asChild variant="outline" size="sm">
+            <Link href={{ pathname: "/workshop/new", query: { truck: truck.id } }}>
+              <Plus className="size-3" />
+              New job card
+            </Link>
+          </Button>
         </header>
         {jobCards.length === 0 ? (
           <div className="flex flex-col items-center gap-2 px-5 py-10 text-center text-fg-tertiary">

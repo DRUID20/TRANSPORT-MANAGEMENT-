@@ -61,7 +61,7 @@ export function DispatchTicker() {
             key={row.truck}
             aria-hidden={!visible}
             className={cn(
-              "grid grid-cols-[auto_1fr_auto] items-center gap-3 rounded-lg border border-white/8 bg-white/[0.02] px-3 py-2.5 backdrop-blur transition-all duration-700",
+              "grid grid-cols-[auto_1fr_auto] items-center gap-3 rounded-lg border border-white/[0.08] bg-white/[0.02] px-3 py-2.5 backdrop-blur transition-all duration-700",
               visible ? "opacity-100" : "opacity-30",
             )}
             style={{ transform: visible ? "none" : "translateY(2px)" }}

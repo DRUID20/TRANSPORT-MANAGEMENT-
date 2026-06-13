@@ -107,16 +107,6 @@ export function SidebarBody({
         ))}
       </nav>
 
-      {!collapsed && (
-        <div className="border-t border-border p-3">
-          <div className="rounded-lg border border-border bg-bg-base p-3">
-            <div className="font-mono text-[10px] uppercase tracking-wider text-fg-tertiary">
-              Build
-            </div>
-            <div className="font-mono text-xs text-fg-secondary">tx-system v0.1</div>
-          </div>
-        </div>
-      )}
     </>
   );
 }

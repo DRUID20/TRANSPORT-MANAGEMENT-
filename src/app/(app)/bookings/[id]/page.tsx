@@ -21,6 +21,7 @@ import {
   StatusPipeline,
   bookingStatusIndex,
 } from "@/components/ui/status-pipeline";
+import { Button } from "@/components/ui/button";
 import { BookingActions } from "./booking-actions";
 import { TripPlanForm } from "./trip-plan-form";
 import { computeFuelRevenue } from "@/lib/types/trips";
@@ -297,13 +298,12 @@ function NextActionPanel({
             </p>
           </div>
         </div>
-        <Link
-          href={`/trips/${trip.id}`}
-          className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-bg-elevated px-3 py-1.5 text-[12px] font-medium text-fg-primary shadow-soft transition-colors hover:border-border-strong hover:bg-bg-elevated-2"
-        >
-          Open trip
-          <ArrowRight className="size-3.5" />
-        </Link>
+        <Button asChild variant="outline" size="sm">
+          <Link href={`/trips/${trip.id}`}>
+            Open trip
+            <ArrowRight className="size-3.5" />
+          </Link>
+        </Button>
       </section>
     );
   }
