@@ -405,7 +405,6 @@ export async function updatePayrollInput(input: {
     notes: input.notes,
   });
   const db = getDb();
-  const orgId = await requireOrgId();
   const rows = await db
     .update(inputsTable)
     .set({

@@ -1,12 +1,10 @@
 "use server";
 
-import {
-  getEmployee,
-  listComplianceRecords,
-  listDrivers,
-  listTrailers,
-  listTrucks,
-} from "@/server/store/mock-store";
+import { listComplianceRecords } from "@/server/repos/hr-compliance";
+import { getEmployee } from "@/server/repos/hr";
+import { listDrivers } from "@/server/repos/drivers";
+import { listTrailers } from "@/server/repos/trailers";
+import { listTrucks } from "@/server/repos/trucks";
 import { classifyExpiry, type ExpiryStatus } from "@/lib/types/fleet";
 import { KIND_LABELS, type ComplianceKind } from "@/lib/types/hr-compliance";
 
@@ -85,7 +83,13 @@ function pushIfPresent(
 /** Pulls every expiry across the fleet. */
 export async function listExpiries(): Promise<ExpiryItem[]> {
   const items: ExpiryItem[] = [];
-  for (const t of listTrucks()) {
+  const [trucks, trailers, drivers, compliance] = await Promise.all([
+    listTrucks(),
+    listTrailers(),
+    listDrivers(),
+    listComplianceRecords(),
+  ]);
+  for (const t of trucks) {
     const base = {
       entityKind: "truck" as const,
       entityId: t.id,
@@ -100,7 +104,7 @@ export async function listExpiries(): Promise<ExpiryItem[]> {
     pushIfPresent(items, { ...base, documentLabel: "Petroleum carriers' liability", dueDate: t.petroleumLiabilityExpiry });
     pushIfPresent(items, { ...base, documentLabel: "Tank calibration", dueDate: t.calibrationDueDate });
   }
-  for (const tr of listTrailers()) {
+  for (const tr of trailers) {
     const base = {
       entityKind: "trailer" as const,
       entityId: tr.id,
@@ -110,7 +114,7 @@ export async function listExpiries(): Promise<ExpiryItem[]> {
     pushIfPresent(items, { ...base, documentLabel: "Insurance",       dueDate: tr.insuranceExpiry });
     pushIfPresent(items, { ...base, documentLabel: "NTSA Inspection", dueDate: tr.ntsaInspectionExpiry });
   }
-  for (const d of listDrivers()) {
+  for (const d of drivers) {
     const base = {
       entityKind: "driver" as const,
       entityId: d.id,
@@ -127,10 +131,10 @@ export async function listExpiries(): Promise<ExpiryItem[]> {
   // PUC) on the same fleet expiry feed so the dispatcher sees them next to
   // truck and trailer paperwork. Non-fuel HR records (work permits,
   // first-aid, etc.) belong on the dedicated HR page and stay there.
-  for (const r of listComplianceRecords()) {
+  for (const r of compliance) {
     if (!r.expiryDate) continue;
     if (!FUEL_HR_KINDS.has(r.kind)) continue;
-    const emp = getEmployee(r.employeeId);
+    const emp = await getEmployee(r.employeeId);
     if (!emp) continue;
     const status = classifyExpiry(r.expiryDate);
     items.push({
@@ -154,7 +158,8 @@ export async function listExpiries(): Promise<ExpiryItem[]> {
 /** Aggregate counts for the dashboard 'Needs Attention' card. */
 export async function getComplianceSummary() {
   const items = await listExpiries();
-  const trucksInWorkshop = listTrucks().filter((t) => t.status === "in_workshop").length;
+  const trucks = await listTrucks();
+  const trucksInWorkshop = trucks.filter((t) => t.status === "in_workshop").length;
 
   const insuranceExpiring = items.filter(
     (i) => i.documentLabel === "Insurance" && (i.status === "warning" || i.status === "critical" || i.status === "expired"),
