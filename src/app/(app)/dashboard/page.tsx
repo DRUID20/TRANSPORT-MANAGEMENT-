@@ -15,6 +15,7 @@ import { listTrucks } from "@/server/actions/trucks";
 import { listDrivers } from "@/server/actions/drivers";
 import { listInvoices } from "@/server/actions/ar";
 import { AreaChartCard } from "@/components/dashboard/area-chart-card";
+import { CountUp } from "@/components/dashboard/count-up";
 import { TodaysDispatch } from "@/components/dashboard/todays-dispatch";
 import { formatMoney } from "@/lib/format";
 import { cn } from "@/lib/utils";
@@ -125,7 +126,9 @@ export default async function DashboardPage() {
   const attention = buildAttention(compliance);
 
   return (
-    <div className="flex flex-col gap-8">
+    <div className="relative isolate -m-4 p-4 sm:-m-6 sm:p-6">
+      <div className="aurora-bg" aria-hidden="true" />
+      <div className="aurora-scope stagger-children relative z-10 flex flex-col gap-8">
       {/* HERO — greeting + dominant live metric */}
       <section className="flex flex-col gap-7 pt-2">
         <div className="flex flex-wrap items-baseline justify-between gap-3">
@@ -138,25 +141,26 @@ export default async function DashboardPage() {
         </div>
 
         <div className="grid gap-4">
-          <h1 className="text-[32px] font-medium leading-[1.05] tracking-tight text-fg-primary sm:text-[40px]">
-            {greeting}, {firstName}.
+          <h1 className="font-display text-[34px] font-semibold leading-[1.03] tracking-tight text-fg-primary sm:text-[46px]">
+            {greeting},{" "}
+            <span className="aurora-text">{firstName}.</span>
           </h1>
           <p className="max-w-2xl text-[17px] leading-snug text-fg-secondary sm:text-[19px]">
-            <span className="font-mono tnum font-semibold text-fg-primary">
-              {onRoad}
+            <span className="font-display tnum font-semibold text-fg-primary">
+              <CountUp value={onRoad} />
             </span>{" "}
             trucks on the road right now, of{" "}
-            <span className="font-mono tnum text-fg-primary">{fleetSize}</span>{" "}
+            <span className="font-display tnum text-fg-primary">{fleetSize}</span>{" "}
             in the fleet.
           </p>
         </div>
 
         {/* Dense live-ops strip */}
-        <div className="surface-card grid grid-cols-2 divide-x divide-y divide-border sm:grid-cols-3 sm:divide-y-0 lg:grid-cols-5">
-          <StripCell label="In transit" value={inTransit} tone="info" />
-          <StripCell label="At border" value={atBorder} tone="warning" />
-          <StripCell label="Delayed" value={delayed} tone="danger" />
-          <StripCell label="Delivered MTD" value={deliveredMtd} tone="success" />
+        <div className="surface-card grid grid-cols-2 divide-x divide-y divide-white/30 sm:grid-cols-3 sm:divide-y-0 lg:grid-cols-5">
+          <StripCell label="In transit" value={inTransit} tone="info" countUp />
+          <StripCell label="At border" value={atBorder} tone="warning" countUp />
+          <StripCell label="Delayed" value={delayed} tone="danger" countUp />
+          <StripCell label="Delivered MTD" value={deliveredMtd} tone="success" countUp />
           <StripCell
             label="Revenue MTD"
             value={formatMoney(revenueMtd, "KES", { compact: true }).replace("KSh ", "")}
@@ -233,6 +237,7 @@ export default async function DashboardPage() {
       </div>
 
       <OpsBoard initialTrips={allTrips} />
+      </div>
     </div>
   );
 }
@@ -244,6 +249,7 @@ function StripCell({
   sub,
   tone = "default",
   wide = false,
+  countUp = false,
 }: {
   label: string;
   value: string | number;
@@ -251,6 +257,7 @@ function StripCell({
   sub?: string;
   tone?: "default" | "info" | "warning" | "danger" | "success";
   wide?: boolean;
+  countUp?: boolean;
 }) {
   const colour =
     tone === "info"
@@ -273,8 +280,8 @@ function StripCell({
         {label}
       </span>
       <span className="flex items-baseline gap-1.5">
-        <span className={cn("font-mono tnum text-2xl font-semibold", colour)}>
-          {value}
+        <span className={cn("font-display tnum text-2xl font-semibold", colour)}>
+          {countUp && typeof value === "number" ? <CountUp value={value} /> : value}
         </span>
         {unit && (
           <span className="font-mono text-[10px] uppercase tracking-wider text-fg-tertiary">

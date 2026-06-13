@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import { fontMono, fontSans } from "@/lib/fonts";
+import { fontDisplay, fontMono, fontSans } from "@/lib/fonts";
 import { ThemeProvider } from "@/components/theme-provider";
 import { cn } from "@/lib/utils";
 import "./globals.css";
@@ -38,6 +38,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="en" suppressHydrationWarning>
       <body
         className={cn(
+          fontDisplay.variable,
           fontSans.variable,
           fontMono.variable,
           "min-h-screen bg-bg-base font-sans text-[15px] text-fg-primary antialiased",
