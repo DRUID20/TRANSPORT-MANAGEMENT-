@@ -176,7 +176,7 @@ export default async function DashboardPage() {
           data={revenueChart}
           index="day"
           categories={["Freight Revenue", "Direct Costs"]}
-          valueFormatter={(n) => formatMoney(n, "KES", { compact: true })}
+          format="kes-compact"
         />
 
         <section className="surface-card flex flex-col overflow-hidden">

@@ -10,31 +10,49 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { formatMoney } from "@/lib/format";
 
 const SERIES_COLORS = ["rgb(var(--brand-blue))", "rgb(var(--accent-secondary,94 92 230))"];
+
+/**
+ * Value-formatting modes. A plain enum (not a function) so this client
+ * component can be rendered from a Server Component without tripping the
+ * "functions cannot be passed to Client Components" boundary rule.
+ */
+export type ChartValueFormat = "kes-compact" | "number";
+
+function formatValue(n: number, format: ChartValueFormat): string {
+  switch (format) {
+    case "kes-compact":
+      return formatMoney(n, "KES", { compact: true });
+    case "number":
+      return String(n);
+  }
+}
 
 export function AreaChartCard({
   title,
   data,
   index,
   categories,
-  valueFormatter = (n: number) => String(n),
+  format = "number",
   height = 280,
 }: {
   title: string;
   data: Array<Record<string, string | number>>;
   index: string;
   categories: string[];
-  valueFormatter?: (n: number) => string;
+  format?: ChartValueFormat;
   height?: number;
 }) {
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>{title}</CardTitle>
-      </CardHeader>
-      <CardContent>
+    <section className="surface-card overflow-hidden">
+      <header className="border-b border-border px-5 py-4">
+        <h2 className="text-[15px] font-semibold tracking-tight text-fg-primary">
+          {title}
+        </h2>
+      </header>
+      <div className="px-3 py-4">
         <div style={{ height }}>
           <ResponsiveContainer width="100%" height="100%">
             <AreaChart data={data} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
@@ -63,7 +81,7 @@ export function AreaChartCard({
                 tickLine={false}
                 axisLine={false}
                 fontSize={11}
-                tickFormatter={(v) => valueFormatter(Number(v))}
+                tickFormatter={(v) => formatValue(Number(v), format)}
                 tick={{ fill: "rgb(var(--text-tertiary))" }}
                 width={60}
               />
@@ -76,7 +94,7 @@ export function AreaChartCard({
                   color: "rgb(var(--text-primary))",
                 }}
                 cursor={{ stroke: "rgb(var(--border-strong))" }}
-                formatter={(v: number) => valueFormatter(v)}
+                formatter={(v: number) => formatValue(v, format)}
               />
               <Legend
                 iconType="circle"
@@ -100,7 +118,7 @@ export function AreaChartCard({
             </AreaChart>
           </ResponsiveContainer>
         </div>
-      </CardContent>
-    </Card>
+      </div>
+    </section>
   );
 }
