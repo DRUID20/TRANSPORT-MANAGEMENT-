@@ -1,6 +1,7 @@
 "use client";
 
-import { ArrowDownRight, ArrowUpRight, type LucideIcon } from "lucide-react";
+import type { ReactNode } from "react";
+import { ArrowDownRight, ArrowUpRight } from "lucide-react";
 import { CountUp } from "@/components/dashboard/count-up";
 import { Sparkline } from "@/components/dashboard/sparkline";
 import { cn } from "@/lib/utils";
@@ -30,7 +31,9 @@ export interface KpiCardProps {
   unit?: string;
   delta?: number; // fraction, e.g. +0.082 for +8.2%
   trend?: number[];
-  icon?: LucideIcon;
+  /** Rendered icon node, e.g. <Truck className="size-4" />. (Server pages
+   *  cannot pass a component function across the client boundary.) */
+  icon?: ReactNode;
   hint?: string;
   tone?: Tone;
   /** decimals for the count-up when value is numeric */
@@ -48,7 +51,7 @@ export function KpiCard({
   unit,
   delta,
   trend,
-  icon: Icon,
+  icon,
   hint,
   tone = "default",
   decimals = 0,
@@ -60,9 +63,9 @@ export function KpiCard({
     <div className="group surface-card surface-interactive relative flex flex-col gap-3 overflow-hidden p-5">
       <div className="flex items-start justify-between gap-2">
         <div className="flex items-center gap-2">
-          {Icon && (
+          {icon && (
             <div className="flex size-8 items-center justify-center rounded-lg bg-brand-blue/10 text-brand-blue ring-1 ring-brand-blue/20">
-              <Icon className="size-4" strokeWidth={1.5} />
+              {icon}
             </div>
           )}
           <div className="text-[11px] font-semibold uppercase tracking-[0.06em] text-fg-tertiary">

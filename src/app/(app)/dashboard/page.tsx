@@ -169,7 +169,7 @@ export default async function DashboardPage() {
         <KpiCard
           label="On the road"
           value={onRoad}
-          icon={Truck}
+          icon={<Truck className="size-4" strokeWidth={1.5} />}
           tone="info"
           hint={`of ${fleetSize} in the fleet`}
         />
@@ -177,20 +177,20 @@ export default async function DashboardPage() {
           label="Revenue MTD"
           value={formatMoney(revenueMtd, "KES", { compact: true }).replace("KSh ", "")}
           unit="KES"
-          icon={Banknote}
+          icon={<Banknote className="size-4" strokeWidth={1.5} />}
           delta={revDelta}
           trend={revSeries}
         />
         <KpiCard
           label="Delivered MTD"
           value={deliveredMtd}
-          icon={CheckCircle2}
+          icon={<CheckCircle2 className="size-4" strokeWidth={1.5} />}
           tone="success"
         />
         <KpiCard
           label="Needs attention"
           value={needsAttentionCount}
-          icon={TriangleAlert}
+          icon={<TriangleAlert className="size-4" strokeWidth={1.5} />}
           tone={needsAttentionCount > 0 ? "danger" : "default"}
           hint={`${delayed} delayed · ${atBorder} at border`}
         />

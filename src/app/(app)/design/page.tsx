@@ -105,7 +105,7 @@ export default function DesignPage() {
 
       <Section title="KPI cards">
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          <KpiCard label="Active Trips" value="47" delta={0.082} trend={trend} icon={Activity} />
+          <KpiCard label="Active Trips" value="47" delta={0.082} trend={trend} icon={<Activity className="size-4" strokeWidth={1.5} />} />
           <KpiCard label="Tonnes (MTD)" value="9,420" unit="t" delta={0.118} trend={trend} />
           <KpiCard label="Fuel Eff." value="3.42" unit="km/L" delta={-0.014} trend={trend} />
           <KpiCard
