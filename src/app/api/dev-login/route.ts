@@ -1,29 +1,27 @@
 import { NextResponse } from "next/server";
-import { getSession } from "@/server/auth/session";
+import { getSession, IS_DEMO_MODE } from "@/server/auth/session";
 
 /**
- * DEV-ONLY login bypass.
+ * Preview-only login bypass.
  *
  * Creates a valid session without touching the database, so the app can be
- * browsed locally when the Postgres host is unreachable (e.g. inside a
- * sandbox with no outbound network). Every page reads from the in-memory
- * store, so a forged session is all that's needed to see the whole app.
+ * browsed when no real DB/auth is configured. Every page reads from the
+ * in-memory store, so a session cookie is all that's needed to walk the app.
  *
- * Hard-gated to non-production: in production this route 404s and can never
- * mint a session. It is NOT an authentication path — do not rely on it for
- * anything but local preview.
+ * Enabled only when one of these holds:
+ *   - IS_DEMO_MODE: no DATABASE_URL is configured, so there is no real auth
+ *     and no data to protect (e.g. a fresh preview deploy or an offline box).
+ *   - ALLOW_DEV_LOGIN=true is explicitly set (local dev convenience).
+ *
+ * The moment a real DATABASE_URL is configured (a real deployment) this route
+ * 404s, unless the operator explicitly opts back in with ALLOW_DEV_LOGIN. It
+ * is NOT an authentication path.
  *
  * Usage: visit /api/dev-login — it sets the cookie and redirects to /dashboard.
  */
 export async function GET(request: Request) {
-  // Two independent gates, both required:
-  //  1. Never in production.
-  //  2. Off by default even in dev — must be explicitly enabled with
-  //     ALLOW_DEV_LOGIN=true so it can't become an accidental backdoor.
-  if (
-    process.env.NODE_ENV === "production" ||
-    process.env.ALLOW_DEV_LOGIN !== "true"
-  ) {
+  const enabled = IS_DEMO_MODE || process.env.ALLOW_DEV_LOGIN === "true";
+  if (!enabled) {
     return new NextResponse("Not found", { status: 404 });
   }
 

@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { unsealData } from "iron-session";
 import type { SessionData } from "@/server/auth/session";
+import { resolveSessionPassword } from "@/server/auth/session-secret";
 
 /**
  * Gate every page route behind a valid session. Unauthenticated requests
@@ -36,7 +37,7 @@ export async function middleware(req: NextRequest) {
   // API routes carry their own auth checks (TODO: once we add any).
   if (pathname.startsWith("/api")) return NextResponse.next();
 
-  const secret = process.env.SESSION_SECRET;
+  const secret = resolveSessionPassword();
   if (!secret) {
     const url = new URL("/login?error=session_unconfigured", req.url);
     return NextResponse.redirect(url);

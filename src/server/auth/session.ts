@@ -1,5 +1,8 @@
 import { getIronSession, SessionOptions } from "iron-session";
 import { cookies } from "next/headers";
+import { IS_DEMO_MODE, resolveSessionPassword } from "@/server/auth/session-secret";
+
+export { IS_DEMO_MODE };
 
 /**
  * Session payload — kept tiny so the cookie stays under 4 KB after signing.
@@ -16,7 +19,7 @@ export interface SessionData {
 const SESSION_COOKIE = "tx_session";
 
 function getOptions(): SessionOptions {
-  const password = process.env.SESSION_SECRET;
+  const password = resolveSessionPassword();
   if (!password || password.length < 32) {
     throw new Error(
       "SESSION_SECRET must be set to a 32+ character random string. Run: node -e \"console.log(require('crypto').randomBytes(48).toString('base64'))\"",
