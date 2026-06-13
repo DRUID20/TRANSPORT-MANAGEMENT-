@@ -207,6 +207,7 @@ export default async function DashboardPage() {
           index="day"
           categories={["Freight Revenue", "Direct Costs"]}
           format="kes-compact"
+          delta={revDelta}
         />
 
         <section className="surface-card flex flex-col overflow-hidden">

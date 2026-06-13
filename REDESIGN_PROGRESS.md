@@ -53,7 +53,7 @@ so it lifts many pages at once.
        (scale-in, type-to-confirm destructive). Toasts (bottom-right, undo, auto-dismiss).
        Wire list rows → slide-over.
 - [ ] **7. Status pills** (§8,§2) — one canonical pill component, tinted bg + dot, used app-wide.
-- [ ] **8. Charts restyle** (§10) — area/line (gradient, crosshair, custom tooltip), bars
+- [x] **8. Charts restyle** (§10) — area/line (gradient, crosshair, custom tooltip), bars
        (radius-4 top), donut (center total), sparklines. Restyle existing Recharts usages.
 - [ ] **9. Calendar** (§9) — `/calendar` + scheduling to Notion-Calendar standard.
 - [ ] **10. Reports + print** (§13) — report shells + **light** print stylesheet.
