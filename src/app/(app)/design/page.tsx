@@ -1,17 +1,55 @@
 "use client";
 
-import { CheckCircle2, AlertTriangle, XCircle, Info, Activity } from "lucide-react";
+import { CheckCircle2, AlertTriangle, XCircle, Info, Activity, Truck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  DataTable,
+  DataTableHead,
+  DataTableHeaderCell,
+  DataTableBody,
+  DataTableRow,
+  DataTableCell,
+} from "@/components/ui/data-table";
 import { KpiCard } from "@/components/dashboard/kpi-card";
 import { Sparkline } from "@/components/dashboard/sparkline";
 import { StatusPill } from "@/components/dashboard/status-pill";
 import { Logo } from "@/components/layout/logo";
 
 const trend = [12, 15, 14, 18, 22, 19, 24, 28, 25, 31, 29, 34, 38, 35, 42];
+
+// Deterministic initials avatar — accent-tinted by name hash (§8 first col).
+function DriverAvatar({ name }: { name: string }) {
+  const initials = name
+    .split(" ")
+    .map((p) => p[0])
+    .slice(0, 2)
+    .join("");
+  const tints = [
+    "bg-brand-blue/15 text-brand-blue",
+    "bg-status-success/15 text-status-success",
+    "bg-status-warning/15 text-status-warning",
+    "bg-status-info/15 text-status-info",
+  ];
+  const hash = name.split("").reduce((a, c) => a + c.charCodeAt(0), 0);
+  return (
+    <span
+      className={`inline-flex size-6 shrink-0 items-center justify-center rounded-full text-[10px] font-semibold ${tints[hash % tints.length]}`}
+    >
+      {initials}
+    </span>
+  );
+}
+
+const sampleTrips = [
+  { id: "TRP-2026-0142", plate: "KCB 234L", route: "Mombasa → Kampala", driver: "Joseph Mwangi", litres: 38000, status: "in_transit" as const, amount: 1_240_000 },
+  { id: "TRP-2026-0141", plate: "KDA 887P", route: "Nairobi → Kigali", driver: "Amina Hassan", litres: 41200, status: "at_border" as const, amount: 1_580_000 },
+  { id: "TRP-2026-0140", plate: "KBZ 119Q", route: "Eldoret → Juba", driver: "Peter Otieno", litres: 36500, status: "delayed" as const, amount: 2_010_000 },
+  { id: "TRP-2026-0139", plate: "KCE 552M", route: "Mombasa → Bujumbura", driver: "Grace Wanjiru", litres: 39800, status: "delivered" as const, amount: 1_890_000 },
+];
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
@@ -84,6 +122,45 @@ export default function DesignPage() {
           <StatusPill status="cancelled" />
           <StatusPill status="delayed" />
         </div>
+      </Section>
+
+      <Section title="Data table">
+        <DataTable caption="1–4 of 142 trips · sorted by trip no.">
+          <DataTableHead>
+            <DataTableRow>
+              <DataTableHeaderCell sortHref="#" sortActive sortDir="desc">Trip</DataTableHeaderCell>
+              <DataTableHeaderCell>Truck</DataTableHeaderCell>
+              <DataTableHeaderCell>Route</DataTableHeaderCell>
+              <DataTableHeaderCell>Driver</DataTableHeaderCell>
+              <DataTableHeaderCell sortHref="#" align="right">Litres</DataTableHeaderCell>
+              <DataTableHeaderCell align="center">Status</DataTableHeaderCell>
+              <DataTableHeaderCell sortHref="#" align="right">Amount</DataTableHeaderCell>
+            </DataTableRow>
+          </DataTableHead>
+          <DataTableBody>
+            {sampleTrips.map((t) => (
+              <DataTableRow key={t.id} linkHref="#">
+                <DataTableCell mono className="text-fg-secondary">{t.id}</DataTableCell>
+                <DataTableCell>
+                  <span className="inline-flex items-center gap-2">
+                    <Truck className="size-4 text-fg-tertiary" strokeWidth={1.5} />
+                    <span className="font-mono font-medium tracking-wide">{t.plate}</span>
+                  </span>
+                </DataTableCell>
+                <DataTableCell className="text-fg-secondary">{t.route}</DataTableCell>
+                <DataTableCell>
+                  <span className="inline-flex items-center gap-2">
+                    <DriverAvatar name={t.driver} />
+                    {t.driver}
+                  </span>
+                </DataTableCell>
+                <DataTableCell mono align="right">{t.litres.toLocaleString()}</DataTableCell>
+                <DataTableCell align="center"><StatusPill status={t.status} /></DataTableCell>
+                <DataTableCell mono align="right">{t.amount.toLocaleString()}</DataTableCell>
+              </DataTableRow>
+            ))}
+          </DataTableBody>
+        </DataTable>
       </Section>
 
       <Section title="Form inputs">
