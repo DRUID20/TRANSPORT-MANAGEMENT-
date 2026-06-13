@@ -2,14 +2,14 @@
 
 import { revalidatePath } from "next/cache";
 import {
-  createRate as storeCreate,
-  listRates as storeList,
-  lookupRate as storeLookup,
-} from "@/server/store/mock-store";
+  createRate as repoCreate,
+  listRates as repoList,
+  lookupRate as repoLookup,
+} from "@/server/repos/rates";
 import { rateCreateSchema, type RateCreateInput } from "@/lib/validators/trips";
 
 export async function listRates() {
-  return storeList();
+  return repoList();
 }
 
 export async function lookupRate(args: {
@@ -18,7 +18,7 @@ export async function lookupRate(args: {
   customerId?: string;
   cargoClass?: string;
 }) {
-  return storeLookup(args);
+  return repoLookup(args);
 }
 
 export type ActionResult = { ok: true; id: string } | { ok: false; error: string };
@@ -28,16 +28,20 @@ export async function createRate(input: RateCreateInput): Promise<ActionResult> 
   if (!parsed.success) {
     return { ok: false, error: parsed.error.errors.map((e) => e.message).join("; ") };
   }
-  const created = storeCreate({
-    origin: parsed.data.origin,
-    destination: parsed.data.destination,
-    customerId: parsed.data.customerId || undefined,
-    cargoClass: parsed.data.cargoClass || undefined,
-    basis: parsed.data.basis,
-    amount: parsed.data.amount,
-    currency: parsed.data.currency,
-    notes: parsed.data.notes || undefined,
-  });
-  revalidatePath("/rates");
-  return { ok: true, id: created.id };
+  try {
+    const created = await repoCreate({
+      origin: parsed.data.origin,
+      destination: parsed.data.destination,
+      customerId: parsed.data.customerId || undefined,
+      cargoClass: parsed.data.cargoClass || undefined,
+      basis: parsed.data.basis,
+      amount: parsed.data.amount,
+      currency: parsed.data.currency,
+      notes: parsed.data.notes || undefined,
+    });
+    revalidatePath("/rates");
+    return { ok: true, id: created.id };
+  } catch (err) {
+    return { ok: false, error: err instanceof Error ? err.message : "Failed to save rate." };
+  }
 }

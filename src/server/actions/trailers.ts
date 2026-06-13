@@ -2,12 +2,12 @@
 
 import { revalidatePath } from "next/cache";
 import {
-  createTrailer as storeCreate,
+  createTrailer as repoCreate,
   getTrailer,
-  listTrailers as storeList,
-  listTrucks,
-  updateTrailer as storeUpdate,
-} from "@/server/store/mock-store";
+  listTrailers as repoList,
+  updateTrailer as repoUpdate,
+} from "@/server/repos/trailers";
+import { listTrucks } from "@/server/repos/trucks";
 import { trailerCreateSchema, type TrailerCreateInput } from "@/lib/validators/fleet";
 
 function normalizePlate(input: string): string {
@@ -15,13 +15,14 @@ function normalizePlate(input: string): string {
 }
 
 export async function listTrailers() {
-  return storeList();
+  return repoList();
 }
 export async function getTrailerById(id: string) {
   return getTrailer(id);
 }
 export async function listTrucksForSelect() {
-  return listTrucks().map((t) => ({ id: t.id, registration: t.registration }));
+  const trucks = await listTrucks();
+  return trucks.map((t) => ({ id: t.id, registration: t.registration }));
 }
 
 export type CreateTrailerResult =
@@ -34,26 +35,30 @@ export async function createTrailer(input: TrailerCreateInput): Promise<CreateTr
     return { ok: false, error: parsed.error.errors.map((e) => e.message).join("; ") };
   }
   const data = parsed.data;
-  const created = storeCreate({
-    registration: normalizePlate(data.registration),
-    ownerType: data.ownerType,
-    subcontractorId: data.ownerType === "subcontractor" ? data.subcontractorId : undefined,
-    type: data.type,
-    capacityTonnes: data.capacityTonnes,
-    axles: data.axles,
-    year: data.year,
-    status: data.status,
-    attachedTruckId: data.attachedTruckId || undefined,
-    insuranceExpiry: data.insuranceExpiry || undefined,
-    ntsaInspectionExpiry: data.ntsaInspectionExpiry || undefined,
-    notes: data.notes || undefined,
-  });
-  revalidatePath("/trailers");
-  return { ok: true, id: created.id };
+  try {
+    const created = await repoCreate({
+      registration: normalizePlate(data.registration),
+      ownerType: data.ownerType,
+      subcontractorId: data.ownerType === "subcontractor" ? data.subcontractorId : undefined,
+      type: data.type,
+      capacityTonnes: data.capacityTonnes,
+      axles: data.axles,
+      year: data.year,
+      status: data.status,
+      attachedTruckId: data.attachedTruckId || undefined,
+      insuranceExpiry: data.insuranceExpiry || undefined,
+      ntsaInspectionExpiry: data.ntsaInspectionExpiry || undefined,
+      notes: data.notes || undefined,
+    });
+    revalidatePath("/trailers");
+    return { ok: true, id: created.id };
+  } catch (err) {
+    return { ok: false, error: err instanceof Error ? err.message : "Failed to save trailer." };
+  }
 }
 
 export async function updateTrailerAction(id: string, patch: Partial<TrailerCreateInput>) {
-  storeUpdate(id, patch);
+  await repoUpdate(id, patch);
   revalidatePath("/trailers");
   revalidatePath(`/trailers/${id}`);
 }

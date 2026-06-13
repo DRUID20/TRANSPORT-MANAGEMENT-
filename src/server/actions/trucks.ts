@@ -3,14 +3,14 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import {
-  createTruck as storeCreateTruck,
-  deleteTruck as storeDeleteTruck,
-  getTruck as storeGetTruck,
+  createTruck as repoCreate,
+  deleteTruck as repoDelete,
+  getTruck as repoGet,
   getTruckByRegistration,
-  listSubcontractors,
-  listTrucks as storeListTrucks,
-  updateTruck as storeUpdateTruck,
-} from "@/server/store/mock-store";
+  listTrucks as repoList,
+  updateTruck as repoUpdate,
+} from "@/server/repos/trucks";
+import { listSubcontractors } from "@/server/repos/subcontractors";
 import { truckCreateSchema, type TruckCreateInput } from "@/lib/validators/fleet";
 
 function normalizePlate(input: string): string {
@@ -18,15 +18,16 @@ function normalizePlate(input: string): string {
 }
 
 export async function listTrucks() {
-  return storeListTrucks();
+  return repoList();
 }
 
 export async function getTruck(id: string) {
-  return storeGetTruck(id);
+  return repoGet(id);
 }
 
 export async function listSubcontractorsForSelect() {
-  return listSubcontractors().map((s) => ({ id: s.id, name: s.name }));
+  const subs = await listSubcontractors();
+  return subs.map((s) => ({ id: s.id, name: s.name }));
 }
 
 export type CreateTruckResult =
@@ -40,38 +41,42 @@ export async function createTruck(input: TruckCreateInput): Promise<CreateTruckR
   }
   const data = parsed.data;
   const reg = normalizePlate(data.registration);
-  if (getTruckByRegistration(reg)) {
-    return { ok: false, error: `A truck with registration ${reg} already exists.` };
+  try {
+    if (await getTruckByRegistration(reg)) {
+      return { ok: false, error: `A truck with registration ${reg} already exists.` };
+    }
+    const created = await repoCreate({
+      registration: reg,
+      ownerType: data.ownerType,
+      subcontractorId: data.ownerType === "subcontractor" ? data.subcontractorId : undefined,
+      make: data.make,
+      model: data.model,
+      year: data.year,
+      fuelType: data.fuelType,
+      capacityTonnes: data.capacityTonnes,
+      axles: data.axles,
+      status: data.status,
+      insuranceExpiry: data.insuranceExpiry || undefined,
+      ntsaInspectionExpiry: data.ntsaInspectionExpiry || undefined,
+      comesaPermitExpiry: data.comesaPermitExpiry || undefined,
+      transitPermitExpiry: data.transitPermitExpiry || undefined,
+      notes: data.notes || undefined,
+    });
+    revalidatePath("/trucks");
+    return { ok: true, id: created.id };
+  } catch (err) {
+    return { ok: false, error: err instanceof Error ? err.message : "Failed to save truck." };
   }
-  const created = storeCreateTruck({
-    registration: reg,
-    ownerType: data.ownerType,
-    subcontractorId: data.ownerType === "subcontractor" ? data.subcontractorId : undefined,
-    make: data.make,
-    model: data.model,
-    year: data.year,
-    fuelType: data.fuelType,
-    capacityTonnes: data.capacityTonnes,
-    axles: data.axles,
-    status: data.status,
-    insuranceExpiry: data.insuranceExpiry || undefined,
-    ntsaInspectionExpiry: data.ntsaInspectionExpiry || undefined,
-    comesaPermitExpiry: data.comesaPermitExpiry || undefined,
-    transitPermitExpiry: data.transitPermitExpiry || undefined,
-    notes: data.notes || undefined,
-  });
-  revalidatePath("/trucks");
-  return { ok: true, id: created.id };
 }
 
 export async function updateTruckAction(id: string, patch: Partial<TruckCreateInput>) {
-  storeUpdateTruck(id, patch);
+  await repoUpdate(id, patch);
   revalidatePath("/trucks");
   revalidatePath(`/trucks/${id}`);
 }
 
 export async function deleteTruckAction(id: string) {
-  storeDeleteTruck(id);
+  await repoDelete(id);
   revalidatePath("/trucks");
   redirect("/trucks");
 }

@@ -9,6 +9,7 @@
  */
 
 import { cache } from "react";
+import { unstable_rethrow } from "next/navigation";
 import { getEmployee } from "@/server/store/mock-store";
 import { getSession, type SessionData } from "@/server/auth/session";
 
@@ -34,8 +35,12 @@ export const getCurrentUser = cache(async (): Promise<SessionData | null> => {
       roleKey: session.roleKey,
       organizationId: session.organizationId,
     };
-  } catch {
-    // Session cookie present but SESSION_SECRET changed / decryption failed.
+  } catch (err) {
+    // Re-throw Next's control-flow signals (e.g. the dynamic-rendering
+    // bailout from cookies() during static generation) so routes that read
+    // the session are correctly marked dynamic instead of erroring.
+    unstable_rethrow(err);
+    // Otherwise: cookie present but SESSION_SECRET rotated / undecryptable.
     return null;
   }
 });

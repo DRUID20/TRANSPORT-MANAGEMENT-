@@ -2,25 +2,25 @@
 
 import { revalidatePath } from "next/cache";
 import {
-  createSubcontractor as storeCreate,
+  createSubcontractor as repoCreate,
   getSubcontractor,
-  listSubcontractors as storeList,
-  trucksForSubcontractor,
-  updateSubcontractor as storeUpdate,
-} from "@/server/store/mock-store";
+  listSubcontractors as repoList,
+  updateSubcontractor as repoUpdate,
+} from "@/server/repos/subcontractors";
+import { trucksForSubcontractor } from "@/server/repos/trucks";
 import {
   subcontractorCreateSchema,
   type SubcontractorCreateInput,
 } from "@/lib/validators/fleet";
 
 export async function listSubcontractors() {
-  return storeList();
+  return repoList();
 }
 
 export async function getSubcontractorById(id: string) {
-  const sub = getSubcontractor(id);
+  const sub = await getSubcontractor(id);
   if (!sub) return undefined;
-  const trucks = trucksForSubcontractor(id);
+  const trucks = await trucksForSubcontractor(id);
   return { ...sub, trucks };
 }
 
@@ -35,26 +35,30 @@ export async function createSubcontractor(
   if (!parsed.success) {
     return { ok: false, error: parsed.error.errors.map((e) => e.message).join("; ") };
   }
-  const created = storeCreate({
-    name: parsed.data.name,
-    contactPerson: parsed.data.contactPerson,
-    phone: parsed.data.phone,
-    email: parsed.data.email || undefined,
-    kraPin: parsed.data.kraPin || undefined,
-    mpesaNumber: parsed.data.mpesaNumber || undefined,
-    bankName: parsed.data.bankName || undefined,
-    bankAccount: parsed.data.bankAccount || undefined,
-    notes: parsed.data.notes || undefined,
-  });
-  revalidatePath("/subcontractors");
-  return { ok: true, id: created.id };
+  try {
+    const created = await repoCreate({
+      name: parsed.data.name,
+      contactPerson: parsed.data.contactPerson,
+      phone: parsed.data.phone,
+      email: parsed.data.email || undefined,
+      kraPin: parsed.data.kraPin || undefined,
+      mpesaNumber: parsed.data.mpesaNumber || undefined,
+      bankName: parsed.data.bankName || undefined,
+      bankAccount: parsed.data.bankAccount || undefined,
+      notes: parsed.data.notes || undefined,
+    });
+    revalidatePath("/subcontractors");
+    return { ok: true, id: created.id };
+  } catch (err) {
+    return { ok: false, error: err instanceof Error ? err.message : "Failed to save subcontractor." };
+  }
 }
 
 export async function updateSubcontractorAction(
   id: string,
   patch: Partial<SubcontractorCreateInput>,
 ) {
-  storeUpdate(id, patch);
+  await repoUpdate(id, patch);
   revalidatePath("/subcontractors");
   revalidatePath(`/subcontractors/${id}`);
 }
