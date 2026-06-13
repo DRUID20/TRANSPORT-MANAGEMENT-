@@ -34,13 +34,13 @@ so it lifts many pages at once.
 - [x] **2. KPI cards + dashboard top** (§10,§14) — `4829f11`, fix `b69ada0`
        (shared `components/dashboard/kpi-card.tsx`: 32px mono count-up, border-hover,
         delta pill, sparkline, tone. Icon prop is ReactNode.)
-- [ ] **3. Tables — Mercury standard** (§8) — `components/ui/data-table.tsx`.
+- [x] **3. Tables — Mercury standard** (§8) — `components/ui/data-table.tsx`.
        40px uppercase header w/ sortable arrows; 48px rows, bottom-border only (no zebra/
        vertical lines), hover `--bg-hover`, whole row → slide-over; numbers RIGHT in mono
        tnum; status pills centered; first-col truck(plate+icon)/driver(initials avatar);
        toolbar (search + filter chips + density + export); skeleton loading rows;
        empty-state; pagination "1–25 of 312". Touches every list page.
-- [ ] **4. Topbar + Cmd+K palette** (§7,§14) — `components/layout/topbar.tsx` + new command
+- [x] **4. Topbar + Cmd+K palette** (§7,§14) — `components/layout/topbar.tsx` + new command
        palette (Linear style, Esc/Enter, fuzzy nav across all routes). Breadcrumb left,
        search pill center w/ ⌘K keycap, bell + mono date right.
 - [ ] **5. Buttons + Forms/Inputs** (§5,§6) — audit `button.tsx`, `input.tsx`, `select.tsx`,
