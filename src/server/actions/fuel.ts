@@ -2,20 +2,20 @@
 
 import { revalidatePath } from "next/cache";
 import {
-  createFuelLog as storeCreate,
-  deleteFuelLog as storeDelete,
-  fleetFuelSnapshot as storeFleetSnapshot,
-  fuelLogsForTrip as storeForTrip,
-  fuelLogsForTruck as storeForTruck,
+  createFuelLog as repoCreate,
+  deleteFuelLog as repoDelete,
+  fleetFuelSnapshot as repoFleetSnapshot,
+  fuelLogsForTrip as repoForTrip,
+  fuelLogsForTruck as repoForTruck,
   getFuelLog,
-  listFuelLogs as storeList,
-  tripFuelTotals as storeTripTotals,
-  truckFuelEfficiency as storeTruckEfficiency,
-} from "@/server/store/mock-store";
+  listFuelLogs as repoList,
+  tripFuelTotals as repoTripTotals,
+  truckFuelEfficiency as repoTruckEfficiency,
+} from "@/server/repos/fuel";
 import { fuelLogCreateSchema, type FuelLogCreateInput } from "@/lib/validators/fuel";
 
 export async function listFuelLogs(filter?: { tripId?: string; truckId?: string }) {
-  return storeList(filter);
+  return repoList(filter);
 }
 
 export async function getFuelLogById(id: string) {
@@ -23,23 +23,23 @@ export async function getFuelLogById(id: string) {
 }
 
 export async function fuelLogsForTrip(tripId: string) {
-  return storeForTrip(tripId);
+  return repoForTrip(tripId);
 }
 
 export async function fuelLogsForTruck(truckId: string) {
-  return storeForTruck(truckId);
+  return repoForTruck(truckId);
 }
 
 export async function tripFuelTotals(tripId: string) {
-  return storeTripTotals(tripId);
+  return repoTripTotals(tripId);
 }
 
 export async function truckFuelEfficiency(truckId: string) {
-  return storeTruckEfficiency(truckId);
+  return repoTruckEfficiency(truckId);
 }
 
 export async function fleetFuelSnapshot() {
-  return storeFleetSnapshot();
+  return repoFleetSnapshot();
 }
 
 export type ActionResult = { ok: true; id: string } | { ok: false; error: string };
@@ -49,7 +49,7 @@ export async function createFuelLog(input: FuelLogCreateInput): Promise<ActionRe
   if (!parsed.success) {
     return { ok: false, error: parsed.error.errors.map((e) => e.message).join("; ") };
   }
-  const log = storeCreate({
+  const log = await repoCreate({
     tripId: parsed.data.tripId,
     truckId: parsed.data.truckId,
     driverId: parsed.data.driverId,
@@ -71,9 +71,9 @@ export async function createFuelLog(input: FuelLogCreateInput): Promise<ActionRe
 }
 
 export async function removeFuelLog(id: string): Promise<ActionResult> {
-  const log = getFuelLog(id);
+  const log = await getFuelLog(id);
   if (!log) return { ok: false, error: "Fuel log not found" };
-  storeDelete(id);
+  await repoDelete(id);
   revalidatePath("/fuel");
   if (log.tripId) revalidatePath(`/trips/${log.tripId}`);
   revalidatePath(`/trucks/${log.truckId}`);

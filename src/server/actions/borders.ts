@@ -2,13 +2,13 @@
 
 import { revalidatePath } from "next/cache";
 import {
-  clearBorderCrossing as storeClear,
-  createBorderCrossing as storeCreate,
-  deleteBorderCrossing as storeDelete,
+  clearBorderCrossing as repoClear,
+  createBorderCrossing as repoCreate,
+  deleteBorderCrossing as repoDelete,
   getBorderCrossing,
-  listAllActiveBorderCrossings as storeListActive,
-  listBorderCrossings as storeList,
-} from "@/server/store/mock-store";
+  listAllActiveBorderCrossings as repoListActive,
+  listBorderCrossings as repoList,
+} from "@/server/repos/borders";
 import {
   borderClearSchema,
   borderCreateSchema,
@@ -17,11 +17,11 @@ import {
 } from "@/lib/validators/borders";
 
 export async function listBorderCrossingsForTrip(tripId: string) {
-  return storeList(tripId);
+  return repoList(tripId);
 }
 
 export async function listActiveBorderCrossings() {
-  return storeListActive();
+  return repoListActive();
 }
 
 export async function getBorderCrossingById(id: string) {
@@ -35,7 +35,7 @@ export async function recordBorderArrival(input: BorderCreateInput): Promise<Act
   if (!parsed.success) {
     return { ok: false, error: parsed.error.errors.map((e) => e.message).join("; ") };
   }
-  const created = storeCreate(parsed.data);
+  const created = await repoCreate(parsed.data);
   if (!created) return { ok: false, error: "Trip not found" };
   revalidatePath(`/trips/${parsed.data.tripId}`);
   revalidatePath("/dashboard");
@@ -47,7 +47,7 @@ export async function clearBorder(input: BorderClearInput): Promise<ActionResult
   if (!parsed.success) {
     return { ok: false, error: parsed.error.errors.map((e) => e.message).join("; ") };
   }
-  const updated = storeClear(parsed.data);
+  const updated = await repoClear(parsed.data);
   if (!updated) return { ok: false, error: "Border crossing not found" };
   revalidatePath(`/trips/${updated.tripId}`);
   revalidatePath("/dashboard");
@@ -55,9 +55,9 @@ export async function clearBorder(input: BorderClearInput): Promise<ActionResult
 }
 
 export async function removeBorderCrossing(id: string): Promise<ActionResult> {
-  const existing = getBorderCrossing(id);
+  const existing = await getBorderCrossing(id);
   if (!existing) return { ok: false, error: "Border crossing not found" };
-  storeDelete(id);
+  await repoDelete(id);
   revalidatePath(`/trips/${existing.tripId}`);
   revalidatePath("/dashboard");
   return { ok: true, id };

@@ -2,14 +2,14 @@
 
 import { revalidatePath } from "next/cache";
 import {
-  createExpense as storeCreate,
-  deleteExpense as storeDelete,
-  expensesForTrip as storeForTrip,
+  createExpense as repoCreate,
+  deleteExpense as repoDelete,
+  expensesForTrip as repoForTrip,
   getExpense,
-  listExpenses as storeList,
-  markExpenseReimbursed as storeReimburse,
-  reviewExpense as storeReview,
-} from "@/server/store/mock-store";
+  listExpenses as repoList,
+  markExpenseReimbursed as repoReimburse,
+  reviewExpense as repoReview,
+} from "@/server/repos/expenses";
 import type { ExpenseStatus } from "@/lib/types/expenses";
 import {
   expenseCreateSchema,
@@ -24,7 +24,7 @@ export async function listExpenses(filter?: {
   truckId?: string;
   driverId?: string;
 }) {
-  return storeList(filter);
+  return repoList(filter);
 }
 
 export async function getExpenseById(id: string) {
@@ -32,7 +32,7 @@ export async function getExpenseById(id: string) {
 }
 
 export async function expensesForTrip(tripId: string) {
-  return storeForTrip(tripId);
+  return repoForTrip(tripId);
 }
 
 export type ActionResult = { ok: true; id: string } | { ok: false; error: string };
@@ -42,7 +42,7 @@ export async function createExpense(input: ExpenseCreateInput): Promise<ActionRe
   if (!parsed.success) {
     return { ok: false, error: parsed.error.errors.map((e) => e.message).join("; ") };
   }
-  const e = storeCreate({
+  const e = await repoCreate({
     amountKes: parsed.data.amountKes,
     originalAmount: parsed.data.originalAmount,
     originalCurrency: parsed.data.originalCurrency,
@@ -70,7 +70,7 @@ export async function reviewExpense(input: ExpenseReviewInput): Promise<ActionRe
   if (!parsed.success) {
     return { ok: false, error: parsed.error.errors.map((e) => e.message).join("; ") };
   }
-  const exp = storeReview({
+  const exp = await repoReview({
     expenseId: parsed.data.expenseId,
     approve: parsed.data.approve,
     reason: parsed.data.reason,
@@ -84,7 +84,7 @@ export async function reviewExpense(input: ExpenseReviewInput): Promise<ActionRe
 }
 
 export async function markReimbursed(id: string): Promise<ActionResult> {
-  const exp = storeReimburse(id);
+  const exp = await repoReimburse(id);
   if (!exp) return { ok: false, error: "Expense not found" };
   revalidatePath("/expenses");
   if (exp.tripId) revalidatePath(`/trips/${exp.tripId}`);
@@ -92,9 +92,9 @@ export async function markReimbursed(id: string): Promise<ActionResult> {
 }
 
 export async function removeExpense(id: string): Promise<ActionResult> {
-  const exp = getExpense(id);
+  const exp = await getExpense(id);
   if (!exp) return { ok: false, error: "Expense not found" };
-  storeDelete(id);
+  await repoDelete(id);
   revalidatePath("/expenses");
   if (exp.tripId) revalidatePath(`/trips/${exp.tripId}`);
   return { ok: true, id };

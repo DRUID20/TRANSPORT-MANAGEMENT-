@@ -2,12 +2,12 @@
 
 import { revalidatePath } from "next/cache";
 import {
-  createTripDocument as storeCreate,
-  deleteTripDocument as storeDelete,
+  createTripDocument as repoCreate,
+  deleteTripDocument as repoDelete,
   getTripDocument,
-  listTripDocuments as storeList,
-  reviewTripDocument as storeReview,
-} from "@/server/store/mock-store";
+  listTripDocuments as repoList,
+  reviewTripDocument as repoReview,
+} from "@/server/repos/documents";
 import {
   documentReviewSchema,
   documentUploadSchema,
@@ -16,7 +16,7 @@ import {
 } from "@/lib/validators/documents";
 
 export async function listTripDocuments(tripId: string) {
-  return storeList(tripId);
+  return repoList(tripId);
 }
 
 export async function getDocument(id: string) {
@@ -30,7 +30,7 @@ export async function uploadDocument(input: DocumentUploadInput): Promise<Action
   if (!parsed.success) {
     return { ok: false, error: parsed.error.errors.map((e) => e.message).join("; ") };
   }
-  const doc = storeCreate({
+  const doc = await repoCreate({
     tripId: parsed.data.tripId,
     kind: parsed.data.kind,
     name: parsed.data.name,
@@ -50,7 +50,7 @@ export async function reviewDocument(input: DocumentReviewInput): Promise<Action
   if (!parsed.success) {
     return { ok: false, error: parsed.error.errors.map((e) => e.message).join("; ") };
   }
-  const doc = storeReview({
+  const doc = await repoReview({
     documentId: parsed.data.documentId,
     approve: parsed.data.approve,
     reason: parsed.data.reason,
@@ -62,9 +62,9 @@ export async function reviewDocument(input: DocumentReviewInput): Promise<Action
 }
 
 export async function removeDocument(id: string): Promise<ActionResult> {
-  const doc = getTripDocument(id);
+  const doc = await getTripDocument(id);
   if (!doc) return { ok: false, error: "Document not found" };
-  storeDelete(id);
+  await repoDelete(id);
   revalidatePath(`/trips/${doc.tripId}`);
   return { ok: true, id };
 }
