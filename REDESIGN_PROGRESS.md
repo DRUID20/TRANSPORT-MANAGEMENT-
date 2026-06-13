@@ -89,7 +89,22 @@ so it lifts many pages at once.
    then wire list rows → slide-over once a detail data source exists.
 4. #9 calendar — largest; Notion-Calendar month/week grid.
 
-## Parallel track — DB persistence (separate from visuals)
+## Parallel track — DB persistence
+- DONE: master data (trucks/trailers/drivers/customers/suppliers/subcontractors/rates).
+- DONE: **dispatch core** — bookings + trips + trip_status_events (repos/counters,
+  repos/bookings, repos/trips). Atomic numbering, transactional plan/transition/reconcile
+  with truck/driver side-effects. Read-aggregators (calendar, customers, reports/ullage)
+  redirected. VERIFIED end-to-end on prod: create booking (BK-2026-0001) → confirm →
+  plan trip (TRP-2026-0001, revenue computed) → transition (truck→in_service). Dual-mode kept.
+- DONE: **security** — public API locked (RLS + grants revoked from anon/authenticated);
+  unique-constraint gap still open (see below).
+- NEXT persistence targets (order): expenses → fuel → AR invoices → AP bills → ledger →
+  workshop → HR. Each = repo + swap action + redirect read-aggregators + verify.
+- OPEN (legit/data-integrity): add UNIQUE constraints on natural keys (users.email,
+  trucks.registration, employee_number, document numbers per org) — only organizations.slug
+  is unique today.
+
+## Parallel track — DB persistence (OLD NOTES)
 - Schema is FULLY built in Postgres (50 tables, `693265b`) but only **master data**
   (trucks/trailers/drivers/customers/suppliers/subcontractors/rates) is wired to the DB.
   All other modules still read the **in-memory mock store** (`src/server/db/mock-store` or
