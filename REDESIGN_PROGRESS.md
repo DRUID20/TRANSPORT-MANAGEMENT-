@@ -62,7 +62,10 @@ so it lifts many pages at once.
 - [x] **8. Charts restyle** (§10) — area chart done (gradient 15%→0%, dashed crosshair, custom
        mono tooltip, glow active-dot, header legend + delta). Only area-chart-card + sparkline
        use Recharts. (Bars/donut: none in app yet — add when a screen needs them.)
-- [ ] **9. Calendar** (§9) — `/calendar` + scheduling to Notion-Calendar standard. LARGE/architectural.
+- [~] **9. Calendar** (§9) — already strong: Mon-first month grid, today accent circle, faded
+       other-months, tone event chips + '+N more', week view, filters/legend/view-switcher,
+       event drawer. Tokenized the hardcoded purple→status-info (calendar + todays-dispatch).
+       DEFERRED (future): hourly week-grid with red now-line + drag-to-reschedule (needs backend).
 - [x] **10. Reports + print** (§13) — light print stylesheet: @media print forces light tokens,
        hides sidebar/topbar (print:hidden in app-shell), flattens cards to bordered blocks,
        repeats table headers, @page margins. (Report-builder UI itself: future.)

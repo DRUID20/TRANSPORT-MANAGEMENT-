@@ -38,7 +38,7 @@ const TONE_BG: Record<string, string> = {
   success: "border-status-success/20 bg-status-success/[0.05]",
   warning: "border-status-warning/30 bg-status-warning/[0.06]",
   danger: "border-status-danger/25 bg-status-danger/[0.05]",
-  purple: "border-purple-500/20 bg-purple-500/[0.05]",
+  purple: "border-status-info/20 bg-status-info/[0.05]",
 };
 
 function todayIso(offset = 0): string {

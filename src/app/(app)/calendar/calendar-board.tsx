@@ -72,11 +72,11 @@ const TONE_CLASSES: Record<
     dot: "bg-status-danger",
   },
   purple: {
-    bg: "bg-purple-500/10",
-    text: "text-purple-500",
-    border: "border-purple-500/20",
-    chip: "bg-purple-500/10 text-purple-500 border-purple-500/20 hover:bg-purple-500/15",
-    dot: "bg-purple-500",
+    bg: "bg-status-info/10",
+    text: "text-status-info",
+    border: "border-status-info/20",
+    chip: "bg-status-info/10 text-status-info border-status-info/20 hover:bg-status-info/15",
+    dot: "bg-status-info",
   },
 };
 
