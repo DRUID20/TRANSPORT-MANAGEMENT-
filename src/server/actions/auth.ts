@@ -2,8 +2,9 @@
 
 import { redirect } from "next/navigation";
 import { headers } from "next/headers";
+import { randomInt } from "node:crypto";
 import bcrypt from "bcryptjs";
-import { eq } from "drizzle-orm";
+import { and, desc, eq, gt, isNull } from "drizzle-orm";
 import { getDb } from "@/server/db/client";
 import { users, passwordResetOtps } from "@/server/db/schema";
 import { getSession } from "@/server/auth/session";
@@ -113,28 +114,142 @@ export async function requestPasswordResetOtp(formData: FormData): Promise<Actio
   const user = found[0];
 
   if (user) {
-    // 6-digit code; hashed in the DB so even a DB leak can't grant access.
-    const code = String(Math.floor(100_000 + Math.random() * 900_000));
-    const codeHash = await bcrypt.hash(code, 10);
-    const ip = (await headers()).get("x-forwarded-for")?.split(",")[0]?.trim() ?? null;
+    // Rate-limit: at most 3 active codes issued in the last 15 min per user,
+    // so the endpoint can't be used to email-bomb someone. Silent (no leak).
+    const since = new Date(Date.now() - 15 * 60_000);
+    const recent = await db
+      .select({ id: passwordResetOtps.id })
+      .from(passwordResetOtps)
+      .where(
+        and(
+          eq(passwordResetOtps.userId, user.id),
+          gt(passwordResetOtps.createdAt, since),
+        ),
+      );
 
-    await db.insert(passwordResetOtps).values({
-      userId: user.id,
-      codeHash,
-      expiresAt: new Date(Date.now() + 15 * 60_000),
-      requestedIp: ip,
-    });
+    if (recent.length < 3) {
+      // Invalidate any still-pending codes — only one live code at a time.
+      await db
+        .update(passwordResetOtps)
+        .set({ consumedAt: new Date() })
+        .where(
+          and(
+            eq(passwordResetOtps.userId, user.id),
+            isNull(passwordResetOtps.consumedAt),
+          ),
+        );
 
-    // Email out-of-band — Resend integration lives in a separate module so
-    // missing RESEND_API_KEY doesn't take down the action. Fire-and-forget.
-    try {
-      const { sendPasswordResetOtp } = await import("@/server/email/send-otp");
-      await sendPasswordResetOtp({ to: user.email, fullName: user.fullName, code });
-    } catch (err) {
-      console.error("[auth] OTP email failed:", err);
-      // We don't fail the action — user already saw "if your email exists…"
+      // CSPRNG 6-digit code; hashed in the DB so a DB leak can't grant access.
+      const code = String(randomInt(0, 1_000_000)).padStart(6, "0");
+      const codeHash = await bcrypt.hash(code, 10);
+      const ip = (await headers()).get("x-forwarded-for")?.split(",")[0]?.trim() ?? null;
+
+      await db.insert(passwordResetOtps).values({
+        userId: user.id,
+        codeHash,
+        expiresAt: new Date(Date.now() + 15 * 60_000),
+        requestedIp: ip,
+      });
+
+      // Email out-of-band — Resend lives in a separate module so a missing
+      // RESEND_API_KEY can't take down the action.
+      try {
+        const { sendPasswordResetOtp } = await import("@/server/email/send-otp");
+        await sendPasswordResetOtp({ to: user.email, fullName: user.fullName, code });
+      } catch (err) {
+        console.error("[auth] OTP email failed:", err);
+        // Don't fail — the user already saw the generic "if it exists…" message.
+      }
     }
   }
+
+  return { ok: true };
+}
+
+/**
+ * Verify a password-reset OTP and set a new password. Generic errors only
+ * (never reveals whether the email or code was the problem). The code is
+ * burned after 5 failed attempts to stop brute force; on success all of the
+ * user's pending codes are consumed and any account lock is cleared.
+ */
+export async function verifyPasswordResetOtp(formData: FormData): Promise<ActionResult> {
+  const email = String(formData.get("email") ?? "").trim().toLowerCase();
+  const code = String(formData.get("code") ?? "").trim();
+  const password = String(formData.get("password") ?? "");
+  const confirm = String(formData.get("confirm") ?? "");
+
+  if (!email || !code || !password) {
+    return { ok: false, error: "All fields are required." };
+  }
+  if (!/^\d{6}$/.test(code)) {
+    return { ok: false, error: "Enter the 6-digit code from your email." };
+  }
+  if (password.length < 8) {
+    return { ok: false, error: "Password must be at least 8 characters." };
+  }
+  if (password !== confirm) {
+    return { ok: false, error: "Passwords do not match." };
+  }
+
+  const GENERIC = "That code is invalid or has expired. Request a new one.";
+  const db = getDb();
+  const found = await db.select().from(users).where(eq(users.email, email)).limit(1);
+  const user = found[0];
+  if (!user) return { ok: false, error: GENERIC };
+
+  // Most recent live (unconsumed, unexpired) code for this user.
+  const otpRows = await db
+    .select()
+    .from(passwordResetOtps)
+    .where(
+      and(
+        eq(passwordResetOtps.userId, user.id),
+        isNull(passwordResetOtps.consumedAt),
+        gt(passwordResetOtps.expiresAt, new Date()),
+      ),
+    )
+    .orderBy(desc(passwordResetOtps.createdAt))
+    .limit(1);
+  const otp = otpRows[0];
+  if (!otp) return { ok: false, error: GENERIC };
+
+  // Brute-force guard — burn the code after too many wrong tries.
+  if (otp.attempts >= 5) {
+    await db
+      .update(passwordResetOtps)
+      .set({ consumedAt: new Date() })
+      .where(eq(passwordResetOtps.id, otp.id));
+    return { ok: false, error: GENERIC };
+  }
+
+  const codeOk = await bcrypt.compare(code, otp.codeHash);
+  if (!codeOk) {
+    const attempts = otp.attempts + 1;
+    await db
+      .update(passwordResetOtps)
+      .set({
+        attempts,
+        consumedAt: attempts >= 5 ? new Date() : null,
+      })
+      .where(eq(passwordResetOtps.id, otp.id));
+    return { ok: false, error: GENERIC };
+  }
+
+  // Success — set the new password, clear any lock, and burn ALL pending codes.
+  const passwordHash = await bcrypt.hash(password, 10);
+  await db
+    .update(users)
+    .set({ passwordHash, failedLoginAttempts: 0, lockedUntil: null })
+    .where(eq(users.id, user.id));
+  await db
+    .update(passwordResetOtps)
+    .set({ consumedAt: new Date() })
+    .where(
+      and(
+        eq(passwordResetOtps.userId, user.id),
+        isNull(passwordResetOtps.consumedAt),
+      ),
+    );
 
   return { ok: true };
 }

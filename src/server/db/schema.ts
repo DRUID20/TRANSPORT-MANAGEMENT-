@@ -69,6 +69,8 @@ export const passwordResetOtps = pgTable(
     codeHash: text("code_hash").notNull(),
     expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
     consumedAt: timestamp("consumed_at", { withTimezone: true }),
+    /** Failed verify attempts; the code is burned after 5 to stop brute force. */
+    attempts: integer("attempts").notNull().default(0),
     requestedIp: varchar("requested_ip", { length: 64 }),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },

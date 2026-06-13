@@ -19,9 +19,9 @@ import { DispatchTicker } from "./dispatch-ticker";
 export default async function LoginPage({
   searchParams,
 }: {
-  searchParams: Promise<{ returnTo?: string; error?: string }>;
+  searchParams: Promise<{ returnTo?: string; error?: string; reset?: string }>;
 }) {
-  const { returnTo, error } = await searchParams;
+  const { returnTo, error, reset } = await searchParams;
   const me = await getCurrentUser();
   if (me?.userId) {
     redirect(returnTo && returnTo.startsWith("/") ? returnTo : "/dashboard");
@@ -113,6 +113,12 @@ export default async function LoginPage({
           {error === "session_unconfigured" && (
             <div className="mb-4 rounded-lg border border-status-danger/30 bg-status-danger/5 px-3 py-2 text-xs text-status-danger">
               Server session is misconfigured. Contact your administrator.
+            </div>
+          )}
+
+          {reset === "1" && (
+            <div className="mb-4 rounded-lg border border-status-success/30 bg-status-success/10 px-3 py-2 text-xs text-status-success">
+              Password updated. Sign in with your new password.
             </div>
           )}
 
