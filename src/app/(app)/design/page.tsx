@@ -6,6 +6,8 @@ import { Button } from "@/components/ui/button";
 import { Modal, ConfirmDialog } from "@/components/ui/modal";
 import { SlideOver, SlideOverRow } from "@/components/ui/slide-over";
 import { toast } from "@/components/ui/toast";
+import { Menu, MenuTrigger, MenuContent, MenuItem, MenuSeparator } from "@/components/ui/menu";
+import { Pencil, Copy, Trash2, MoreHorizontal } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
@@ -201,6 +203,21 @@ export default function DesignPage() {
           <Button variant="secondary" onClick={() => setSlideOpen(true)}>
             Open slide-over
           </Button>
+          <Menu>
+            <MenuTrigger asChild>
+              <Button variant="outline">
+                <MoreHorizontal className="size-4" /> Row menu
+              </Button>
+            </MenuTrigger>
+            <MenuContent>
+              <MenuItem icon={<Pencil />} onSelect={() => toast.info("Edit")}>Edit</MenuItem>
+              <MenuItem icon={<Copy />} onSelect={() => toast.info("Duplicated")}>Duplicate</MenuItem>
+              <MenuSeparator />
+              <MenuItem icon={<Trash2 />} destructive onSelect={() => setConfirmOpen(true)}>
+                Delete
+              </MenuItem>
+            </MenuContent>
+          </Menu>
         </div>
 
         <Modal

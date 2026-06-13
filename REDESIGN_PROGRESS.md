@@ -54,7 +54,8 @@ so it lifts many pages at once.
        verified: Toaster (store-based `toast()`, bottom-right, variants, undo action, progress,
        stack≤3, mounted in app-shell); Modal + ConfirmDialog (radix-dialog, scale-in,
        type-to-confirm destructive); SlideOver + SlideOverRow (520px right panel, scrim,
-       sticky footer). REMAINING: dropdown Menu primitive; WIRING into real actions
+       sticky footer). Menu primitive DONE (ui/menu.tsx — Radix dropdown, destructive item below divider).
+       REMAINING: WIRING overlays into real actions
        (delete→ConfirmDialog+toast, list rows→SlideOver) — incremental per page.
 - [x] **7. Status pills** (§8,§2) — canonical `Badge` (ui/badge.tsx) + trip `StatusPill`
        (dashboard/status-pill.tsx): tinted bg + leading dot + colored text. Verified in /design.
