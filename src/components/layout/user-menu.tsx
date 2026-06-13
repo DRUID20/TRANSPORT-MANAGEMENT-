@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { LogOut, Settings, User } from "lucide-react";
+import { LogOut, Settings } from "lucide-react";
 import { signOut } from "@/server/actions/auth";
 
 /**
@@ -71,15 +71,6 @@ export function UserMenu({
             >
               <Settings className="size-3.5 text-fg-tertiary" />
               Settings
-            </Link>
-            <Link
-              href="/notifications/inbox"
-              onClick={() => setOpen(false)}
-              className="flex items-center gap-2 px-3 py-2 text-sm text-fg-secondary transition-colors hover:bg-bg-surface hover:text-fg-primary"
-              role="menuitem"
-            >
-              <User className="size-3.5 text-fg-tertiary" />
-              My inbox
             </Link>
           </div>
           <form action={signOut} className="border-t border-border">

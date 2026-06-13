@@ -14,14 +14,12 @@ import {
   rejectLeaveRequest as storeReject,
 } from "@/server/store/mock-store";
 import type { LeaveStatus, LeaveType } from "@/lib/types/leave";
-import { LEAVE_TYPE_LABELS } from "@/lib/types/leave";
 import {
   attendanceCreateSchema,
   leaveRequestCreateSchema,
   type AttendanceCreateInput,
   type LeaveRequestCreateInput,
 } from "@/lib/validators/leave";
-import { notify } from "@/server/notifications/service";
 
 const HR_MANAGER_ID = "emp-004";
 
@@ -64,22 +62,6 @@ export async function createLeaveRequest(input: LeaveRequestCreateInput): Promis
   if ("error" in r) return { ok: false, error: r.error };
   revalidatePath("/hr/leave");
   revalidatePath(`/hr/employees/${parsed.data.employeeId}`);
-
-  const employee = getEmployee(r.employeeId);
-  await notify({
-    category: "leave_requested",
-    recipientId: HR_MANAGER_ID,
-    payload: {
-      number: r.number,
-      employee: employee?.fullName ?? r.employeeId,
-      leaveType: LEAVE_TYPE_LABELS[r.leaveType],
-      startDate: r.startDate,
-      endDate: r.endDate,
-      days: String(r.days),
-      reason: r.reason,
-    },
-    href: `/hr/leave/${r.id}`,
-  });
   return { ok: true, id: r.id };
 }
 
@@ -90,21 +72,6 @@ export async function approveLeaveRequest(id: string): Promise<ActionResult> {
   revalidatePath("/hr/leave");
   revalidatePath(`/hr/leave/${id}`);
   revalidatePath(`/hr/employees/${r.employeeId}`);
-
-  const approver = getEmployee(HR_MANAGER_ID);
-  await notify({
-    category: "leave_approved",
-    recipientId: r.employeeId,
-    payload: {
-      number: r.number,
-      leaveType: LEAVE_TYPE_LABELS[r.leaveType],
-      startDate: r.startDate,
-      endDate: r.endDate,
-      days: String(r.days),
-      approver: approver?.fullName ?? "HR",
-    },
-    href: `/hr/leave/${r.id}`,
-  });
   return { ok: true, id: r.id };
 }
 
@@ -114,17 +81,6 @@ export async function rejectLeaveRequest(id: string, reason: string): Promise<Ac
   if ("error" in r) return { ok: false, error: r.error };
   revalidatePath("/hr/leave");
   revalidatePath(`/hr/leave/${id}`);
-
-  await notify({
-    category: "leave_rejected",
-    recipientId: r.employeeId,
-    payload: {
-      number: r.number,
-      leaveType: LEAVE_TYPE_LABELS[r.leaveType],
-      reason: reason,
-    },
-    href: `/hr/leave/${r.id}`,
-  });
   return { ok: true, id: r.id };
 }
 

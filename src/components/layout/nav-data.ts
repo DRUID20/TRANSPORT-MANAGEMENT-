@@ -23,7 +23,6 @@ import {
   ClipboardList,
   Tag,
   Fuel as FuelIcon,
-  Smartphone,
   BookOpen,
   ListChecks,
   Scale,
@@ -35,10 +34,6 @@ import {
   CalendarDays,
   GraduationCap,
   KeyRound,
-  Bell,
-  Sliders,
-  FileEdit,
-  Inbox,
   Sparkles,
   Trophy,
   Pause,
@@ -99,7 +94,6 @@ export const navGroups: { title: string; items: NavItem[] }[] = [
     items: [
       { href: "/expenses", label: "Expenses", icon: Receipt },
       { href: "/fuel", label: "Fuel", icon: FuelIcon },
-      { href: "/mpesa", label: "M-Pesa", icon: Smartphone },
       { href: "/accounts", label: "Chart of Accounts", icon: BookOpen },
       { href: "/ledger", label: "General Ledger", icon: ListChecks },
       { href: "/ledger/trial-balance", label: "Trial Balance", icon: Scale },
@@ -110,16 +104,6 @@ export const navGroups: { title: string; items: NavItem[] }[] = [
       { href: "/bank", label: "Bank Reconciliation", icon: Banknote },
       { href: "/reports", label: "Reports", icon: BarChart3 },
       { href: "/management-pack", label: "Management Pack", icon: FileBarChart },
-    ],
-  },
-  {
-    title: "Communications",
-    items: [
-      { href: "/notifications", label: "Notifications", icon: Bell },
-      { href: "/notifications/inbox", label: "Inbox", icon: Inbox },
-      { href: "/notifications/log", label: "Outbound log", icon: ScrollText },
-      { href: "/notifications/templates", label: "Templates", icon: FileEdit },
-      { href: "/notifications/preferences", label: "Preferences", icon: Sliders },
     ],
   },
   {

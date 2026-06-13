@@ -1,13 +1,10 @@
 import { Search } from "lucide-react";
 import { ThemeToggle } from "@/components/layout/theme-toggle";
 import { TopbarClock } from "@/components/layout/topbar-clock";
-import { NotificationBell } from "@/components/layout/notification-bell";
 import { MobileSidebar } from "@/components/layout/mobile-sidebar";
 import { UserMenu } from "@/components/layout/user-menu";
 import { Kbd } from "@/components/ui/kbd";
-import { listNotifications } from "@/server/actions/notifications";
 import {
-  CURRENT_USER_EMPLOYEE_ID,
   getCurrentEmployee,
   getCurrentUser,
 } from "@/server/auth/current-user";
@@ -18,20 +15,13 @@ import {
  * Layout (left to right):
  *  - Mobile menu trigger (md:hidden)
  *  - Command-K search trigger
- *  - Right cluster: clock, theme toggle, notifications bell, user menu
+ *  - Right cluster: clock, theme toggle, user menu
  *
  * The bar is translucent + backdrop-blurred so the page underneath
  * subtly bleeds through when scrolling — the Linear / Vercel feel.
  */
 export async function Topbar() {
-  const [items, sessionUser] = await Promise.all([
-    listNotifications({
-      recipientId: CURRENT_USER_EMPLOYEE_ID,
-      channel: "in_app",
-      limit: 12,
-    }),
-    getCurrentUser(),
-  ]);
+  const sessionUser = await getCurrentUser();
 
   // Identity for the user menu: prefer the signed-in user, fall back to
   // the seed employee so the topbar still renders during the transition
@@ -60,7 +50,6 @@ export async function Topbar() {
       <div className="ml-auto flex items-center gap-1.5">
         <TopbarClock />
         <ThemeToggle />
-        <NotificationBell initialItems={items} />
         <UserMenu fullName={fullName} email={email} initials={initials} />
       </div>
     </header>
