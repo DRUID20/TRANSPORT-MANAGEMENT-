@@ -24,12 +24,16 @@ export async function AppShell({ children }: { children: React.ReactNode }) {
 
   return (
     <TooltipProvider delayDuration={150}>
-      <div className="flex h-screen w-full overflow-hidden bg-bg-base">
-        <Sidebar user={user} />
-        <div className="flex min-w-0 flex-1 flex-col">
-          <Topbar user={user} />
-          <main className="flex-1 overflow-y-auto">
-            <div className="mx-auto w-full max-w-[1280px] px-4 py-5 md:px-6 md:py-6 lg:px-8 lg:py-8">
+      <div className="flex h-screen w-full overflow-hidden bg-bg-base print:block print:h-auto print:overflow-visible">
+        <div className="print:hidden">
+          <Sidebar user={user} />
+        </div>
+        <div className="flex min-w-0 flex-1 flex-col print:block">
+          <div className="print:hidden">
+            <Topbar user={user} />
+          </div>
+          <main className="flex-1 overflow-y-auto print:overflow-visible">
+            <div className="mx-auto w-full max-w-[1280px] px-4 py-5 md:px-6 md:py-6 lg:px-8 lg:py-8 print:max-w-none print:p-0">
               {children}
             </div>
           </main>

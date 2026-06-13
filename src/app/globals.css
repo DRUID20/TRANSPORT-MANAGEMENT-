@@ -241,3 +241,65 @@
     animation: shimmer 1.6s linear infinite;
   }
 }
+
+/* ============================================================
+   PRINT — DESIGN.md §13: reports print on a LIGHT theme (white bg,
+   near-black text), never the dark control-tower theme. App chrome
+   (sidebar, topbar, command palette) is hidden; cards flatten to
+   plain bordered blocks so tables and totals read on paper.
+   ============================================================ */
+@media print {
+  /* Force light tokens regardless of the on-screen theme. */
+  :root,
+  .dark {
+    --bg-base: 255 255 255;
+    --bg-surface: 255 255 255;
+    --bg-elevated: 255 255 255;
+    --bg-elevated-2: 255 255 255;
+    --border: 209 213 219;        /* gray-300 */
+    --border-strong: 156 163 175; /* gray-400 */
+    --text-primary: 17 24 39;     /* gray-900 */
+    --text-secondary: 55 65 81;   /* gray-700 */
+    --text-tertiary: 75 85 99;    /* gray-600 */
+    color-scheme: light;
+  }
+
+  html,
+  body {
+    background: #ffffff !important;
+    color: #111827 !important;
+  }
+
+  /* Anything explicitly marked no-print (action bars, toolbars, etc.). */
+  .no-print,
+  [data-print="hide"] {
+    display: none !important;
+  }
+
+  /* Flatten elevation: borders only, no shadows or tonal fills. */
+  .surface-card,
+  .surface-interactive {
+    box-shadow: none !important;
+    background: #ffffff !important;
+    border: 1px solid rgb(var(--border)) !important;
+    break-inside: avoid;
+  }
+
+  /* Keep table rows intact across page breaks. */
+  tr,
+  thead {
+    break-inside: avoid;
+  }
+  thead {
+    display: table-header-group; /* repeat header on each printed page */
+  }
+
+  a {
+    color: #111827 !important;
+    text-decoration: none !important;
+  }
+
+  @page {
+    margin: 16mm 14mm;
+  }
+}

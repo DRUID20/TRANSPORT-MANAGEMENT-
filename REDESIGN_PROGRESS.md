@@ -52,14 +52,31 @@ so it lifts many pages at once.
        (520px, 250ms, scrim, tabs Details/Documents/History/Costs, sticky footer). Modals
        (scale-in, type-to-confirm destructive). Toasts (bottom-right, undo, auto-dismiss).
        Wire list rows → slide-over.
-- [ ] **7. Status pills** (§8,§2) — one canonical pill component, tinted bg + dot, used app-wide.
-- [x] **8. Charts restyle** (§10) — area/line (gradient, crosshair, custom tooltip), bars
-       (radius-4 top), donut (center total), sparklines. Restyle existing Recharts usages.
-- [ ] **9. Calendar** (§9) — `/calendar` + scheduling to Notion-Calendar standard.
-- [ ] **10. Reports + print** (§13) — report shells + **light** print stylesheet.
-- [ ] **11. Micro-interactions + banned-list sweep** (§14,§15) — route fade/drift, stagger,
-       skeletons everywhere, reduced-motion, scrollbars, selection color; grep for native
-       controls / hardcoded hex / emoji icons / zebra tables and fix.
+- [x] **7. Status pills** (§8,§2) — canonical `Badge` (ui/badge.tsx) + trip `StatusPill`
+       (dashboard/status-pill.tsx): tinted bg + leading dot + colored text. Verified in /design.
+       (Domain statuses — invoice/bill/payroll/leave — should use Badge; spot-check if revisited.)
+- [x] **8. Charts restyle** (§10) — area chart done (gradient 15%→0%, dashed crosshair, custom
+       mono tooltip, glow active-dot, header legend + delta). Only area-chart-card + sparkline
+       use Recharts. (Bars/donut: none in app yet — add when a screen needs them.)
+- [ ] **9. Calendar** (§9) — `/calendar` + scheduling to Notion-Calendar standard. LARGE/architectural.
+- [x] **10. Reports + print** (§13) — light print stylesheet: @media print forces light tokens,
+       hides sidebar/topbar (print:hidden in app-shell), flattens cards to bordered blocks,
+       repeats table headers, @page margins. (Report-builder UI itself: future.)
+- [x] **11. Micro-interactions + banned sweep** (§14,§15) — polish utilities all present in
+       globals.css (::selection, scrollbars, prefers-reduced-motion, .stagger-children,
+       .animate-content-in). Banned sweep CLEAN: no emoji icons (em-dash false positive), hex
+       only in legit spots (theme-color meta, login hero, rgba scrims), white only as text on
+       colored fills. Sole outstanding bans = native date inputs (30 files) + native selects
+       (27) → tracked under #5 deferral.
+
+### Remaining (in priority order for next window)
+1. #10 print stylesheet (safe, self-contained) — IN PROGRESS.
+2. Deferred from #5: custom **DatePicker** (30 files) + custom **Select** (27, 14 controlled).
+   Both need a PORTAL (form sections are `overflow-hidden`) + e2e verify of FormData/onChange.
+   High blast-radius — do as its own careful pass, verify a controlled AND an uncontrolled form.
+3. #6 slide-overs/modals/toasts — additive but large; modals+toasts first (no row wiring),
+   then wire list rows → slide-over once a detail data source exists.
+4. #9 calendar — largest; Notion-Calendar month/week grid.
 
 ## Parallel track — DB persistence (separate from visuals)
 - Schema is FULLY built in Postgres (50 tables, `693265b`) but only **master data**
