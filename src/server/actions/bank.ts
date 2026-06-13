@@ -2,15 +2,15 @@
 
 import { revalidatePath } from "next/cache";
 import {
-  bankReconSummary as storeSummary,
-  createBankStatementTx as storeCreate,
-  deleteBankStatementTx as storeDelete,
-  listBankAccounts as storeBankAccounts,
-  listBankStatementTxs as storeList,
-  matchBankStatementTx as storeMatch,
-  unmatchBankStatementTx as storeUnmatch,
-  unmatchedGlLinesForAccount as storeUnmatchedGl,
-} from "@/server/store/mock-store";
+  bankReconSummary as repoSummary,
+  createBankStatementTx as repoCreate,
+  deleteBankStatementTx as repoDelete,
+  listBankAccounts as repoBankAccounts,
+  listBankStatementTxs as repoList,
+  matchBankStatementTx as repoMatch,
+  unmatchBankStatementTx as repoUnmatch,
+  unmatchedGlLinesForAccount as repoUnmatchedGl,
+} from "@/server/repos/bank";
 import {
   bankMatchSchema,
   bankTxCreateSchema,
@@ -19,19 +19,19 @@ import {
 } from "@/lib/validators/bank";
 
 export async function listBankAccounts() {
-  return storeBankAccounts();
+  return repoBankAccounts();
 }
 
 export async function listBankStatementTxs(accountCode: string) {
-  return storeList(accountCode);
+  return repoList(accountCode);
 }
 
 export async function unmatchedGlLines(accountCode: string) {
-  return storeUnmatchedGl(accountCode);
+  return repoUnmatchedGl(accountCode);
 }
 
 export async function bankReconSummary(accountCode: string) {
-  return storeSummary(accountCode);
+  return repoSummary(accountCode);
 }
 
 export type ActionResult = { ok: true; id: string } | { ok: false; error: string };
@@ -41,7 +41,7 @@ export async function createBankStatementTx(input: BankTxCreateInput): Promise<A
   if (!parsed.success) {
     return { ok: false, error: parsed.error.errors.map((e) => e.message).join("; ") };
   }
-  const result = storeCreate(parsed.data);
+  const result = await repoCreate(parsed.data);
   if ("error" in result) return { ok: false, error: result.error };
   revalidatePath(`/bank/${parsed.data.accountCode}`);
   return { ok: true, id: result.id };
@@ -52,21 +52,21 @@ export async function matchBankTx(input: BankMatchInput): Promise<ActionResult> 
   if (!parsed.success) {
     return { ok: false, error: parsed.error.errors.map((e) => e.message).join("; ") };
   }
-  const result = storeMatch(parsed.data.bankTxId, parsed.data.journalLineId);
+  const result = await repoMatch(parsed.data.bankTxId, parsed.data.journalLineId);
   if ("error" in result) return { ok: false, error: result.error };
   revalidatePath(`/bank/${result.accountCode}`);
   return { ok: true, id: result.id };
 }
 
 export async function unmatchBankTx(bankTxId: string): Promise<ActionResult> {
-  const result = storeUnmatch(bankTxId);
+  const result = await repoUnmatch(bankTxId);
   if ("error" in result) return { ok: false, error: result.error };
   revalidatePath(`/bank/${result.accountCode}`);
   return { ok: true, id: result.id };
 }
 
 export async function deleteBankStatementTx(bankTxId: string): Promise<ActionResult> {
-  const ok = storeDelete(bankTxId);
+  const ok = await repoDelete(bankTxId);
   if (!ok) return { ok: false, error: "Not found" };
   revalidatePath("/bank");
   return { ok: true, id: bankTxId };

@@ -2,14 +2,14 @@
 
 import { revalidatePath } from "next/cache";
 import {
-  accountBalance as storeBalance,
+  accountBalance as repoBalance,
   getJournalEntry,
-  ledgerLinesForAccount as storeLines,
-  listJournalEntries as storeList,
+  ledgerLinesForAccount as repoLines,
+  listJournalEntries as repoList,
   postJournalEntry,
-  reverseJournalEntry as storeReverse,
-  trialBalance as storeTrialBalance,
-} from "@/server/store/mock-store";
+  reverseJournalEntry as repoReverse,
+  trialBalance as repoTrialBalance,
+} from "@/server/repos/ledger";
 import type { JournalReferenceType, JournalStatus } from "@/lib/types/ledger";
 import {
   journalEntryCreateSchema,
@@ -22,7 +22,7 @@ export async function listJournalEntries(filter?: {
   fromDate?: string;
   toDate?: string;
 }) {
-  return storeList(filter);
+  return repoList(filter);
 }
 
 export async function getJournalEntryById(id: string) {
@@ -33,18 +33,18 @@ export async function ledgerLinesForAccount(
   accountId: string,
   range?: { fromDate?: string; toDate?: string },
 ) {
-  return storeLines(accountId, range);
+  return repoLines(accountId, range);
 }
 
 export async function accountBalance(
   accountId: string,
   range?: { fromDate?: string; toDate?: string },
 ) {
-  return storeBalance(accountId, range);
+  return repoBalance(accountId, range);
 }
 
 export async function trialBalance(range?: { fromDate?: string; toDate?: string }) {
-  return storeTrialBalance(range);
+  return repoTrialBalance(range);
 }
 
 export type ActionResult = { ok: true; id: string } | { ok: false; error: string };
@@ -54,7 +54,7 @@ export async function postJournal(input: JournalEntryCreateInput): Promise<Actio
   if (!parsed.success) {
     return { ok: false, error: parsed.error.errors.map((e) => e.message).join("; ") };
   }
-  const result = postJournalEntry(parsed.data);
+  const result = await postJournalEntry(parsed.data);
   if ("error" in result) return { ok: false, error: result.error };
   revalidatePath("/ledger");
   revalidatePath("/ledger/trial-balance");
@@ -65,7 +65,7 @@ export async function postJournal(input: JournalEntryCreateInput): Promise<Actio
 }
 
 export async function reverseJournal(entryId: string): Promise<ActionResult> {
-  const result = storeReverse({ entryId, postedBy: "Finance" });
+  const result = await repoReverse({ entryId, postedBy: "Finance" });
   if ("error" in result) return { ok: false, error: result.error };
   revalidatePath("/ledger");
   revalidatePath(`/ledger/${entryId}`);

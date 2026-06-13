@@ -2,17 +2,17 @@
 
 import { revalidatePath } from "next/cache";
 import {
-  cancelInvoice as storeCancel,
-  createInvoice as storeCreate,
-  getCustomer,
+  cancelInvoice as repoCancel,
+  createInvoice as repoCreate,
   getInvoice,
-  getTrip,
-  invoicesForTrip as storeForTrip,
-  listInvoices as storeList,
-  recordCustomerPayment as storeRecordPayment,
+  invoicesForTrip as repoForTrip,
+  listInvoices as repoList,
+  recordCustomerPayment as repoRecord,
   refreshInvoiceStatuses,
-  sendInvoice as storeSend,
-} from "@/server/store/mock-store";
+  sendInvoice as repoSend,
+} from "@/server/repos/ar";
+import { getCustomer } from "@/server/repos/customers";
+import { getTrip } from "@/server/repos/trips";
 import type { InvoiceStatus } from "@/lib/types/ar";
 import {
   invoiceCreateSchema,
@@ -22,21 +22,23 @@ import {
 } from "@/lib/validators/ar";
 
 export async function listInvoices(filter?: { status?: InvoiceStatus; customerId?: string }) {
-  refreshInvoiceStatuses();
-  return storeList(filter);
+  await refreshInvoiceStatuses();
+  return repoList(filter);
 }
 
 export async function getInvoiceById(id: string) {
-  refreshInvoiceStatuses();
-  const inv = getInvoice(id);
+  await refreshInvoiceStatuses();
+  const inv = await getInvoice(id);
   if (!inv) return undefined;
-  const customer = getCustomer(inv.customerId);
-  const trip = inv.tripId ? getTrip(inv.tripId) : undefined;
+  const [customer, trip] = await Promise.all([
+    getCustomer(inv.customerId),
+    inv.tripId ? getTrip(inv.tripId) : Promise.resolve(undefined),
+  ]);
   return { ...inv, customer, trip };
 }
 
 export async function invoicesForTrip(tripId: string) {
-  return storeForTrip(tripId);
+  return repoForTrip(tripId);
 }
 
 export type ActionResult = { ok: true; id: string } | { ok: false; error: string };
@@ -46,7 +48,7 @@ export async function createInvoice(input: InvoiceCreateInput): Promise<ActionRe
   if (!parsed.success) {
     return { ok: false, error: parsed.error.errors.map((e) => e.message).join("; ") };
   }
-  const result = storeCreate(parsed.data);
+  const result = await repoCreate(parsed.data);
   if ("error" in result) return { ok: false, error: result.error };
   revalidatePath("/invoices");
   if (parsed.data.tripId) revalidatePath(`/trips/${parsed.data.tripId}`);
@@ -54,7 +56,7 @@ export async function createInvoice(input: InvoiceCreateInput): Promise<ActionRe
 }
 
 export async function sendInvoice(id: string): Promise<ActionResult> {
-  const r = storeSend(id);
+  const r = await repoSend(id);
   if ("error" in r) return { ok: false, error: r.error };
   revalidatePath("/invoices");
   revalidatePath(`/invoices/${id}`);
@@ -64,7 +66,7 @@ export async function sendInvoice(id: string): Promise<ActionResult> {
 }
 
 export async function cancelInvoice(id: string): Promise<ActionResult> {
-  const r = storeCancel(id);
+  const r = await repoCancel(id);
   if ("error" in r) return { ok: false, error: r.error };
   revalidatePath("/invoices");
   revalidatePath(`/invoices/${id}`);
@@ -77,7 +79,7 @@ export async function recordPayment(input: PaymentRecordInput): Promise<ActionRe
   if (!parsed.success) {
     return { ok: false, error: parsed.error.errors.map((e) => e.message).join("; ") };
   }
-  const result = storeRecordPayment(parsed.data);
+  const result = await repoRecord(parsed.data);
   if ("error" in result) return { ok: false, error: result.error };
   revalidatePath("/invoices");
   revalidatePath(`/invoices/${parsed.data.invoiceId}`);

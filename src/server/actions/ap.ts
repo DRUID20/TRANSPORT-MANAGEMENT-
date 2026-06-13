@@ -2,15 +2,15 @@
 
 import { revalidatePath } from "next/cache";
 import {
-  cancelBill as storeCancel,
-  createBill as storeCreate,
+  cancelBill as repoCancel,
+  createBill as repoCreate,
   getBill,
-  getSupplier,
-  listBills as storeList,
-  paySupplierBill as storePay,
-  postBill as storePost,
+  listBills as repoList,
+  paySupplierBill as repoPay,
+  postBill as repoPost,
   refreshBillStatuses,
-} from "@/server/store/mock-store";
+} from "@/server/repos/ap";
+import { getSupplier } from "@/server/repos/suppliers";
 import type { BillStatus } from "@/lib/types/ap";
 import {
   billCreateSchema,
@@ -20,15 +20,15 @@ import {
 } from "@/lib/validators/ap";
 
 export async function listBills(filter?: { status?: BillStatus; supplierId?: string }) {
-  refreshBillStatuses();
-  return storeList(filter);
+  await refreshBillStatuses();
+  return repoList(filter);
 }
 
 export async function getBillById(id: string) {
-  refreshBillStatuses();
-  const b = getBill(id);
+  await refreshBillStatuses();
+  const b = await getBill(id);
   if (!b) return undefined;
-  const supplier = getSupplier(b.supplierId);
+  const supplier = await getSupplier(b.supplierId);
   return { ...b, supplier };
 }
 
@@ -39,14 +39,14 @@ export async function createBill(input: BillCreateInput): Promise<ActionResult> 
   if (!parsed.success) {
     return { ok: false, error: parsed.error.errors.map((e) => e.message).join("; ") };
   }
-  const result = storeCreate(parsed.data);
+  const result = await repoCreate(parsed.data);
   if ("error" in result) return { ok: false, error: result.error };
   revalidatePath("/bills");
   return { ok: true, id: result.id };
 }
 
 export async function postBill(id: string): Promise<ActionResult> {
-  const r = storePost(id);
+  const r = await repoPost(id);
   if ("error" in r) return { ok: false, error: r.error };
   revalidatePath("/bills");
   revalidatePath(`/bills/${id}`);
@@ -56,7 +56,7 @@ export async function postBill(id: string): Promise<ActionResult> {
 }
 
 export async function cancelBill(id: string): Promise<ActionResult> {
-  const r = storeCancel(id);
+  const r = await repoCancel(id);
   if ("error" in r) return { ok: false, error: r.error };
   revalidatePath("/bills");
   revalidatePath(`/bills/${id}`);
@@ -69,7 +69,7 @@ export async function payBill(input: BillPaymentInput): Promise<ActionResult> {
   if (!parsed.success) {
     return { ok: false, error: parsed.error.errors.map((e) => e.message).join("; ") };
   }
-  const result = storePay(parsed.data);
+  const result = await repoPay(parsed.data);
   if ("error" in result) return { ok: false, error: result.error };
   revalidatePath("/bills");
   revalidatePath(`/bills/${parsed.data.billId}`);

@@ -1,11 +1,11 @@
 "use server";
 
 import {
-  accountClassCounts as storeCounts,
+  accountClassCounts as repoCounts,
   getAccount,
   getAccountByCode,
-  listAccounts as storeList,
-} from "@/server/store/mock-store";
+  listAccounts as repoList,
+} from "@/server/repos/accounts";
 import type { AccountClass, AccountStatus } from "@/lib/types/accounts";
 
 export async function listAccounts(filter?: {
@@ -13,7 +13,7 @@ export async function listAccounts(filter?: {
   status?: AccountStatus;
   search?: string;
 }) {
-  return storeList(filter);
+  return repoList(filter);
 }
 
 export async function getAccountById(id: string) {
@@ -25,5 +25,5 @@ export async function getAccountByCodeAction(code: string) {
 }
 
 export async function accountClassCounts() {
-  return storeCounts();
+  return repoCounts();
 }
