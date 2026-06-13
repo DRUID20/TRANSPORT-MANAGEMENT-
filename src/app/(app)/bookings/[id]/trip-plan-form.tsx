@@ -8,18 +8,15 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { FormField, FormSection } from "@/components/ui/form-section";
-import { FormFooter } from "@/components/ui/form-footer";
+import { FormField } from "@/components/ui/form-section";
 
 type T = { id: string; registration: string };
 type Drv = { id: string; fullName: string };
 
 /**
  * TripPlanForm — converts a confirmed booking into a dispatched trip.
- *
- * Renders inside the booking detail page. Three logical groups:
- * crew & equipment (truck + trailer + driver), schedule (dates), and
- * costs (driver advance) + free-form dispatch notes.
+ * Lives inline inside the booking detail page now, so it skips the
+ * outer FormSection chrome and renders as a tight inline grid.
  */
 export function TripPlanForm({
   bookingId,
@@ -66,61 +63,41 @@ export function TripPlanForm({
   }
 
   return (
-    <form onSubmit={onSubmit} className="flex flex-col gap-5 pb-20">
+    <form onSubmit={onSubmit} className="flex flex-col gap-5">
       {error && (
-        <div className="surface-card animate-content-in border-status-danger/30 bg-status-danger/5 p-4 text-sm text-status-danger">
+        <div className="rounded-lg border border-status-danger/30 bg-status-danger/5 p-3 text-sm text-status-danger">
           {error}
         </div>
       )}
 
-      <FormSection
-        eyebrow="Step 1"
-        title="Crew & equipment"
-        description="Assign the tanker, optional trailer, and driver who'll run this load."
-        columns={3}
-      >
+      <div className="grid gap-4 sm:grid-cols-3">
         <FormField label="Truck" required>
           <Select name="truckId" required defaultValue="">
-            <option value="" disabled>
-              Select a truck…
-            </option>
+            <option value="" disabled>Select</option>
             {trucks.map((t) => (
-              <option key={t.id} value={t.id}>
-                {t.registration}
-              </option>
+              <option key={t.id} value={t.id}>{t.registration}</option>
             ))}
           </Select>
         </FormField>
         <FormField label="Trailer" hint="OPTIONAL">
           <Select name="trailerId" defaultValue="">
-            <option value="">— None —</option>
+            <option value="">None</option>
             {trailers.map((t) => (
-              <option key={t.id} value={t.id}>
-                {t.registration}
-              </option>
+              <option key={t.id} value={t.id}>{t.registration}</option>
             ))}
           </Select>
         </FormField>
         <FormField label="Driver" required>
           <Select name="driverId" required defaultValue="">
-            <option value="" disabled>
-              Select a driver…
-            </option>
+            <option value="" disabled>Select</option>
             {drivers.map((d) => (
-              <option key={d.id} value={d.id}>
-                {d.fullName}
-              </option>
+              <option key={d.id} value={d.id}>{d.fullName}</option>
             ))}
           </Select>
         </FormField>
-      </FormSection>
+      </div>
 
-      <FormSection
-        eyebrow="Step 2"
-        title="Schedule & costs"
-        description="Dates default to the booking's requested date — adjust if dispatch slipped. The driver advance is cash issued for fuel, tolls, border and food."
-        columns={3}
-      >
+      <div className="grid gap-4 sm:grid-cols-3">
         <FormField label="Planned departure">
           <Input
             name="plannedDepartureDate"
@@ -130,11 +107,7 @@ export function TripPlanForm({
           />
         </FormField>
         <FormField label="Planned delivery">
-          <Input
-            name="plannedDeliveryDate"
-            type="date"
-            className="font-mono tnum"
-          />
+          <Input name="plannedDeliveryDate" type="date" className="font-mono tnum" />
         </FormField>
         <FormField label="Driver advance" hint="KES">
           <Input
@@ -147,53 +120,21 @@ export function TripPlanForm({
             leadingIcon={<Banknote />}
           />
         </FormField>
-      </FormSection>
+      </div>
 
-      <FormSection
-        eyebrow="Optional"
-        title="Dispatch notes"
-        description="Anything the driver should know before loading at the depot."
-        columns={1}
-      >
-        <FormField label="Notes" hint="OPTIONAL">
-          <Textarea
-            name="notes"
-            rows={3}
-            placeholder="e.g. Customer prefers AM delivery · Loop via Limuru weighbridge"
-          />
-        </FormField>
-      </FormSection>
+      <FormField label="Notes" hint="OPTIONAL">
+        <Textarea
+          name="notes"
+          rows={2}
+          placeholder="Customer release, route preferences"
+        />
+      </FormField>
 
-      <FormFooter
-        meta={
-          <span>
-            Once planned, the booking transitions to planned and the trip
-            appears on the dispatch board.
-          </span>
-        }
-      >
-        <Button
-          type="button"
-          variant="secondary"
-          onClick={() => router.back()}
-          disabled={loading}
-        >
-          Cancel
-        </Button>
+      <div className="flex items-center justify-end">
         <Button type="submit" disabled={loading}>
-          {loading ? (
-            <>
-              <Loader2 className="size-4 animate-spin" />
-              Planning…
-            </>
-          ) : (
-            <>
-              <Send className="size-4" />
-              Plan trip
-            </>
-          )}
+          {loading ? <><Loader2 className="size-3.5 animate-spin" />Planning</> : <><Send className="size-3.5" />Plan trip</>}
         </Button>
-      </FormFooter>
+      </div>
     </form>
   );
 }
