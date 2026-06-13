@@ -53,3 +53,6 @@ yarn-error.log*
 
 # drizzle migrations are committed (schema source of truth)
 
+
+# Skill CLI scratch (the npx tool's symlink dir — we commit real files under .claude/skills/)
+.agents/
