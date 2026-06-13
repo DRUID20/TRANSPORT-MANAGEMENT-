@@ -4981,12 +4981,15 @@ const employees = new Map<string, Employee>(
   DEMO_DATA ? employeeSeed.map((e) => [e.id, e]) : [],
 );
 
-// Set department heads now that employees exist
-departments.set("dept-mgmt", { ...departments.get("dept-mgmt")!, headEmployeeId: "emp-001" });
-departments.set("dept-fin",  { ...departments.get("dept-fin")!,  headEmployeeId: "emp-002" });
-departments.set("dept-ops",  { ...departments.get("dept-ops")!,  headEmployeeId: "emp-003" });
-departments.set("dept-hr",   { ...departments.get("dept-hr")!,   headEmployeeId: "emp-004" });
-departments.set("dept-wsp",  { ...departments.get("dept-wsp")!,  headEmployeeId: "emp-005" });
+// Set department heads now that employees exist (demo data only — these
+// spread the seeded department rows, which don't exist when DEMO_DATA is off).
+if (DEMO_DATA) {
+  departments.set("dept-mgmt", { ...departments.get("dept-mgmt")!, headEmployeeId: "emp-001" });
+  departments.set("dept-fin",  { ...departments.get("dept-fin")!,  headEmployeeId: "emp-002" });
+  departments.set("dept-ops",  { ...departments.get("dept-ops")!,  headEmployeeId: "emp-003" });
+  departments.set("dept-hr",   { ...departments.get("dept-hr")!,   headEmployeeId: "emp-004" });
+  departments.set("dept-wsp",  { ...departments.get("dept-wsp")!,  headEmployeeId: "emp-005" });
+}
 
 const contractSeed: Contract[] = [
   {
