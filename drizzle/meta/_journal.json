@@ -15,6 +15,13 @@
       "when": 1781363738805,
       "tag": "0001_phase1_master_data",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1781375250031,
+      "tag": "0002_phase2_full_domain",
+      "breakpoints": true
     }
   ]
 }
