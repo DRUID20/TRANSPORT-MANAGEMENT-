@@ -5,7 +5,6 @@ import { useEffect, useState, useTransition } from "react";
 import {
   Banknote,
   Droplet,
-  Fuel,
   Loader2,
   RotateCcw,
   Save,
@@ -29,7 +28,7 @@ import {
 
 type Cus = { id: string; name: string; billingCurrency: "KES" | "USD" };
 
-const DEFAULT_DESTINATIONS = [
+const DESTINATIONS = [
   "Nairobi",
   "Kisumu",
   "Eldoret",
@@ -49,11 +48,11 @@ type Errors = Partial<
   >
 >;
 
-const INITIAL = {
+const INIT = {
   customerId: "",
   product: "AGO" as FuelProduct,
   origin: FUEL_DEPOTS[0],
-  destination: DEFAULT_DESTINATIONS[0]!,
+  destination: DESTINATIONS[0]!,
   destinationOther: "",
   cargoQuantity: "",
   requestedDate: "",
@@ -75,36 +74,33 @@ export function BookingCreateForm({
   const [error, setError] = useState<string | null>(null);
   const [errors, setErrors] = useState<Errors>({});
 
-  const [customerId, setCustomerId] = useState(preselectCustomerId ?? INITIAL.customerId);
-  const [product, setProduct] = useState<FuelProduct>(INITIAL.product);
-  const [origin, setOrigin] = useState<string>(INITIAL.origin);
-  const [destination, setDestination] = useState<string>(INITIAL.destination);
-  const [destinationOther, setDestinationOther] = useState(INITIAL.destinationOther);
-  const [cargoQuantity, setCargoQuantity] = useState(INITIAL.cargoQuantity);
-  const [requestedDate, setRequestedDate] = useState(INITIAL.requestedDate);
-  const [agreedAmount, setAgreedAmount] = useState(INITIAL.agreedAmount);
-  const [agreedBasis, setAgreedBasis] = useState<RateBasis>(INITIAL.agreedBasis);
-  const [agreedCurrency, setAgreedCurrency] = useState<typeof INITIAL.agreedCurrency>(
-    INITIAL.agreedCurrency,
+  const [customerId, setCustomerId] = useState(preselectCustomerId ?? INIT.customerId);
+  const [product, setProduct] = useState<FuelProduct>(INIT.product);
+  const [origin, setOrigin] = useState<string>(INIT.origin);
+  const [destination, setDestination] = useState<string>(INIT.destination);
+  const [destinationOther, setDestinationOther] = useState(INIT.destinationOther);
+  const [cargoQuantity, setCargoQuantity] = useState(INIT.cargoQuantity);
+  const [requestedDate, setRequestedDate] = useState(INIT.requestedDate);
+  const [agreedAmount, setAgreedAmount] = useState(INIT.agreedAmount);
+  const [agreedBasis, setAgreedBasis] = useState<RateBasis>(INIT.agreedBasis);
+  const [agreedCurrency, setAgreedCurrency] = useState<typeof INIT.agreedCurrency>(
+    INIT.agreedCurrency,
   );
-  const [notes, setNotes] = useState(INITIAL.notes);
+  const [notes, setNotes] = useState(INIT.notes);
   const [rateHint, setRateHint] = useState<string | null>(null);
   const [lookingUp, startLookup] = useTransition();
 
-  // Workspace defaults from /settings (localStorage). Applied once on
-  // mount so the dispatcher's usual depot + currency come pre-selected.
+  // Hydrate workspace defaults from /settings.
   useEffect(() => {
     try {
       const depot = window.localStorage.getItem("tx.prefs.defaultDepot");
-      if (depot && (FUEL_DEPOTS as readonly string[]).includes(depot)) {
-        setOrigin(depot);
-      }
+      if (depot && (FUEL_DEPOTS as readonly string[]).includes(depot)) setOrigin(depot);
       const cur = window.localStorage.getItem("tx.prefs.defaultCurrency");
       if (cur && ["KES", "USD", "UGX", "TZS", "RWF"].includes(cur)) {
-        setAgreedCurrency(cur as typeof INITIAL.agreedCurrency);
+        setAgreedCurrency(cur as typeof INIT.agreedCurrency);
       }
     } catch {
-      // localStorage unavailable — keep built-in defaults.
+      // Private mode — silent fallback.
     }
   }, []);
 
@@ -112,17 +108,17 @@ export function BookingCreateForm({
     destination === "Other (specify)" ? destinationOther.trim() : destination;
 
   function onReset() {
-    setCustomerId(preselectCustomerId ?? INITIAL.customerId);
-    setProduct(INITIAL.product);
-    setOrigin(INITIAL.origin);
-    setDestination(INITIAL.destination);
-    setDestinationOther(INITIAL.destinationOther);
-    setCargoQuantity(INITIAL.cargoQuantity);
-    setRequestedDate(INITIAL.requestedDate);
-    setAgreedAmount(INITIAL.agreedAmount);
-    setAgreedBasis(INITIAL.agreedBasis);
-    setAgreedCurrency(INITIAL.agreedCurrency);
-    setNotes(INITIAL.notes);
+    setCustomerId(preselectCustomerId ?? INIT.customerId);
+    setProduct(INIT.product);
+    setOrigin(INIT.origin);
+    setDestination(INIT.destination);
+    setDestinationOther(INIT.destinationOther);
+    setCargoQuantity(INIT.cargoQuantity);
+    setRequestedDate(INIT.requestedDate);
+    setAgreedAmount(INIT.agreedAmount);
+    setAgreedBasis(INIT.agreedBasis);
+    setAgreedCurrency(INIT.agreedCurrency);
+    setNotes(INIT.notes);
     setErrors({});
     setError(null);
     setRateHint(null);
@@ -137,34 +133,28 @@ export function BookingCreateForm({
         customerId: customerId || undefined,
       });
       if (!rate) {
-        setRateHint(
-          `No rate found for ${origin} → ${finalDestination || "destination"}. Add one in /rates.`,
-        );
+        setRateHint(`No rate on file for ${origin} to ${finalDestination || "destination"}.`);
         return;
       }
       setAgreedAmount(String(rate.amount));
       setAgreedBasis(rate.basis);
       setAgreedCurrency(rate.currency);
-      setRateHint(
-        rate.customerId
-          ? "Customer-specific rate applied."
-          : "Default route rate applied.",
-      );
+      setRateHint(rate.customerId ? "Customer rate applied." : "Default rate applied.");
     });
   }
 
   function validate(): boolean {
     const next: Errors = {};
-    if (!customerId) next.customerId = "Pick a customer to invoice.";
+    if (!customerId) next.customerId = "Required.";
     if (destination === "Other (specify)" && !destinationOther.trim()) {
-      next.destination = "Specify the destination name.";
+      next.destination = "Specify the destination.";
     }
     if (!cargoQuantity || Number(cargoQuantity) <= 0) {
-      next.cargoQuantity = "Enter volume in litres.";
+      next.cargoQuantity = "Enter litres.";
     }
-    if (!requestedDate) next.requestedDate = "Pick a requested date.";
+    if (!requestedDate) next.requestedDate = "Required.";
     if (!agreedAmount || Number(agreedAmount) <= 0) {
-      next.agreedAmount = "Enter the agreed amount.";
+      next.agreedAmount = "Required.";
     }
     setErrors(next);
     return Object.keys(next).length === 0;
@@ -197,88 +187,43 @@ export function BookingCreateForm({
   }
 
   return (
-    <form onSubmit={onSubmit} className="flex flex-col gap-5 pb-20">
+    <form onSubmit={onSubmit} className="stagger-children flex flex-col gap-4 pb-24">
       {error && (
-        <div className="surface-card animate-content-in border-status-danger/30 bg-status-danger/5 p-4 text-sm text-status-danger">
+        <div className="surface-card animate-content-in border-status-danger/30 bg-status-danger/5 p-3 text-sm text-status-danger">
           {error}
         </div>
       )}
 
-      <FormSection
-        eyebrow="Step 1"
-        title="Customer & route"
-        description="Pick the customer to invoice, the depot for loading, and the off-take point for delivery."
-        columns={2}
-      >
-        <FormField
-          label="Customer"
-          required
-          className="sm:col-span-2"
-          error={errors.customerId}
-          helper={!errors.customerId ? "Drives invoicing currency and rate lookup." : undefined}
-        >
+      <FormSection title="Customer and route" columns={2}>
+        <FormField label="Customer" required className="sm:col-span-2" error={errors.customerId}>
           <Select
             value={customerId}
             onChange={(e) => setCustomerId(e.currentTarget.value)}
             required
             error={Boolean(errors.customerId)}
           >
-            <option value="" disabled>
-              Select a customer…
-            </option>
+            <option value="" disabled>Select customer</option>
             {customers.map((c) => (
-              <option key={c.id} value={c.id}>
-                {c.name} ({c.billingCurrency})
-              </option>
+              <option key={c.id} value={c.id}>{c.name} ({c.billingCurrency})</option>
             ))}
           </Select>
         </FormField>
-        <FormField label="Origin (depot)" required>
-          <Select
-            value={origin}
-            onChange={(e) => setOrigin(e.currentTarget.value)}
-            required
-          >
-            {FUEL_DEPOTS.map((d) => (
-              <option key={d} value={d}>
-                {d}
-              </option>
-            ))}
+        <FormField label="Origin" required>
+          <Select value={origin} onChange={(e) => setOrigin(e.currentTarget.value)} required>
+            {FUEL_DEPOTS.map((d) => <option key={d} value={d}>{d}</option>)}
           </Select>
         </FormField>
-        <FormField
-          label="Destination"
-          required
-          error={errors.destination}
-          helper={
-            !errors.destination
-              ? "Pick a preset or choose 'Other (specify)' to type a new one."
-              : undefined
-          }
-        >
-          <Select
-            value={destination}
-            onChange={(e) => setDestination(e.currentTarget.value)}
-            required
-          >
-            {DEFAULT_DESTINATIONS.map((d) => (
-              <option key={d} value={d}>
-                {d}
-              </option>
-            ))}
+        <FormField label="Destination" required error={errors.destination}>
+          <Select value={destination} onChange={(e) => setDestination(e.currentTarget.value)} required>
+            {DESTINATIONS.map((d) => <option key={d} value={d}>{d}</option>)}
           </Select>
         </FormField>
         {destination === "Other (specify)" && (
-          <FormField
-            label="Destination name"
-            required
-            className="sm:col-span-2"
-            error={errors.destination}
-          >
+          <FormField label="Destination name" required className="sm:col-span-2" error={errors.destination}>
             <Input
               value={destinationOther}
               onChange={(e) => setDestinationOther(e.currentTarget.value)}
-              placeholder="e.g. Lokichogio, Mtwapa, Mwanza…"
+              placeholder="Lokichogio"
               error={Boolean(errors.destination)}
               required
             />
@@ -286,13 +231,8 @@ export function BookingCreateForm({
         )}
       </FormSection>
 
-      <FormSection
-        eyebrow="Step 2"
-        title="Product & volume"
-        description="Loading observations (temperature, density, dipstick) are captured later from the depot loading sheet."
-        columns={3}
-      >
-        <FormField label="Product" required className="sm:col-span-1">
+      <FormSection title="Product and volume" columns={3}>
+        <FormField label="Product" required>
           <SegmentedControl
             value={product}
             onChange={setProduct}
@@ -304,12 +244,7 @@ export function BookingCreateForm({
             fullWidth
           />
         </FormField>
-        <FormField
-          label="Quantity"
-          required
-          hint="LITRES"
-          error={errors.cargoQuantity}
-        >
+        <FormField label="Quantity" required hint="LITRES" error={errors.cargoQuantity}>
           <Input
             value={cargoQuantity}
             onChange={(e) => setCargoQuantity(e.currentTarget.value)}
@@ -333,9 +268,7 @@ export function BookingCreateForm({
       </FormSection>
 
       <FormSection
-        eyebrow="Step 3"
         title="Rate"
-        description="Pulled from the rate table — you can override. Per-litre or per-litre-per-km is the typical fuel-haul basis."
         action={
           <Button
             type="button"
@@ -344,12 +277,8 @@ export function BookingCreateForm({
             onClick={onLookupRate}
             disabled={lookingUp || !origin || !finalDestination}
           >
-            {lookingUp ? (
-              <Loader2 className="size-3.5 animate-spin" />
-            ) : (
-              <Sparkles className="size-3.5" />
-            )}
-            Lookup rate
+            {lookingUp ? <Loader2 className="size-3.5 animate-spin" /> : <Sparkles className="size-3.5" />}
+            Lookup
           </Button>
         }
         columns={3}
@@ -368,21 +297,15 @@ export function BookingCreateForm({
           />
         </FormField>
         <FormField label="Basis" required>
-          <Select
-            value={agreedBasis}
-            onChange={(e) => setAgreedBasis(e.currentTarget.value as RateBasis)}
-          >
+          <Select value={agreedBasis} onChange={(e) => setAgreedBasis(e.currentTarget.value as RateBasis)}>
             <option value="per_litre">Per litre</option>
             <option value="per_litre_per_km">Per litre per km</option>
-            <option value="per_trip">Per trip (flat)</option>
+            <option value="per_trip">Per trip</option>
             <option value="per_km">Per km</option>
           </Select>
         </FormField>
         <FormField label="Currency" required>
-          <Select
-            value={agreedCurrency}
-            onChange={(e) => setAgreedCurrency(e.currentTarget.value as never)}
-          >
+          <Select value={agreedCurrency} onChange={(e) => setAgreedCurrency(e.currentTarget.value as never)}>
             <option value="KES">KES</option>
             <option value="USD">USD</option>
             <option value="UGX">UGX</option>
@@ -391,35 +314,23 @@ export function BookingCreateForm({
           </Select>
         </FormField>
         {rateHint && (
-          <p className="sm:col-span-3 -mt-1 text-xs text-fg-tertiary">{rateHint}</p>
+          <p className="sm:col-span-3 -mt-1 text-[11px] text-fg-tertiary">{rateHint}</p>
         )}
       </FormSection>
 
-      <FormSection
-        eyebrow="Optional"
-        title="Notes"
-        description="Customer release reference, special instructions, demurrage clauses, anything the dispatcher needs."
-        columns={1}
-      >
+      <FormSection title="Notes" columns={1}>
         <FormField label="Notes" hint="OPTIONAL">
           <Textarea
             value={notes}
             onChange={(e) => setNotes(e.currentTarget.value)}
-            rows={3}
-            placeholder="e.g. KPC release ref RL-2026-0481. Customer prefers AM delivery."
+            rows={2}
+            placeholder="Release reference, special instructions"
           />
         </FormField>
       </FormSection>
 
-      <FormFooter
-        meta={
-          <span className="inline-flex items-center gap-1.5">
-            <Fuel className="size-3.5 text-fg-tertiary" />
-            All times in EAT. Booking creates a draft trip you can plan into dispatch.
-          </span>
-        }
-      >
-        <Button type="button" variant="ghost" onClick={onReset} disabled={loading}>
+      <FormFooter>
+        <Button type="button" variant="ghost" size="sm" onClick={onReset} disabled={loading}>
           <RotateCcw className="size-3.5" />
           Reset
         </Button>
@@ -427,17 +338,7 @@ export function BookingCreateForm({
           Cancel
         </Button>
         <Button type="submit" disabled={loading || !customerId}>
-          {loading ? (
-            <>
-              <Loader2 className="size-4 animate-spin" />
-              Saving…
-            </>
-          ) : (
-            <>
-              <Save className="size-4" />
-              Save booking
-            </>
-          )}
+          {loading ? <><Loader2 className="size-3.5 animate-spin" />Saving</> : <><Save className="size-3.5" />Save</>}
         </Button>
       </FormFooter>
     </form>

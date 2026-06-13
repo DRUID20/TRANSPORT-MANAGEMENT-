@@ -40,7 +40,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         className={cn(
           fontSans.variable,
           fontMono.variable,
-          "min-h-screen bg-bg-base font-sans text-fg-primary antialiased",
+          "min-h-screen bg-bg-base font-sans text-[15px] text-fg-primary antialiased",
         )}
       >
         <ThemeProvider>{children}</ThemeProvider>

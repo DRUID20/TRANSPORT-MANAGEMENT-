@@ -76,7 +76,8 @@
   html,
   body {
     @apply bg-bg-base text-fg-primary;
-    font-family: var(--font-sans), system-ui, sans-serif;
+    font-family: var(--font-geist-sans), system-ui, -apple-system, sans-serif;
+    font-feature-settings: "rlig" 1, "calt" 1, "ss01" 1;
     -webkit-font-smoothing: antialiased;
     text-rendering: optimizeLegibility;
   }
@@ -185,10 +186,26 @@
     box-shadow: 0 6px 20px rgba(15, 23, 42, 0.08);
   }
 
-  /* Smooth content-in keyframe used by sections + drawers */
+  /* Content-in keyframe used by sections + drawers + form sections.
+     280ms spring-out, opacity-only by default in reduced motion. */
   .animate-content-in {
     animation: contentIn 280ms cubic-bezier(0.16, 1, 0.3, 1) both;
   }
+
+  /* Section stagger — child sections fade in sequentially, ~40ms apart.
+     Apply .stagger-children on the parent. Children opt in to the
+     animation via :nth-child via the keyframe below. */
+  .stagger-children > * {
+    animation: contentIn 320ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  }
+  .stagger-children > *:nth-child(1) { animation-delay: 0ms; }
+  .stagger-children > *:nth-child(2) { animation-delay: 40ms; }
+  .stagger-children > *:nth-child(3) { animation-delay: 80ms; }
+  .stagger-children > *:nth-child(4) { animation-delay: 120ms; }
+  .stagger-children > *:nth-child(5) { animation-delay: 160ms; }
+  .stagger-children > *:nth-child(6) { animation-delay: 200ms; }
+  .stagger-children > *:nth-child(7) { animation-delay: 240ms; }
+  .stagger-children > *:nth-child(8) { animation-delay: 280ms; }
 
   @keyframes contentIn {
     from {
@@ -198,6 +215,19 @@
     to {
       opacity: 1;
       transform: translateY(0);
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .animate-content-in,
+    .stagger-children > * {
+      animation: none !important;
+    }
+    .lift-on-hover {
+      transition: none !important;
+    }
+    .lift-on-hover:hover {
+      transform: none !important;
     }
   }
 
