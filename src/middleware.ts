@@ -19,6 +19,9 @@ const PUBLIC_PATHS = [
   "/forgot-password",
   "/_next",
   "/favicon.ico",
+  "/manifest.webmanifest",
+  "/robots.txt",
+  "/sitemap.xml",
 ];
 
 const SESSION_COOKIE = "tx_session";
