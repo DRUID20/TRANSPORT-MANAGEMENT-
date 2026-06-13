@@ -1,4 +1,8 @@
 import { NextResponse } from "next/server";
+
+// exceljs needs Node APIs (Buffer/streams) — pin this route to the Node runtime.
+export const runtime = "nodejs";
+
 import {
   apAgingBySupplier,
   arAgingByCustomer,
@@ -195,6 +199,33 @@ export async function GET(
     }
     default:
       return new NextResponse(`Unknown report: ${report}`, { status: 404 });
+  }
+
+  const format = url.searchParams.get("format") ?? "csv";
+
+  if (format === "xlsx") {
+    const TITLES: Record<string, string> = {
+      "ar-aging": "Accounts Receivable — Aging",
+      "ap-aging": "Accounts Payable — Aging",
+      "fleet-utilisation": "Fleet Utilisation",
+      "fuel-efficiency": "Fuel Efficiency by Truck",
+      expenses: "Expense Breakdown",
+      "truck-pnl": "Truck Profit & Loss",
+    };
+    const period = asOf
+      ? `As at ${asOf}`
+      : fromDate || toDate
+        ? `${fromDate ?? "—"} → ${toDate ?? "today"}`
+        : "All time";
+    const { buildBrandedWorkbook } = await import("@/server/reports/workbook");
+    const buf = await buildBrandedWorkbook({ title: TITLES[report] ?? report, period, headers, rows });
+    return new NextResponse(buf as BodyInit, {
+      status: 200,
+      headers: {
+        "Content-Type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        "Content-Disposition": `attachment; filename="${filename.replace(/\.csv$/, ".xlsx")}"`,
+      },
+    });
   }
 
   const body = toCsv(headers, rows);
