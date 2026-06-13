@@ -143,9 +143,9 @@
     border-color: rgb(var(--border));
   }
 
-  /* KPI number — large, tabular, mono */
+  /* KPI number — DESIGN.md §3: 32px JetBrains Mono 600, tabular */
   .kpi-number {
-    @apply font-mono tnum text-3xl font-medium tracking-tight;
+    @apply font-mono tnum text-[32px] font-semibold leading-none tracking-[-0.02em];
   }
 
   /* Status pill base */

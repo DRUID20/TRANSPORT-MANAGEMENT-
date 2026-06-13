@@ -1,9 +1,12 @@
 import Link from "next/link";
 import {
   ArrowUpRight,
+  Banknote,
+  CheckCircle2,
   Fuel,
   IdCard as IdCardIcon,
   Shield,
+  TriangleAlert,
   Truck,
   Wrench,
   FileWarning,
@@ -15,6 +18,7 @@ import { listTrucks } from "@/server/actions/trucks";
 import { listDrivers } from "@/server/actions/drivers";
 import { listInvoices } from "@/server/actions/ar";
 import { AreaChartCard } from "@/components/dashboard/area-chart-card";
+import { KpiCard } from "@/components/dashboard/kpi-card";
 import { CountUp } from "@/components/dashboard/count-up";
 import { TodaysDispatch } from "@/components/dashboard/todays-dispatch";
 import { formatMoney } from "@/lib/format";
@@ -108,7 +112,6 @@ export default async function DashboardPage() {
   const onRoad = allTrips.filter((t) =>
     ["in_transit", "at_border", "loading"].includes(t.status),
   ).length;
-  const inTransit = allTrips.filter((t) => t.status === "in_transit").length;
   const atBorder = allTrips.filter((t) => t.status === "at_border").length;
   const delayed = allTrips.filter((t) => t.status === "delayed").length;
   const deliveredMtd = allTrips.filter((t) => t.status === "delivered").length;
@@ -121,6 +124,13 @@ export default async function DashboardPage() {
     .filter((i) => new Date(i.issueDate) >= monthStart)
     .reduce((s, i) => s + i.total * i.fxRate, 0);
   const fleetSize = trucks.length;
+
+  // Revenue sparkline + period delta, derived from the 30-day series.
+  const revSeries = revenueChart.map((d) => d["Freight Revenue"] as number);
+  const firstHalf = revSeries.slice(0, 15).reduce((a, b) => a + b, 0);
+  const secondHalf = revSeries.slice(15).reduce((a, b) => a + b, 0);
+  const revDelta = firstHalf > 0 ? (secondHalf - firstHalf) / firstHalf : undefined;
+  const needsAttentionCount = delayed + atBorder;
 
   // Needs-attention rows from real compliance summary (Postgres lands later).
   const attention = buildAttention(compliance);
@@ -152,20 +162,39 @@ export default async function DashboardPage() {
           </p>
         </div>
 
-        {/* Dense live-ops strip */}
-        <div className="surface-card grid grid-cols-2 divide-x divide-y divide-border sm:grid-cols-3 sm:divide-y-0 lg:grid-cols-5">
-          <StripCell label="In transit" value={inTransit} tone="info" countUp />
-          <StripCell label="At border" value={atBorder} tone="warning" countUp />
-          <StripCell label="Delayed" value={delayed} tone="danger" countUp />
-          <StripCell label="Delivered MTD" value={deliveredMtd} tone="success" countUp />
-          <StripCell
-            label="Revenue MTD"
-            value={formatMoney(revenueMtd, "KES", { compact: true }).replace("KSh ", "")}
-            unit="KES"
-            wide
-          />
-        </div>
       </section>
+
+      {/* HERO KPIs — 4 across (DESIGN.md §10) */}
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <KpiCard
+          label="On the road"
+          value={onRoad}
+          icon={Truck}
+          tone="info"
+          hint={`of ${fleetSize} in the fleet`}
+        />
+        <KpiCard
+          label="Revenue MTD"
+          value={formatMoney(revenueMtd, "KES", { compact: true }).replace("KSh ", "")}
+          unit="KES"
+          icon={Banknote}
+          delta={revDelta}
+          trend={revSeries}
+        />
+        <KpiCard
+          label="Delivered MTD"
+          value={deliveredMtd}
+          icon={CheckCircle2}
+          tone="success"
+        />
+        <KpiCard
+          label="Needs attention"
+          value={needsAttentionCount}
+          icon={TriangleAlert}
+          tone={needsAttentionCount > 0 ? "danger" : "default"}
+          hint={`${delayed} delayed · ${atBorder} at border`}
+        />
+      </div>
 
       {/* TODAY · TOMORROW dispatch (already strong, kept) */}
       <TodaysDispatch />
@@ -234,60 +263,6 @@ export default async function DashboardPage() {
       </div>
 
       <OpsBoard initialTrips={allTrips} />
-    </div>
-  );
-}
-
-function StripCell({
-  label,
-  value,
-  unit,
-  sub,
-  tone = "default",
-  wide = false,
-  countUp = false,
-}: {
-  label: string;
-  value: string | number;
-  unit?: string;
-  sub?: string;
-  tone?: "default" | "info" | "warning" | "danger" | "success";
-  wide?: boolean;
-  countUp?: boolean;
-}) {
-  const colour =
-    tone === "info"
-      ? "text-brand-blue"
-      : tone === "warning"
-        ? "text-status-warning"
-        : tone === "danger"
-          ? "text-status-danger"
-          : tone === "success"
-            ? "text-status-success"
-            : "text-fg-primary";
-  return (
-    <div
-      className={cn(
-        "flex flex-col gap-1.5 px-5 py-4",
-        wide && "lg:col-span-1 sm:col-span-3 lg:col-auto",
-      )}
-    >
-      <span className="font-mono text-[10px] uppercase tracking-[0.16em] text-fg-tertiary">
-        {label}
-      </span>
-      <span className="flex items-baseline gap-1.5">
-        <span className={cn("font-mono tnum text-[28px] font-semibold leading-none", colour)}>
-          {countUp && typeof value === "number" ? <CountUp value={value} /> : value}
-        </span>
-        {unit && (
-          <span className="font-mono text-[10px] uppercase tracking-wider text-fg-tertiary">
-            {unit}
-          </span>
-        )}
-      </span>
-      {sub && (
-        <span className="font-mono text-[10px] text-fg-tertiary">{sub}</span>
-      )}
     </div>
   );
 }
