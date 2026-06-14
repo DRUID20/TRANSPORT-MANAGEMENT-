@@ -249,12 +249,7 @@ export function InvoiceCreateForm({
             <option value="UGX">UGX</option>
           </Select>
         </FormField>
-        <FormField
-          label="FX rate"
-          required
-          hint="TO KES"
-          helper="Auto-filled from the latest live rate — editable for a contracted rate."
-        >
+        <FormField label="FX rate" required hint="TO KES">
           <Input
             type="number"
             step="0.0001"
@@ -263,6 +258,9 @@ export function InvoiceCreateForm({
             onChange={(e) => setFxRate(e.currentTarget.value)}
             className="font-mono tnum"
           />
+          <span className="text-[11px] text-fg-tertiary">
+            Auto-filled from the latest live rate — editable for a contracted rate.
+          </span>
         </FormField>
         <FormField
           label="VAT rate"
