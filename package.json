@@ -16,7 +16,8 @@
     "db:generate": "drizzle-kit generate",
     "db:push": "drizzle-kit push",
     "db:migrate": "tsx --env-file=.env.local src/server/db/migrate.ts",
-    "db:seed-admin": "tsx --env-file=.env.local src/server/db/seed-admin.ts"
+    "db:seed-admin": "tsx --env-file=.env.local src/server/db/seed-admin.ts",
+    "db:seed-coa": "tsx --env-file=.env.local src/server/db/seed-coa.ts"
   },
   "dependencies": {
     "@radix-ui/react-dialog": "^1.1.4",
