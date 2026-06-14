@@ -5,7 +5,8 @@ import { listBookings } from "@/server/repos/bookings";
 import { listTrucks } from "@/server/repos/trucks";
 import { listDrivers } from "@/server/repos/drivers";
 import { listCustomers } from "@/server/repos/customers";
-import { listComplianceRecords, getEmployee } from "@/server/store/mock-store";
+import { listComplianceRecords } from "@/server/repos/hr-compliance";
+import { listEmployees } from "@/server/repos/hr";
 import { KIND_LABELS, type ComplianceKind } from "@/lib/types/hr-compliance";
 
 /**
@@ -74,13 +75,16 @@ export async function listCalendarEvents(window?: {
     return d >= from && d <= to;
   };
 
-  const [trips, trucks, drivers, customers, bookings] = await Promise.all([
+  const [trips, trucks, drivers, customers, bookings, complianceRecords, employees] = await Promise.all([
     listTrips(),
     listTrucks(),
     listDrivers(),
     listCustomers(),
     listBookings(),
+    listComplianceRecords(),
+    listEmployees(),
   ]);
+  const employeeById = new Map(employees.map((e) => [e.id, e]));
   const truckMap = new Map(trucks.map((x) => [x.id, x]));
   const driverMap = new Map(drivers.map((x) => [x.id, x]));
   const customerMap = new Map(customers.map((x) => [x.id, x]));
@@ -142,10 +146,10 @@ export async function listCalendarEvents(window?: {
     "epra_dangerous_goods",
     "puc_certificate",
   ]);
-  for (const r of listComplianceRecords()) {
+  for (const r of complianceRecords) {
     if (!r.expiryDate || !FUEL_HR_KINDS.has(r.kind)) continue;
     if (!inWindow(r.expiryDate)) continue;
-    const emp = getEmployee(r.employeeId);
+    const emp = employeeById.get(r.employeeId);
     if (!emp) continue;
     events.push({
       id: `hr:${r.id}`,

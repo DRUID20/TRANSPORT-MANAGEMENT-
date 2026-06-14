@@ -11,6 +11,7 @@ import { nextDocumentNumber } from "@/server/repos/counters";
 import { listTrips } from "@/server/repos/trips";
 import { listTrucks } from "@/server/repos/trucks";
 import { createBill } from "@/server/repos/ap";
+import { getRatesToKesMap } from "@/server/repos/fx";
 import {
   createSubcontractor as storeCreate,
   getSubcontractor as storeGet,
@@ -229,10 +230,11 @@ export async function subcontractorAccount(
   const sub = await getSubcontractor(subcontractorId);
   if (!sub) return undefined;
   const rate = sub.commissionRate ?? 0.1;
-  const [trips, trucks, payments] = await Promise.all([
+  const [trips, trucks, payments, fxToKes] = await Promise.all([
     listTrips(),
     listTrucks(),
     listSubcontractorPayments(subcontractorId),
+    getRatesToKesMap(),
   ]);
   const subTruckIds = new Set(
     trucks
@@ -246,11 +248,17 @@ export async function subcontractorAccount(
     const date = (
       t.actualDeliveryAt ?? t.actualDepartureAt ?? t.plannedDepartureDate ?? t.createdAt
     ).slice(0, 10);
+    // Freight may be in USD/UGX for cross-border trips — convert to KES using
+    // the live KES-equivalent rate so the account isn't ~140× under-credited.
+    const fx = fxToKes[t.revenueCurrency] ?? 1;
+    const revenueKes = t.revenueAmount * fx;
     all.push({
       date,
       ref: t.number,
-      description: `Trip ${t.origin} → ${t.destination} · ${((1 - rate) * 100).toFixed(0)}% of freight`,
-      credit: t.revenueAmount * (1 - rate),
+      description:
+        `Trip ${t.origin} → ${t.destination} · ${((1 - rate) * 100).toFixed(0)}% of freight` +
+        (t.revenueCurrency !== "KES" ? ` (from ${t.revenueAmount.toLocaleString()} ${t.revenueCurrency})` : ""),
+      credit: revenueKes * (1 - rate),
       debit: 0,
       balance: 0,
     });

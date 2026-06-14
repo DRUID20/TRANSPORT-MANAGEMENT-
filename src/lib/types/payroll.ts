@@ -95,6 +95,8 @@ export interface Loan {
   status: LoanStatus;
   reason?: string;
   notes?: string;
+  /** Set when auto-raised by AR for a driver fuel shortage; hard idempotency key. */
+  shortageTripId?: string;
   createdAt: string;
 }
 

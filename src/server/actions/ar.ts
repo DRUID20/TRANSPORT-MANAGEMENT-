@@ -15,8 +15,8 @@ import { getCustomer } from "@/server/repos/customers";
 import { getTrip } from "@/server/repos/trips";
 import { getEmployeeByDriverId } from "@/server/repos/hr";
 import { createLoan, listLoans } from "@/server/repos/payroll";
+import { getRatesToKesMap } from "@/server/repos/fx";
 import type { InvoiceStatus } from "@/lib/types/ar";
-import type { Currency } from "@/lib/types/ledger";
 import { ULLAGE_ALERT_THRESHOLD_PCT } from "@/lib/types/trips";
 import {
   invoiceCreateSchema,
@@ -83,30 +83,43 @@ async function recordDriverShortageIfAny(tripId: string): Promise<void> {
   const employee = await getEmployeeByDriverId(trip.driverId);
   if (!employee) return; // driver has no employee record to deduct from
 
-  // Idempotent: don't raise a second shortage loan for the same trip.
+  // Idempotent: don't raise a second shortage loan for the same trip. Use the
+  // hard `shortageTripId` column — the old substring match on `reason` collided
+  // (e.g. "TRP-001" is a substring of "TRP-0010"), which would silently
+  // suppress a real later shortage.
   const existing = await listLoans({ employeeId: employee.id });
-  if (existing.some((l) => l.reason?.includes(trip.number))) return;
+  if (existing.some((l) => l.shortageTripId === trip.id)) return;
 
+  // Charge the lost value at the freight rate per litre. For per_litre and
+  // per_m3 this is the same effective per-litre price; for per_trip (lumpsum)
+  // it pro-rates the booked freight to the short share — by agreement with
+  // the user, the recovery is at SELLING price, not product cost.
   const ratePerLitre = trip.cargoQuantity > 0 ? trip.revenueAmount / trip.cargoQuantity : 0;
-  const value = Math.round(shortL * ratePerLitre * 100) / 100;
-  if (value <= 0) return;
-
-  const currency: Currency = (["KES", "USD", "UGX"] as const).includes(
-    trip.revenueCurrency as Currency,
-  )
-    ? (trip.revenueCurrency as Currency)
-    : "KES";
+  const valueOriginal = shortL * ratePerLitre;
+  // Always raise the loan in KES regardless of trip currency, so it deducts
+  // cleanly from a KES-paid driver. Convert at the live rate.
+  const fxToKes = await getRatesToKesMap();
+  const fx = fxToKes[trip.revenueCurrency] ?? 1;
+  const valueKes = Math.round(valueOriginal * fx * 100) / 100;
+  if (valueKes <= 0) return;
 
   await createLoan({
     employeeId: employee.id,
-    principal: value,
-    currency,
+    principal: valueKes,
+    currency: "KES",
     disbursedDate: new Date().toISOString().slice(0, 10),
     termMonths: 1,
-    monthlyRecovery: value,
+    monthlyRecovery: valueKes,
     interestRate: 0,
     reason: `Fuel shortage ${trip.number} — ${shortL.toFixed(0)}L @20°C`,
-    notes: `Auto-raised on invoicing: delivered ${delivered.toFixed(0)}L vs loaded ${loaded.toFixed(0)}L (${shortPct.toFixed(2)}% short). Recovered from driver via payroll.`,
+    notes:
+      `Auto-raised on invoicing: delivered ${delivered.toFixed(0)}L vs loaded ${loaded.toFixed(0)}L ` +
+      `(${shortPct.toFixed(2)}% short). ` +
+      (trip.revenueCurrency !== "KES"
+        ? `Valued at ${valueOriginal.toFixed(2)} ${trip.revenueCurrency} × ${fx} → KSh ${valueKes.toFixed(2)}. `
+        : "") +
+      `Recovered from driver via payroll.`,
+    shortageTripId: trip.id,
   });
   revalidatePath("/hr/loans");
 }

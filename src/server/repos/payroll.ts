@@ -120,6 +120,7 @@ function toLoan(r: LRow): Loan {
     status: r.status as LoanStatus,
     reason: r.reason ?? undefined,
     notes: r.notes ?? undefined,
+    shortageTripId: r.shortageTripId ?? undefined,
     createdAt: r.createdAt.toISOString(),
   };
 }
@@ -487,6 +488,7 @@ export async function createLoan(input: {
   interestRate: number;
   reason?: string;
   notes?: string;
+  shortageTripId?: string;
 }): Promise<Loan | { error: string }> {
   if (IS_DEMO_MODE) return storeCreateLoan(input);
   const employee = await getEmployee(input.employeeId);
@@ -511,6 +513,7 @@ export async function createLoan(input: {
       status: "active",
       reason: input.reason ?? null,
       notes: input.notes ?? null,
+      shortageTripId: input.shortageTripId ?? null,
     })
     .returning();
   return toLoan(rows[0]!);

@@ -14,6 +14,7 @@ import { listExpenses } from "@/server/repos/expenses";
 import { listBorderCrossings } from "@/server/repos/borders";
 import { jobCardsForTruck } from "@/server/repos/workshop";
 import { getSubcontractor } from "@/server/repos/subcontractors";
+import { getRatesToKesMap } from "@/server/repos/fx";
 import type { OwnerType } from "@/lib/types/fleet";
 
 export interface TruckStatementMonth {
@@ -75,11 +76,12 @@ export async function truckStatement(truckId: string): Promise<TruckStatement | 
     }
   }
 
-  const [trips, fuelLogs, expenses, jobCards] = await Promise.all([
+  const [trips, fuelLogs, expenses, jobCards, fxToKes] = await Promise.all([
     listTrips(),
     listFuelLogs(),
     listExpenses(),
     jobCardsForTruck(truckId),
+    getRatesToKesMap(),
   ]);
 
   const truckTrips = trips.filter((t) => t.truckId === truckId && t.status === "closed");
@@ -135,7 +137,10 @@ export async function truckStatement(truckId: string): Promise<TruckStatement | 
   for (const t of truckTrips) {
     const { key, label } = monthMeta(tripRef(t));
     const b = ensure(key, label);
-    b.revenueKes += t.revenueAmount * revenueShare;
+    // Convert non-KES freight to KES via the live rate so cross-border trips
+    // aren't ~140× under-credited on the statement.
+    const fx = fxToKes[t.revenueCurrency] ?? 1;
+    b.revenueKes += t.revenueAmount * fx * revenueShare;
     b.fuelKes += fuelByTrip.get(t.id) ?? 0;
     b.expensesKes += expenseByTrip.get(t.id) ?? 0;
     b.borderKes += borderByTrip.get(t.id) ?? 0;

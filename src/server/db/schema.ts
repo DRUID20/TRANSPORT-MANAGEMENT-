@@ -948,6 +948,10 @@ export const loans = pgTable(
     status: varchar("status", { length: 16 }).notNull().default("active"),
     reason: text("reason"),
     notes: text("notes"),
+    /** Set when this loan is an auto-raised driver shortage recovery; used as
+     *  a hard idempotency key so two invoices for the same trip can't double-bill
+     *  the driver (substring match on `reason` collides: "TRP-001" ⊂ "TRP-0010"). */
+    shortageTripId: uuid("shortage_trip_id").references(() => trips.id, { onDelete: "set null" }),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => ({ byEmployee: index("loans_employee_idx").on(t.employeeId) }),

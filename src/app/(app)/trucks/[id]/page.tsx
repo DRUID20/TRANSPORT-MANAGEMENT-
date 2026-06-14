@@ -12,7 +12,8 @@ import {
 } from "lucide-react";
 import { getTruck } from "@/server/actions/trucks";
 import { getSubcontractorById } from "@/server/actions/subcontractors";
-import { driverForTruck, trailerForTruck } from "@/server/store/mock-store";
+import { getDriver } from "@/server/repos/drivers";
+import { listTrailers } from "@/server/repos/trailers";
 import { jobCardsForTruck } from "@/server/actions/job-cards";
 import { JobCardStatusPill } from "@/components/workshop/job-card-status-pill";
 import { TruckFuelCard } from "@/components/fleet/truck-fuel-card";
@@ -40,9 +41,15 @@ export default async function TruckDetailPage({
   const sub = truck.subcontractorId
     ? await getSubcontractorById(truck.subcontractorId)
     : undefined;
-  const driver = driverForTruck(truck.id);
-  const trailer = trailerForTruck(truck.id);
-  const jobCards = await jobCardsForTruck(truck.id);
+  // Resolve current driver from the truck's currentDriverId, and find the
+  // trailer (if any) coupled to this truck via its attachedTruckId. Both go
+  // through the dual-mode repos so they reflect real data in prod.
+  const [driver, trailers, jobCards] = await Promise.all([
+    truck.currentDriverId ? getDriver(truck.currentDriverId) : Promise.resolve(undefined),
+    listTrailers(),
+    jobCardsForTruck(truck.id),
+  ]);
+  const trailer = trailers.find((t) => t.attachedTruckId === truck.id);
 
   const tankLabel = truck.tankCapacityLitres
     ? `${truck.tankCapacityLitres.toLocaleString()}`
