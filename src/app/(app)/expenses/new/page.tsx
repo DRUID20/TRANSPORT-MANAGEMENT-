@@ -3,6 +3,7 @@ import { listTrips } from "@/server/actions/trips";
 import { listTrucks } from "@/server/actions/trucks";
 import { listDrivers } from "@/server/actions/drivers";
 import { listSuppliers } from "@/server/actions/suppliers";
+import { getRatesToKesMap } from "@/server/actions/fx";
 import { PageHeader } from "@/components/layout/page-header";
 import { ExpenseCreateForm } from "./expense-create-form";
 
@@ -25,6 +26,7 @@ export default async function NewExpensePage({
   const trucks = (await listTrucks()).map((t) => ({ id: t.id, registration: t.registration }));
   const drivers = (await listDrivers()).map((d) => ({ id: d.id, fullName: d.fullName }));
   const suppliers = (await listSuppliers()).map((s) => ({ id: s.id, name: s.name }));
+  const ratesToKes = await getRatesToKesMap();
 
   return (
     <div className="mx-auto flex w-full max-w-2xl flex-col gap-6">
@@ -39,6 +41,7 @@ export default async function NewExpensePage({
         trucks={trucks}
         drivers={drivers}
         suppliers={suppliers}
+        ratesToKes={ratesToKes}
         preselectTripId={trip}
         preselectTruckId={truck}
       />

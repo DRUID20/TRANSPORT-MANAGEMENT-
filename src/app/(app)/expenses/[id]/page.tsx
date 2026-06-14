@@ -16,6 +16,7 @@ import { getTruck } from "@/server/actions/trucks";
 import { getDriverById } from "@/server/actions/drivers";
 import { getTripById } from "@/server/actions/trips";
 import { getSupplierById } from "@/server/actions/suppliers";
+import { DeleteExpenseButton } from "@/components/expenses/delete-expense-button";
 import {
   expenseCategoryLabel,
   paymentMethodLabel,
@@ -46,13 +47,26 @@ export default async function ExpenseDetailPage({
         eyebrow="Expense"
         title={exp.number}
         description={exp.description}
-        actions={<ExpenseStatusPill status={exp.status} />}
+        actions={
+          <div className="flex items-center gap-2">
+            <ExpenseStatusPill status={exp.status} />
+            <DeleteExpenseButton expenseId={exp.id} />
+          </div>
+        }
       />
 
       <Card>
         <CardContent className="!p-6">
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             <Stat icon={Wallet} label="Amount (KES)" value={`KSh ${exp.amountKes.toLocaleString()}`} mono />
+            {exp.originalCurrency && exp.originalAmount !== undefined && (
+              <Stat
+                icon={Wallet}
+                label="Original"
+                value={`${exp.originalAmount.toLocaleString()} ${exp.originalCurrency}`}
+                mono
+              />
+            )}
             <Stat icon={Tag} label="Category" value={expenseCategoryLabel[exp.category]} />
             <Stat icon={Receipt} label="Paid by" value={paymentMethodLabel[exp.paidBy]} />
             <Stat

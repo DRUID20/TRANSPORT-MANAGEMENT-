@@ -21,6 +21,7 @@ export function ExpenseCreateForm({
   trucks,
   drivers,
   suppliers,
+  ratesToKes,
   preselectTripId,
   preselectTruckId,
 }: {
@@ -28,6 +29,7 @@ export function ExpenseCreateForm({
   trucks: Truck[];
   drivers: Driver[];
   suppliers: Supplier[];
+  ratesToKes: Record<string, number>;
   preselectTripId?: string;
   preselectTruckId?: string;
 }) {
@@ -38,7 +40,14 @@ export function ExpenseCreateForm({
   const [tripId, setTripId] = useState(preselectTripId ?? "");
   const [truckId, setTruckId] = useState(preselectTruckId ?? "");
   const [driverId, setDriverId] = useState("");
+  const [currency, setCurrency] = useState<"KES" | "USD" | "UGX">("KES");
+  const [amount, setAmount] = useState("");
   const [formKey, setFormKey] = useState(0);
+
+  // FX is applied behind the scenes: KES is always 1; USD/UGX use the latest
+  // live rate. amountKes is what gets stored + posted.
+  const rate = currency === "KES" ? 1 : ratesToKes[currency] ?? 1;
+  const amountKes = (Number(amount) || 0) * rate;
 
   function onTripChange(value: string) {
     setTripId(value);
@@ -55,7 +64,9 @@ export function ExpenseCreateForm({
     setLoading(true);
     const fd = new FormData(e.currentTarget);
     const result = await createExpense({
-      amountKes: Number(fd.get("amountKes") ?? 0),
+      amountKes: Math.round(amountKes * 100) / 100,
+      originalAmount: currency === "KES" ? undefined : Number(amount) || 0,
+      originalCurrency: currency === "KES" ? undefined : currency,
       category: String(fd.get("category") ?? "other") as never,
       description: String(fd.get("description") ?? ""),
       location: String(fd.get("location") ?? "") || undefined,
@@ -82,6 +93,8 @@ export function ExpenseCreateForm({
     setTripId(preselectTripId ?? "");
     setTruckId(preselectTruckId ?? "");
     setDriverId("");
+    setCurrency("KES");
+    setAmount("");
     setError(null);
     setFormKey((k) => k + 1);
   }
@@ -107,9 +120,29 @@ export function ExpenseCreateForm({
             placeholder="Diesel — Mariakani Total"
           />
         </FormField>
-        <FormField label="Amount" required hint="KES">
+        <FormField label="Currency" required>
+          <Select
+            value={currency}
+            onChange={(e) => setCurrency(e.currentTarget.value as "KES" | "USD" | "UGX")}
+          >
+            <option value="KES">KES — Kenyan Shilling</option>
+            <option value="UGX">UGX — Ugandan Shilling</option>
+            <option value="USD">USD — US Dollar</option>
+          </Select>
+        </FormField>
+        <FormField
+          label="Amount"
+          required
+          hint={currency}
+          helper={
+            currency !== "KES" && Number(amount) > 0
+              ? `≈ KSh ${amountKes.toLocaleString(undefined, { maximumFractionDigits: 0 })} (live rate ${rate})`
+              : "Converted to KES automatically."
+          }
+        >
           <Input
-            name="amountKes"
+            value={amount}
+            onChange={(e) => setAmount(e.currentTarget.value)}
             type="number"
             required
             min={0}
