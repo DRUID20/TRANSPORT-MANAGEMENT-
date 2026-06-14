@@ -30,6 +30,16 @@ const config: Config = {
           "blue-hover": "rgb(var(--brand-blue-hover) / <alpha-value>)",
           cyan: "rgb(var(--brand-cyan) / <alpha-value>)",
         },
+        // UNOC accent + sidebar palette
+        gold: "rgb(var(--accent-gold) / <alpha-value>)",
+        sidebar: {
+          DEFAULT: "rgb(var(--sidebar-bg) / <alpha-value>)",
+          fg: "rgb(var(--sidebar-fg) / <alpha-value>)",
+          muted: "rgb(var(--sidebar-fg-muted) / <alpha-value>)",
+          active: "rgb(var(--sidebar-active-bg) / <alpha-value>)",
+          "active-fg": "rgb(var(--sidebar-active-fg) / <alpha-value>)",
+          border: "rgb(var(--sidebar-border) / <alpha-value>)",
+        },
         // Apple semantic statuses
         status: {
           success: "rgb(var(--status-success) / <alpha-value>)",
@@ -54,6 +64,7 @@ const config: Config = {
         xl: "20px",
       },
       boxShadow: {
+        card: "var(--shadow-card)",
         soft: "0 1px 2px rgba(15,23,42,.04), 0 2px 8px rgba(15,23,42,.05)",
         elevated:
           "0 4px 16px rgba(15,23,42,.06), 0 16px 40px rgba(15,23,42,.08)",

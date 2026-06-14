@@ -15,16 +15,16 @@
        Off-white app surface with a faint cool tint so cards
        (pure white) have visible separation without shadow noise.
        ============================================================ */
-    --bg-base: 247 249 252;        /* #F7F9FC  app canvas */
-    --bg-surface: 241 244 249;     /* #F1F4F9  sidebar / muted panels */
+    --bg-base: 244 245 247;        /* #F4F5F7  soft grey app canvas (UNOC) */
+    --bg-surface: 241 244 249;     /* #F1F4F9  muted panels */
     --bg-elevated: 255 255 255;    /* #FFFFFF  cards */
     --bg-elevated-2: 255 255 255;  /* hover surfaces */
-    --border: 184 194 210;         /* #B8C2D2 — defined hairlines that snap into view */
-    --border-strong: 148 163 184;  /* #94A3B8 slate-400 — input + divider definition */
-    --text-primary: 15 23 42;      /* #0F172A — slate-900 */
-    --text-secondary: 51 65 85;    /* #334155 — slate-700, fuller body text */
-    --text-tertiary: 71 85 105;    /* #475569 slate-600 — high-contrast muted labels */
-    --text-disabled: 148 163 184;  /* slate-400 */
+    --border: 226 229 235;         /* #E2E5EB — soft hairline (cards lift via shadow now) */
+    --border-strong: 203 209 219;  /* #CBD1DB — input + divider definition */
+    --text-primary: 17 18 22;      /* #111216 near-black headings (UNOC) */
+    --text-secondary: 51 60 74;    /* #333C4A body */
+    --text-tertiary: 96 105 122;   /* #60697A muted labels */
+    --text-disabled: 160 168 180;
 
     /* Brand — premium dispatch-grade blue, slightly cooler than before */
     --brand-navy: 15 76 129;       /* #0F4C81 — secondary brand mark */
@@ -38,6 +38,20 @@
     --status-danger: 239 68 68;    /* #EF4444 */
     --status-info: 8 145 178;      /* #0891B2 cyan-600 — distinct from brand-blue CTA */
     --status-neutral: 100 116 139;
+
+    /* UNOC portal — black sidebar with a gold active pill, raised white cards.
+       Sidebar has its OWN tokens (not the surface scale) so it's black in
+       light mode without disturbing anything else. */
+    --sidebar-bg: 11 12 16;          /* #0B0C10 near-black */
+    --sidebar-fg: 237 239 244;       /* #EDEFF4 */
+    --sidebar-fg-muted: 150 158 173; /* #969EAD muted nav text */
+    --sidebar-active-bg: 242 169 59; /* #F2A93B gold pill */
+    --sidebar-active-fg: 17 17 19;   /* near-black text on gold */
+    --sidebar-hover: 255 255 255;    /* hover wash uses this @ low alpha */
+    --sidebar-border: 30 33 41;      /* #1E2129 dividers / tree lines */
+    --accent-gold: 242 169 59;       /* #F2A93B */
+    /* Soft raised-card shadow — the "3D / floating panel" look (light only). */
+    --shadow-card: 0 1px 2px rgb(15 23 42 / 0.05), 0 8px 20px rgb(15 23 42 / 0.07);
 
     color-scheme: light;
   }
@@ -65,6 +79,18 @@
     --status-danger: 239 68 68;    /* #EF4444 */
     --status-info: 139 92 246;     /* #8B5CF6 violet — scheduled/planned */
     --status-neutral: 91 107 130;
+
+    /* Dark keeps its dark sidebar; gold active pill for brand consistency.
+       Depth stays border-only (no drop shadow) on the dark canvas. */
+    --sidebar-bg: 16 21 30;          /* #10151E — matches the dark surface */
+    --sidebar-fg: 233 238 245;
+    --sidebar-fg-muted: 130 145 169;
+    --sidebar-active-bg: 242 169 59; /* gold pill in dark too */
+    --sidebar-active-fg: 17 17 19;
+    --sidebar-hover: 255 255 255;
+    --sidebar-border: 30 39 53;
+    --accent-gold: 242 169 59;
+    --shadow-card: none;
 
     color-scheme: dark;
   }
@@ -163,12 +189,14 @@
     @apply inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-medium;
   }
 
-  /* Surface card — DESIGN.md §4: depth from borders, NOT shadows. Slightly
-     thicker hairline so cards/containers read as defined panels. */
+  /* Surface card — raised white panel (UNOC look). In light mode it floats
+     via --shadow-card; in dark mode that var is `none`, so depth falls back
+     to the border (the control-tower aesthetic). */
   .surface-card {
-    background: rgb(var(--bg-surface));
-    border: 1.5px solid rgb(var(--border));
-    border-radius: 10px;
+    background: rgb(var(--bg-elevated));
+    border: 1px solid rgb(var(--border));
+    border-radius: 14px;
+    box-shadow: var(--shadow-card);
   }
 
   /* Interactive surface — border brightens on hover (no shadow). */
@@ -231,9 +259,40 @@
     }
   }
 
+  /* Collapsible accordion (sidebar groups) — animates open/closed via the
+     grid-rows 0fr↔1fr trick (smooth height with no JS measuring). */
+  .collapsible {
+    display: grid;
+    grid-template-rows: 0fr;
+    transition: grid-template-rows 220ms cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  .collapsible[data-open="true"] {
+    grid-template-rows: 1fr;
+  }
+  .collapsible > .collapsible-inner {
+    overflow: hidden;
+    min-height: 0;
+  }
+
+  /* Decorative driving truck — feedback/empty states only (not real GPS). */
+  @keyframes truckDrive {
+    0% { transform: translateX(-10%); }
+    100% { transform: translateX(110%); }
+  }
+  @keyframes wheelSpin {
+    to { transform: rotate(360deg); }
+  }
+  .animate-truck { animation: truckDrive 3s cubic-bezier(0.45, 0, 0.55, 1) infinite; }
+
   @media (prefers-reduced-motion: reduce) {
     .animate-content-in,
     .stagger-children > * {
+      animation: none !important;
+    }
+    .collapsible {
+      transition: none !important;
+    }
+    .animate-truck {
       animation: none !important;
     }
     .lift-on-hover {

@@ -39,7 +39,7 @@ export function Sidebar({ user }: { user?: SidebarUserInfo }) {
   return (
     <aside
       className={cn(
-        "relative hidden h-screen shrink-0 flex-col border-r border-border bg-bg-surface transition-[width] duration-200 ease-out md:flex",
+        "relative hidden h-screen shrink-0 flex-col border-r border-sidebar-border bg-sidebar transition-[width] duration-200 ease-out md:flex",
         collapsed ? "w-[68px]" : "w-60",
       )}
       aria-label="Primary navigation"

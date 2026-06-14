@@ -54,29 +54,29 @@ export function SidebarUser({
   const role = ROLE_LABELS[user.roleKey] ?? user.roleKey;
 
   return (
-    <div ref={ref} className="relative border-t border-border p-2">
+    <div ref={ref} className="relative border-t border-sidebar-border p-2">
       <button
         type="button"
         aria-haspopup="menu"
         aria-expanded={open}
         onClick={() => setOpen((o) => !o)}
         className={cn(
-          "flex w-full items-center gap-2.5 rounded-lg p-2 text-left transition-colors hover:bg-bg-elevated-2",
+          "flex w-full items-center gap-2.5 rounded-lg p-2 text-left transition-colors hover:bg-white/10",
           collapsed && "justify-center p-1.5",
         )}
       >
-        <span className="grid size-8 shrink-0 place-items-center rounded-full bg-brand-blue/15 font-mono text-[11px] font-semibold text-brand-blue ring-1 ring-brand-blue/25">
+        <span className="grid size-8 shrink-0 place-items-center rounded-full bg-gold/20 font-mono text-[11px] font-semibold text-gold ring-1 ring-gold/30">
           {user.initials}
         </span>
         {!collapsed && (
           <>
             <span className="min-w-0 flex-1 leading-tight">
-              <span className="block truncate text-[13px] font-medium text-fg-primary">
+              <span className="block truncate text-[13px] font-medium text-sidebar-fg">
                 {user.fullName}
               </span>
-              <span className="block truncate text-[11px] text-fg-tertiary">{role}</span>
+              <span className="block truncate text-[11px] text-sidebar-muted">{role}</span>
             </span>
-            <ChevronsUpDown className="size-3.5 shrink-0 text-fg-tertiary" />
+            <ChevronsUpDown className="size-3.5 shrink-0 text-sidebar-muted" />
           </>
         )}
       </button>

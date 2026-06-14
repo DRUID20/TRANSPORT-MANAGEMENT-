@@ -61,14 +61,14 @@ export function MobileSidebar({ user }: { user?: SidebarUserInfo }) {
             role="dialog"
             aria-modal="true"
             aria-label="Primary navigation"
-            className="fixed inset-y-0 left-0 z-50 flex w-72 max-w-[85vw] flex-col border-r border-border bg-bg-surface shadow-modal animate-content-in md:hidden"
+            className="fixed inset-y-0 left-0 z-50 flex w-72 max-w-[85vw] flex-col border-r border-sidebar-border bg-sidebar shadow-modal animate-content-in md:hidden"
           >
             <SidebarBody user={user} onNavigate={() => setOpen(false)} />
             <button
               type="button"
               onClick={() => setOpen(false)}
               aria-label="Close navigation"
-              className="absolute right-2 top-2 grid size-8 place-items-center rounded-md text-fg-tertiary transition-colors hover:bg-bg-elevated hover:text-fg-primary"
+              className="absolute right-2 top-2 grid size-8 place-items-center rounded-md text-sidebar-muted transition-colors hover:bg-white/10 hover:text-sidebar-fg"
             >
               <X className="size-4" />
             </button>

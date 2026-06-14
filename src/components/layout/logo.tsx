@@ -9,10 +9,13 @@ export function Logo({
   className,
   variant = "horizontal",
   showWordmark = true,
+  onDark = false,
 }: {
   className?: string;
   variant?: "horizontal" | "icon";
   showWordmark?: boolean;
+  /** Render the wordmark for a dark background (e.g. the black sidebar). */
+  onDark?: boolean;
 }) {
   if (variant === "icon") {
     return (
@@ -49,10 +52,20 @@ export function Logo({
       </div>
       {showWordmark && (
         <div className="flex flex-col leading-none">
-          <span className="text-sm font-semibold tracking-tight text-fg-primary">
+          <span
+            className={cn(
+              "text-sm font-semibold tracking-tight",
+              onDark ? "text-white" : "text-fg-primary",
+            )}
+          >
             Nile Valley
           </span>
-          <span className="text-[10px] font-medium uppercase tracking-[0.14em] text-brand-blue">
+          <span
+            className={cn(
+              "text-[10px] font-medium uppercase tracking-[0.14em]",
+              onDark ? "text-gold" : "text-brand-blue",
+            )}
+          >
             Logistics
           </span>
         </div>

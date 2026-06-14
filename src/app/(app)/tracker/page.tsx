@@ -5,6 +5,7 @@ import { PageHeader } from "@/components/layout/page-header";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { EmptyState } from "@/components/ui/empty-state";
+import { DrivingTruck } from "@/components/ui/driving-truck";
 import {
   DataTable,
   DataTableBody,
@@ -47,6 +48,8 @@ export default async function TrackerHubPage({
         title="Truck performance tracker"
         description={`KPIs and leaderboard for every truck. ${fromDate} → ${toDate}.`}
       />
+
+      <DrivingTruck className="h-7" />
 
       <div className="surface-card p-3">
         <form className="flex flex-col gap-2 sm:flex-row sm:items-center">
