@@ -19,11 +19,11 @@
     --bg-surface: 241 244 249;     /* #F1F4F9  sidebar / muted panels */
     --bg-elevated: 255 255 255;    /* #FFFFFF  cards */
     --bg-elevated-2: 255 255 255;  /* hover surfaces */
-    --border: 205 213 226;         /* #CDD5E2 — visible hairlines on the cool canvas */
-    --border-strong: 160 173 193;  /* #A0ADC1 — input + divider definition */
+    --border: 184 194 210;         /* #B8C2D2 — defined hairlines that snap into view */
+    --border-strong: 148 163 184;  /* #94A3B8 slate-400 — input + divider definition */
     --text-primary: 15 23 42;      /* #0F172A — slate-900 */
     --text-secondary: 51 65 85;    /* #334155 — slate-700, fuller body text */
-    --text-tertiary: 81 95 117;    /* #515F75 — readable muted, not washed out */
+    --text-tertiary: 71 85 105;    /* #475569 slate-600 — high-contrast muted labels */
     --text-disabled: 148 163 184;  /* slate-400 */
 
     /* Brand — premium dispatch-grade blue, slightly cooler than before */
@@ -48,11 +48,11 @@
     --bg-surface: 20 26 37;        /* #141A25 cards / sidebar */
     --bg-elevated: 28 36 50;       /* #1C2432 nested / inputs / table header */
     --bg-elevated-2: 37 47 64;     /* #252F40 hover */
-    --border: 40 50 67;            /* #283243 defined 1px borders */
-    --border-strong: 58 72 95;     /* #3A485F focused / dividers */
+    --border: 53 65 85;            /* #334155 — borders that snap against the dark canvas */
+    --border-strong: 73 88 112;    /* #495870 focused / dividers */
     --text-primary: 233 238 245;   /* #E9EEF5 — softened a touch to reduce glare */
-    --text-secondary: 167 180 199; /* #A7B4C7 — fuller secondary text */
-    --text-tertiary: 130 145 169;  /* #8291A9 — legible muted, far less eye strain */
+    --text-secondary: 176 188 206; /* #B0BCCE — fuller secondary text */
+    --text-tertiary: 156 171 196;  /* #9CABC4 — high-contrast muted labels */
     --text-disabled: 88 102 124;
 
     --brand-navy: 59 130 246;
@@ -163,10 +163,11 @@
     @apply inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-medium;
   }
 
-  /* Surface card — DESIGN.md §4: depth from 1px borders, NOT shadows. */
+  /* Surface card — DESIGN.md §4: depth from borders, NOT shadows. Slightly
+     thicker hairline so cards/containers read as defined panels. */
   .surface-card {
     background: rgb(var(--bg-surface));
-    border: 1px solid rgb(var(--border));
+    border: 1.5px solid rgb(var(--border));
     border-radius: 10px;
   }
 
@@ -180,7 +181,7 @@
 
   /* Section header — used inside form sections / card heads */
   .section-eyebrow {
-    @apply text-[10px] font-semibold uppercase tracking-[0.16em] text-fg-tertiary;
+    @apply text-[11px] font-bold uppercase tracking-[0.14em] text-fg-secondary;
   }
 }
 

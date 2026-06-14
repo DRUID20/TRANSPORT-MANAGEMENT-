@@ -144,7 +144,7 @@ function Stat({
 }) {
   return (
     <div>
-      <div className="text-xs uppercase tracking-wider text-fg-tertiary">{label}</div>
+      <div className="text-[13px] font-semibold uppercase tracking-wider text-fg-secondary">{label}</div>
       <div
         className={
           "mt-1 font-medium text-fg-primary " +

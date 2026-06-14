@@ -253,7 +253,7 @@ export function JobCardEditor({
           ) : (
             <table className="w-full text-sm">
               <thead>
-                <tr className="border-b border-border text-left text-xs uppercase tracking-wider text-fg-tertiary">
+                <tr className="border-b border-border text-left text-[13px] font-semibold uppercase tracking-wider text-fg-secondary">
                   <th className="px-5 py-2 font-medium">Service</th>
                   <th className="px-5 py-2 font-medium">Hours</th>
                   <th className="px-5 py-2 text-right font-medium">Cost (KES)</th>
@@ -295,7 +295,7 @@ export function JobCardEditor({
                   </tr>
                 ))}
                 <tr className="bg-bg-base/40">
-                  <td className="px-5 py-2 text-xs uppercase tracking-wider text-fg-tertiary" colSpan={2}>
+                  <td className="px-5 py-2 text-[13px] font-semibold uppercase tracking-wider text-fg-secondary" colSpan={2}>
                     Subtotal — labour
                   </td>
                   <td className="px-5 py-2 text-right font-mono tnum font-semibold text-fg-primary">
@@ -379,7 +379,7 @@ export function JobCardEditor({
           ) : (
             <table className="w-full text-sm">
               <thead>
-                <tr className="border-b border-border text-left text-xs uppercase tracking-wider text-fg-tertiary">
+                <tr className="border-b border-border text-left text-[13px] font-semibold uppercase tracking-wider text-fg-secondary">
                   <th className="px-5 py-2 font-medium">Item</th>
                   <th className="px-5 py-2 font-medium">Supplier</th>
                   <th className="px-5 py-2 font-medium">Qty</th>
@@ -436,7 +436,7 @@ export function JobCardEditor({
                   );
                 })}
                 <tr className="bg-bg-base/40">
-                  <td className="px-5 py-2 text-xs uppercase tracking-wider text-fg-tertiary" colSpan={4}>
+                  <td className="px-5 py-2 text-[13px] font-semibold uppercase tracking-wider text-fg-secondary" colSpan={4}>
                     Subtotal — spares
                   </td>
                   <td className="px-5 py-2 text-right font-mono tnum font-semibold text-fg-primary">
@@ -521,7 +521,7 @@ export function JobCardEditor({
         <CardContent className="!p-5">
           <div className="flex items-end justify-between gap-3">
             <div>
-              <div className="text-xs uppercase tracking-wider text-fg-tertiary">
+              <div className="text-[13px] font-semibold uppercase tracking-wider text-fg-secondary">
                 Job Card total
               </div>
               <div className="mt-1 font-mono text-3xl tnum font-medium text-fg-primary">
