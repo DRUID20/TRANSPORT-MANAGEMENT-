@@ -1,10 +1,13 @@
 import Link from "next/link";
 import {
+  Activity,
   BarChart3,
   Banknote,
+  Building2,
   Droplet,
   Fuel,
   LineChart,
+  Percent,
   PieChart,
   Receipt,
   Scale,
@@ -12,6 +15,7 @@ import {
   TrendingDown,
   TrendingUp,
   Truck,
+  Users,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -77,6 +81,30 @@ const reports: Report[] = [
     ready: true,
     group: "Finance",
   },
+  {
+    href: "/reports/revenue-by-customer",
+    title: "Revenue by Customer",
+    desc: "Invoiced, received and outstanding per customer with collection rate. Ranked by revenue.",
+    icon: Building2,
+    ready: true,
+    group: "Finance",
+  },
+  {
+    href: "/reports/vat-summary",
+    title: "VAT Summary",
+    desc: "Output VAT on sales vs input VAT on purchases, by month, with net payable. KRA-ready.",
+    icon: Percent,
+    ready: true,
+    group: "Finance",
+  },
+  {
+    href: "/reports/monthly-trend",
+    title: "Monthly Trend",
+    desc: "Revenue, cost and gross profit by month with a 12-month chart. Spot seasonality.",
+    icon: Activity,
+    ready: true,
+    group: "Finance",
+  },
 
   // Operations
   {
@@ -116,6 +144,14 @@ const reports: Report[] = [
     title: "Ullage report",
     desc: "Loaded vs discharged litres (20 °C corrected) per trip. Flags variance above 0.5%.",
     icon: Droplet,
+    ready: true,
+    group: "Operations",
+  },
+  {
+    href: "/reports/driver-performance",
+    title: "Driver Performance",
+    desc: "Trips, completion, revenue generated and ullage discipline per driver. Ranked.",
+    icon: Users,
     ready: true,
     group: "Operations",
   },

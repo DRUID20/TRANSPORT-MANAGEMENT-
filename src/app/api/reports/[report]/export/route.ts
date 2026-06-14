@@ -6,12 +6,15 @@ export const runtime = "nodejs";
 import {
   apAgingBySupplier,
   arAgingByCustomer,
+  driverPerformance,
   expenseBreakdown,
   fleetProfitAndLoss,
   fleetUtilisation,
   fuelEfficiencyByTruck,
+  revenueByCustomer,
   truckProfitAndLoss,
-} from "@/server/store/mock-store";
+  vatSummary,
+} from "@/server/actions/reports";
 
 type Row = Record<string, string | number | null>;
 
@@ -48,7 +51,7 @@ export async function GET(
 
   switch (report) {
     case "ar-aging": {
-      const data = arAgingByCustomer(asOf ? new Date(asOf) : undefined);
+      const data = await arAgingByCustomer(asOf);
       headers = ["customer_id", "customer_name", "invoice_count", "current", "1_30", "31_60", "61_90", "90_plus", "total_kes"];
       rows = data.map((r) => ({
         customer_id: r.customerId,
@@ -65,7 +68,7 @@ export async function GET(
       break;
     }
     case "ap-aging": {
-      const data = apAgingBySupplier(asOf ? new Date(asOf) : undefined);
+      const data = await apAgingBySupplier(asOf);
       headers = ["supplier_id", "supplier_name", "bill_count", "current", "1_30", "31_60", "61_90", "90_plus", "total_kes"];
       rows = data.map((r) => ({
         supplier_id: r.supplierId,
@@ -82,7 +85,7 @@ export async function GET(
       break;
     }
     case "fleet-utilisation": {
-      const data = fleetUtilisation({ fromDate, toDate });
+      const data = await fleetUtilisation({ fromDate, toDate });
       headers = ["truck_id", "registration", "status", "trips", "km_driven", "revenue_kes", "fuel_kes", "expenses_kes", "gross_profit_kes", "margin_pct"];
       rows = data.map((r) => ({
         truck_id: r.truckId,
@@ -100,7 +103,7 @@ export async function GET(
       break;
     }
     case "fuel-efficiency": {
-      const data = fuelEfficiencyByTruck({ fromDate, toDate });
+      const data = await fuelEfficiencyByTruck({ fromDate, toDate });
       headers = ["truck_id", "registration", "fills", "total_litres", "total_kes", "km_covered", "l_per_100km", "kes_per_km", "avg_kes_per_l"];
       rows = data.map((r) => ({
         truck_id: r.truckId,
@@ -117,7 +120,7 @@ export async function GET(
       break;
     }
     case "expenses": {
-      const data = expenseBreakdown({
+      const data = await expenseBreakdown({
         dimension: (dim === "truck" || dim === "currency" ? dim : "category") as
           | "category"
           | "truck"
@@ -139,11 +142,11 @@ export async function GET(
     case "truck-pnl": {
       const truckParam = url.searchParams.get("truck") ?? undefined;
       const data = truckParam
-        ? (() => {
-            const single = truckProfitAndLoss(truckParam, { fromDate, toDate });
+        ? await (async () => {
+            const single = await truckProfitAndLoss(truckParam, { fromDate, toDate });
             return single ? [single] : [];
           })()
-        : fleetProfitAndLoss({ fromDate, toDate });
+        : await fleetProfitAndLoss({ fromDate, toDate });
       headers = [
         "truck_id",
         "registration",
@@ -197,6 +200,55 @@ export async function GET(
         : `truck-pnl-${fromDate ?? "ytd"}-${toDate ?? "today"}.csv`;
       break;
     }
+    case "revenue-by-customer": {
+      const data = await revenueByCustomer({ fromDate, toDate });
+      headers = ["customer_id", "customer_name", "invoices", "invoiced_kes", "received_kes", "outstanding_kes", "last_invoice"];
+      rows = data.map((r) => ({
+        customer_id: r.customerId,
+        customer_name: r.customerName,
+        invoices: r.invoiceCount,
+        invoiced_kes: Math.round(r.invoicedKes),
+        received_kes: Math.round(r.receivedKes),
+        outstanding_kes: Math.round(r.outstandingKes),
+        last_invoice: r.lastInvoiceDate ?? null,
+      }));
+      filename = `revenue-by-customer-${fromDate ?? "ytd"}-${toDate ?? "today"}.csv`;
+      break;
+    }
+    case "driver-performance": {
+      const data = await driverPerformance({ fromDate, toDate });
+      headers = ["driver_id", "driver_name", "status", "trips", "completed", "revenue_kes", "avg_ullage_pct", "ullage_breaches"];
+      rows = data.map((r) => ({
+        driver_id: r.driverId,
+        driver_name: r.driverName,
+        status: r.status,
+        trips: r.tripCount,
+        completed: r.completedTrips,
+        revenue_kes: Math.round(r.revenueKes),
+        avg_ullage_pct: r.avgUllagePct === null ? null : Number(r.avgUllagePct.toFixed(3)),
+        ullage_breaches: r.ullageBreaches,
+      }));
+      filename = `driver-performance-${fromDate ?? "ytd"}-${toDate ?? "today"}.csv`;
+      break;
+    }
+    case "vat-summary": {
+      const data = await vatSummary({ fromDate, toDate });
+      headers = ["month", "output_vat_kes", "input_vat_kes", "net_vat_kes"];
+      rows = data.byMonth.map((m) => ({
+        month: m.label,
+        output_vat_kes: Math.round(m.outputKes),
+        input_vat_kes: Math.round(m.inputKes),
+        net_vat_kes: Math.round(m.netKes),
+      }));
+      rows.push({
+        month: "TOTAL",
+        output_vat_kes: Math.round(data.outputVatKes),
+        input_vat_kes: Math.round(data.inputVatKes),
+        net_vat_kes: Math.round(data.netPayableKes),
+      });
+      filename = `vat-summary-${fromDate ?? "ytd"}-${toDate ?? "today"}.csv`;
+      break;
+    }
     default:
       return new NextResponse(`Unknown report: ${report}`, { status: 404 });
   }
@@ -211,6 +263,9 @@ export async function GET(
       "fuel-efficiency": "Fuel Efficiency by Truck",
       expenses: "Expense Breakdown",
       "truck-pnl": "Truck Profit & Loss",
+      "revenue-by-customer": "Revenue by Customer",
+      "driver-performance": "Driver Performance",
+      "vat-summary": "VAT Summary",
     };
     const period = asOf
       ? `As at ${asOf}`

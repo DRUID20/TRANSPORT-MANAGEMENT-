@@ -1,17 +1,21 @@
 "use server";
 
 import {
-  apAgingBySupplier as storeApAging,
-  arAgingByCustomer as storeArAging,
-  expenseBreakdown as storeExpenseBreakdown,
-  fleetProfitAndLoss as storeFleetPnL,
-  fleetUtilisation as storeFleetUtil,
-  fuelEfficiencyByTruck as storeFuelEff,
-  profitAndLoss as storePnL,
-  statementOfFinancialPosition as storeSfp,
-  tripProfitability as storeTripProfit,
-  truckProfitAndLoss as storeTruckPnL,
-} from "@/server/store/mock-store";
+  apAgingBySupplier as repoApAging,
+  arAgingByCustomer as repoArAging,
+  expenseBreakdown as repoExpenseBreakdown,
+  fleetProfitAndLoss as repoFleetPnL,
+  fleetUtilisation as repoFleetUtil,
+  fuelEfficiencyByTruck as repoFuelEff,
+  profitAndLoss as repoPnL,
+  statementOfFinancialPosition as repoSfp,
+  tripProfitability as repoTripProfit,
+  truckProfitAndLoss as repoTruckPnL,
+  revenueByCustomer as repoRevenueByCustomer,
+  driverPerformance as repoDriverPerformance,
+  monthlyPerformance as repoMonthlyPerformance,
+  vatSummary as repoVatSummary,
+} from "@/server/repos/reports";
 import { listTrips } from "@/server/repos/trips";
 import { listBookings } from "@/server/repos/bookings";
 import { listTrucks } from "@/server/repos/trucks";
@@ -20,31 +24,31 @@ import { listCustomers } from "@/server/repos/customers";
 import { ULLAGE_ALERT_THRESHOLD_PCT } from "@/lib/types/trips";
 
 export async function profitAndLoss(range?: { fromDate?: string; toDate?: string }) {
-  return storePnL(range);
+  return repoPnL(range);
 }
 
 export async function statementOfFinancialPosition(asOfDate?: string) {
-  return storeSfp(asOfDate);
+  return repoSfp(asOfDate);
 }
 
 export async function tripProfitability() {
-  return storeTripProfit();
+  return repoTripProfit();
 }
 
 export async function arAgingByCustomer(asOf?: string) {
-  return storeArAging(asOf ? new Date(asOf) : undefined);
+  return repoArAging(asOf ? new Date(asOf) : undefined);
 }
 
 export async function apAgingBySupplier(asOf?: string) {
-  return storeApAging(asOf ? new Date(asOf) : undefined);
+  return repoApAging(asOf ? new Date(asOf) : undefined);
 }
 
 export async function fleetUtilisation(range?: { fromDate?: string; toDate?: string }) {
-  return storeFleetUtil(range);
+  return repoFleetUtil(range);
 }
 
 export async function fuelEfficiencyByTruck(range?: { fromDate?: string; toDate?: string }) {
-  return storeFuelEff(range);
+  return repoFuelEff(range);
 }
 
 export async function expenseBreakdown(opts: {
@@ -52,18 +56,34 @@ export async function expenseBreakdown(opts: {
   fromDate?: string;
   toDate?: string;
 }) {
-  return storeExpenseBreakdown(opts);
+  return repoExpenseBreakdown(opts);
 }
 
 export async function fleetProfitAndLoss(range?: { fromDate?: string; toDate?: string }) {
-  return storeFleetPnL(range);
+  return repoFleetPnL(range);
 }
 
 export async function truckProfitAndLoss(
   truckId: string,
   range?: { fromDate?: string; toDate?: string },
 ) {
-  return storeTruckPnL(truckId, range);
+  return repoTruckPnL(truckId, range);
+}
+
+export async function revenueByCustomer(range?: { fromDate?: string; toDate?: string }) {
+  return repoRevenueByCustomer(range);
+}
+
+export async function driverPerformance(range?: { fromDate?: string; toDate?: string }) {
+  return repoDriverPerformance(range);
+}
+
+export async function monthlyPerformance(months?: number) {
+  return repoMonthlyPerformance(months);
+}
+
+export async function vatSummary(range?: { fromDate?: string; toDate?: string }) {
+  return repoVatSummary(range);
 }
 
 /**

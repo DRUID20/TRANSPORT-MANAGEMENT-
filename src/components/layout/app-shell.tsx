@@ -1,5 +1,7 @@
 import { Sidebar } from "@/components/layout/sidebar";
 import { Topbar } from "@/components/layout/topbar";
+import { NavigationProgress } from "@/components/layout/navigation-progress";
+import { RouteTransition } from "@/components/layout/route-transition";
 import type { SidebarUserInfo } from "@/components/layout/sidebar-user";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { Toaster } from "@/components/ui/toast";
@@ -25,6 +27,7 @@ export async function AppShell({ children }: { children: React.ReactNode }) {
 
   return (
     <TooltipProvider delayDuration={150}>
+      <NavigationProgress />
       <div className="flex h-screen w-full overflow-hidden bg-bg-base print:block print:h-auto print:overflow-visible">
         <div className="print:hidden">
           <Sidebar user={user} />
@@ -35,7 +38,7 @@ export async function AppShell({ children }: { children: React.ReactNode }) {
           </div>
           <main className="flex-1 overflow-y-auto print:overflow-visible">
             <div className="mx-auto w-full max-w-[1280px] px-4 py-5 md:px-6 md:py-6 lg:px-8 lg:py-8 print:max-w-none print:p-0">
-              {children}
+              <RouteTransition>{children}</RouteTransition>
             </div>
           </main>
         </div>
