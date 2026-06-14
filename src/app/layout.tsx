@@ -41,7 +41,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           fontDisplay.variable,
           fontSans.variable,
           fontMono.variable,
-          "min-h-screen bg-bg-base font-sans text-[15px] text-fg-primary antialiased",
+          "min-h-screen bg-bg-base font-sans text-[15px] text-fg-primary",
         )}
       >
         <ThemeProvider>{children}</ThemeProvider>

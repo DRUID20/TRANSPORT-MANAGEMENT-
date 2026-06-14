@@ -19,12 +19,12 @@
     --bg-surface: 241 244 249;     /* #F1F4F9  sidebar / muted panels */
     --bg-elevated: 255 255 255;    /* #FFFFFF  cards */
     --bg-elevated-2: 255 255 255;  /* hover surfaces */
-    --border: 226 232 240;         /* #E2E8F0 */
-    --border-strong: 203 213 225;  /* #CBD5E1 */
+    --border: 205 213 226;         /* #CDD5E2 — visible hairlines on the cool canvas */
+    --border-strong: 160 173 193;  /* #A0ADC1 — input + divider definition */
     --text-primary: 15 23 42;      /* #0F172A — slate-900 */
-    --text-secondary: 71 85 105;   /* #475569 — slate-600 */
-    --text-tertiary: 100 116 139;  /* #64748B — slate-500 */
-    --text-disabled: 203 213 225;  /* slate-300 */
+    --text-secondary: 51 65 85;    /* #334155 — slate-700, fuller body text */
+    --text-tertiary: 81 95 117;    /* #515F75 — readable muted, not washed out */
+    --text-disabled: 148 163 184;  /* slate-400 */
 
     /* Brand — premium dispatch-grade blue, slightly cooler than before */
     --brand-navy: 15 76 129;       /* #0F4C81 — secondary brand mark */
@@ -44,16 +44,16 @@
 
   .dark {
     /* Dark control-tower theme — DESIGN.md §2 (the primary theme). */
-    --bg-base: 10 14 20;           /* #0A0E14 app background */
-    --bg-surface: 16 21 30;        /* #10151E cards / sidebar */
-    --bg-elevated: 22 29 41;       /* #161D29 nested / inputs / table header */
-    --bg-elevated-2: 28 36 51;     /* #1C2433 hover */
-    --border: 30 39 53;            /* #1E2735 subtle 1px borders */
-    --border-strong: 44 56 80;     /* #2C3850 focused / dividers */
-    --text-primary: 237 241 247;   /* #EDF1F7 */
-    --text-secondary: 148 163 184; /* #94A3B8 */
-    --text-tertiary: 91 107 130;   /* #5B6B82 muted */
-    --text-disabled: 71 85 105;
+    --bg-base: 13 17 26;           /* #0D111A — lifted off pure black to cut glare/halation */
+    --bg-surface: 20 26 37;        /* #141A25 cards / sidebar */
+    --bg-elevated: 28 36 50;       /* #1C2432 nested / inputs / table header */
+    --bg-elevated-2: 37 47 64;     /* #252F40 hover */
+    --border: 40 50 67;            /* #283243 defined 1px borders */
+    --border-strong: 58 72 95;     /* #3A485F focused / dividers */
+    --text-primary: 233 238 245;   /* #E9EEF5 — softened a touch to reduce glare */
+    --text-secondary: 167 180 199; /* #A7B4C7 — fuller secondary text */
+    --text-tertiary: 130 145 169;  /* #8291A9 — legible muted, far less eye strain */
+    --text-disabled: 88 102 124;
 
     --brand-navy: 59 130 246;
     --brand-blue: 59 130 246;       /* #3B82F6 electric accent */
@@ -76,10 +76,20 @@
   html,
   body {
     @apply bg-bg-base text-fg-primary;
-    font-family: var(--font-geist-sans), system-ui, -apple-system, sans-serif;
+    font-family: var(--font-sans), system-ui, -apple-system, sans-serif;
     font-feature-settings: "rlig" 1, "calt" 1, "ss01" 1;
-    -webkit-font-smoothing: antialiased;
     text-rendering: optimizeLegibility;
+    /* Light mode: subpixel AA keeps dark-on-light text crisp and full-weight
+       (forcing grayscale `antialiased` here is what made it look thin/blurry). */
+    -webkit-font-smoothing: auto;
+    -moz-osx-font-smoothing: auto;
+  }
+
+  /* Dark mode: grayscale AA, which avoids the colour fringing subpixel
+     rendering produces on light-on-dark text. */
+  .dark body {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
   }
 
   /* Tabular figures for money / KPIs */
@@ -185,16 +195,20 @@
   }
 
   /* Content-in keyframe used by sections + drawers + form sections.
-     280ms spring-out, opacity-only by default in reduced motion. */
+     `backwards` (not `both`): the element must NOT retain the final
+     `transform: translateY(0)` — a lingering transform promotes the node to
+     its own layer and disables sub-pixel text AA, which makes everything look
+     blurry/thin (worst in light mode). With `backwards` the transform is
+     dropped the instant the animation ends, so text renders crisp. */
   .animate-content-in {
-    animation: contentIn 280ms cubic-bezier(0.16, 1, 0.3, 1) both;
+    animation: contentIn 280ms cubic-bezier(0.16, 1, 0.3, 1) backwards;
   }
 
   /* Section stagger — child sections fade in sequentially, ~40ms apart.
      Apply .stagger-children on the parent. Children opt in to the
      animation via :nth-child via the keyframe below. */
   .stagger-children > * {
-    animation: contentIn 320ms cubic-bezier(0.16, 1, 0.3, 1) both;
+    animation: contentIn 320ms cubic-bezier(0.16, 1, 0.3, 1) backwards;
   }
   .stagger-children > *:nth-child(1) { animation-delay: 0ms; }
   .stagger-children > *:nth-child(2) { animation-delay: 40ms; }
