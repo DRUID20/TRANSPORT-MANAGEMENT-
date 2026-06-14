@@ -15,11 +15,20 @@ import {
   DataTableHeaderCell,
   DataTableRow,
 } from "@/components/ui/data-table";
+import { Paginator } from "@/components/ui/paginator";
 import { PageHeader } from "@/components/layout/page-header";
 import { TripStatusPill } from "@/components/trips/trip-status-pill";
 import { cn } from "@/lib/utils";
 
-export default async function TripsPage() {
+const PAGE_SIZE = 50;
+
+export default async function TripsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ page?: string }>;
+}) {
+  const { page: rawPage } = await searchParams;
+  const page = Math.max(1, Number(rawPage) || 1);
   const [trips, trucks, drivers, customers, bookings] = await Promise.all([
     listTrips(),
     listTrucks(),
@@ -27,6 +36,9 @@ export default async function TripsPage() {
     listCustomers(),
     listBookings(),
   ]);
+  const tripsCount = trips.length;
+  const paged = trips.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+  const hrefForPage = (p: number) => `/trips?page=${p}`;
   const truckById = new Map(trucks.map((t) => [t.id, t]));
   const driverById = new Map(drivers.map((d) => [d.id, d]));
   const bookingById = new Map(bookings.map((b) => [b.id, b]));
@@ -97,7 +109,7 @@ export default async function TripsPage() {
             </tr>
           </DataTableHead>
           <DataTableBody>
-            {trips.map((t) => {
+            {paged.map((t) => {
               const truck = truckById.get(t.truckId);
               const driver = driverById.get(t.driverId);
               const booking = bookingById.get(t.bookingId);
@@ -147,6 +159,7 @@ export default async function TripsPage() {
           </DataTableBody>
         </DataTable>
       )}
+      <Paginator page={page} pageSize={PAGE_SIZE} total={tripsCount} hrefFor={hrefForPage} />
     </div>
   );
 }

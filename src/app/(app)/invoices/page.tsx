@@ -12,6 +12,7 @@ import {
   DataTableHeaderCell,
   DataTableRow,
 } from "@/components/ui/data-table";
+import { Paginator } from "@/components/ui/paginator";
 import { PageHeader } from "@/components/layout/page-header";
 import { InvoiceStatusPill } from "@/components/finance/invoice-status-pill";
 import { InvoicesFilters } from "./invoices-filters";
@@ -27,19 +28,26 @@ const VALID_STATUS: InvoiceStatus[] = [
   "cancelled",
 ];
 
+const PAGE_SIZE = 50;
+
 export default async function InvoicesPage({
   searchParams,
 }: {
-  searchParams: Promise<{ status?: string }>;
+  searchParams: Promise<{ status?: string; page?: string }>;
 }) {
-  const { status: rawStatus } = await searchParams;
+  const { status: rawStatus, page: rawPage } = await searchParams;
   const status = (VALID_STATUS as string[]).includes(rawStatus ?? "")
     ? (rawStatus as InvoiceStatus)
     : undefined;
+  const page = Math.max(1, Number(rawPage) || 1);
 
   const [all, customers] = await Promise.all([listInvoices(), listCustomers()]);
   const filtered = status ? all.filter((i) => i.status === status) : all;
+  const filteredCount = filtered.length;
+  const paged = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
   const customerById = new Map(customers.map((c) => [c.id, c]));
+  const hrefForPage = (p: number) =>
+    `/invoices?${new URLSearchParams({ ...(status ? { status } : {}), page: String(p) }).toString()}`;
 
   const counts = {
     draft: all.filter((i) => i.status === "draft").length,
@@ -135,7 +143,7 @@ export default async function InvoicesPage({
             </tr>
           </DataTableHead>
           <DataTableBody>
-            {filtered.map((inv) => {
+            {paged.map((inv) => {
               const c = customerById.get(inv.customerId);
               return (
                 <DataTableRow key={inv.id} linkHref={`/invoices/${inv.id}`}>
@@ -190,6 +198,7 @@ export default async function InvoicesPage({
           </DataTableBody>
         </DataTable>
       )}
+      <Paginator page={page} pageSize={PAGE_SIZE} total={filteredCount} hrefFor={hrefForPage} />
     </div>
   );
 }

@@ -12,6 +12,7 @@ import {
   DataTableHeaderCell,
   DataTableRow,
 } from "@/components/ui/data-table";
+import { Paginator } from "@/components/ui/paginator";
 import { PageHeader } from "@/components/layout/page-header";
 import { BillStatusPill } from "@/components/finance/bill-status-pill";
 import { BillsFilters } from "./bills-filters";
@@ -27,19 +28,26 @@ const VALID: BillStatus[] = [
   "cancelled",
 ];
 
+const PAGE_SIZE = 50;
+
 export default async function BillsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ status?: string }>;
+  searchParams: Promise<{ status?: string; page?: string }>;
 }) {
-  const { status: rawStatus } = await searchParams;
+  const { status: rawStatus, page: rawPage } = await searchParams;
   const status = (VALID as string[]).includes(rawStatus ?? "")
     ? (rawStatus as BillStatus)
     : undefined;
+  const page = Math.max(1, Number(rawPage) || 1);
 
   const [all, suppliers] = await Promise.all([listBills(), listSuppliers()]);
   const filtered = status ? all.filter((b) => b.status === status) : all;
+  const filteredCount = filtered.length;
+  const paged = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
   const supplierById = new Map(suppliers.map((s) => [s.id, s]));
+  const hrefForPage = (p: number) =>
+    `/bills?${new URLSearchParams({ ...(status ? { status } : {}), page: String(p) }).toString()}`;
 
   const counts = {
     posted: all.filter(
@@ -139,7 +147,7 @@ export default async function BillsPage({
             </tr>
           </DataTableHead>
           <DataTableBody>
-            {filtered.map((b) => {
+            {paged.map((b) => {
               const sup = supplierById.get(b.supplierId);
               return (
                 <DataTableRow key={b.id} linkHref={`/bills/${b.id}`}>
@@ -201,6 +209,7 @@ export default async function BillsPage({
           </DataTableBody>
         </DataTable>
       )}
+      <Paginator page={page} pageSize={PAGE_SIZE} total={filteredCount} hrefFor={hrefForPage} />
     </div>
   );
 }

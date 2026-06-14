@@ -15,9 +15,12 @@ import {
   DataTableRow,
 } from "@/components/ui/data-table";
 import { PageHeader } from "@/components/layout/page-header";
+import { Paginator } from "@/components/ui/paginator";
 import { ExpenseStatusPill } from "@/components/expenses/expense-status-pill";
 import { DeleteExpenseButton } from "@/components/expenses/delete-expense-button";
 import { ExpensesFilters } from "./expenses-filters";
+
+const PAGE_SIZE = 50;
 import {
   expenseCategoryLabel,
   paymentMethodLabel,
@@ -28,14 +31,15 @@ import { cn } from "@/lib/utils";
 export default async function ExpensesPage({
   searchParams,
 }: {
-  searchParams: Promise<{ status?: string }>;
+  searchParams: Promise<{ status?: string; page?: string }>;
 }) {
-  const { status: rawStatus } = await searchParams;
+  const { status: rawStatus, page: rawPage } = await searchParams;
   const status = (
     ["pending", "approved", "rejected", "reimbursed"].includes(rawStatus ?? "")
       ? rawStatus
       : undefined
   ) as ExpenseStatus | undefined;
+  const page = Math.max(1, Number(rawPage) || 1);
 
   const [all, filtered, trips, trucks, drivers] = await Promise.all([
     listExpenses(),
@@ -47,6 +51,12 @@ export default async function ExpensesPage({
   const tripById = new Map(trips.map((t) => [t.id, t]));
   const truckById = new Map(trucks.map((t) => [t.id, t]));
   const driverById = new Map(drivers.map((d) => [d.id, d]));
+  // Server-side pagination — slice after filter so the count + paginator are
+  // accurate. URL ?page=N preserves the existing ?status= param.
+  const filteredCount = filtered.length;
+  const paged = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+  const hrefForPage = (p: number) =>
+    `/expenses?${new URLSearchParams({ ...(status ? { status } : {}), page: String(p) }).toString()}`;
 
   const counts = {
     pending: all.filter((e) => e.status === "pending").length,
@@ -139,7 +149,7 @@ export default async function ExpensesPage({
             </tr>
           </DataTableHead>
           <DataTableBody>
-            {filtered.map((e) => {
+            {paged.map((e) => {
               const trip = e.tripId ? tripById.get(e.tripId) : undefined;
               const truck = e.truckId ? truckById.get(e.truckId) : undefined;
               const driver = e.driverId ? driverById.get(e.driverId) : undefined;
@@ -206,6 +216,7 @@ export default async function ExpensesPage({
           </DataTableBody>
         </DataTable>
       )}
+      <Paginator page={page} pageSize={PAGE_SIZE} total={filteredCount} hrefFor={hrefForPage} />
     </div>
   );
 }

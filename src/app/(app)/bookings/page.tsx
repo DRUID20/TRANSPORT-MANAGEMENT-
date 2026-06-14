@@ -12,6 +12,7 @@ import {
   DataTableHeaderCell,
   DataTableRow,
 } from "@/components/ui/data-table";
+import { Paginator } from "@/components/ui/paginator";
 import { PageHeader } from "@/components/layout/page-header";
 import { BookingStatusPill } from "@/components/trips/booking-status-pill";
 import { cn } from "@/lib/utils";
@@ -22,8 +23,19 @@ const basisShort = {
   per_trip: "trip",
 } as const;
 
-export default async function BookingsPage() {
+const PAGE_SIZE = 50;
+
+export default async function BookingsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ page?: string }>;
+}) {
+  const { page: rawPage } = await searchParams;
+  const page = Math.max(1, Number(rawPage) || 1);
   const [bookings, customers] = await Promise.all([listBookings(), listCustomers()]);
+  const bookingsCount = bookings.length;
+  const paged = bookings.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+  const hrefForPage = (p: number) => `/bookings?page=${p}`;
   const customerById = new Map(customers.map((c) => [c.id, c]));
 
   const draft = bookings.filter((b) => b.status === "draft").length;
@@ -82,7 +94,7 @@ export default async function BookingsPage() {
             </tr>
           </DataTableHead>
           <DataTableBody>
-            {bookings.map((b) => {
+            {paged.map((b) => {
               const c = customerById.get(b.customerId);
               return (
                 <DataTableRow key={b.id} linkHref={`/bookings/${b.id}`}>
@@ -135,6 +147,7 @@ export default async function BookingsPage() {
           </DataTableBody>
         </DataTable>
       )}
+      <Paginator page={page} pageSize={PAGE_SIZE} total={bookingsCount} hrefFor={hrefForPage} />
     </div>
   );
 }
