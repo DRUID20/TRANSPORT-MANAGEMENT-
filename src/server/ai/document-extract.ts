@@ -59,6 +59,7 @@ function mockExtract(
 function labelFor(kind: TripDocumentKind): string {
   const map: Record<TripDocumentKind, string> = {
     manifest: "Manifest",
+    bill_of_lading: "Bill of Lading",
     commercial_invoice: "Commercial Invoice",
     packing_list: "Packing List",
     waybill: "Waybill",

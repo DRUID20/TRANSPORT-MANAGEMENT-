@@ -2,6 +2,7 @@ import { z } from "zod";
 
 export const documentKindEnum = z.enum([
   "manifest",
+  "bill_of_lading",
   "commercial_invoice",
   "packing_list",
   "waybill",
