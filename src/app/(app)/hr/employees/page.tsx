@@ -13,6 +13,7 @@ import {
   DataTableRow,
 } from "@/components/ui/data-table";
 import { PageHeader } from "@/components/layout/page-header";
+import { EmployeeAvatar } from "@/components/hr/employee-avatar";
 import { EmployeeStatusPill } from "@/components/hr/employee-status-pill";
 import { EmployeesFilters } from "./employees-filters";
 import type { EmployeeStatus } from "@/lib/types/hr";
@@ -141,9 +142,7 @@ export default async function EmployeesPage({
                       href={`/hr/employees/${e.id}`}
                       className="flex items-center gap-2.5"
                     >
-                      <span className="flex size-8 items-center justify-center rounded-full bg-brand-blue/10 text-[10px] font-semibold text-brand-blue ring-1 ring-brand-blue/20">
-                        {initials(e.fullName)}
-                      </span>
+                      <EmployeeAvatar name={e.fullName} photoUrl={e.photoUrl} size="sm" />
                       <div className="flex flex-col leading-tight">
                         <span className="text-fg-primary group-hover:text-brand-blue">
                           {e.fullName}
@@ -187,10 +186,4 @@ export default async function EmployeesPage({
       )}
     </div>
   );
-}
-
-function initials(name: string): string {
-  const parts = name.split(/\s+/).filter(Boolean);
-  if (parts.length === 1) return parts[0]!.slice(0, 2).toUpperCase();
-  return (parts[0]![0]! + parts[parts.length - 1]![0]!).toUpperCase();
 }

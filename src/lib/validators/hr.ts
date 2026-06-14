@@ -29,6 +29,7 @@ export const employeeCreateSchema = z.object({
   jobTitle: z.string().min(2, "Job title required"),
   lineManagerId: z.string().optional(),
   driverId: z.string().optional(),
+  photoUrl: z.string().optional(),
   notes: z.string().optional(),
 });
 export type EmployeeCreateInput = z.infer<typeof employeeCreateSchema>;

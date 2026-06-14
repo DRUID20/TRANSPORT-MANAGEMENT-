@@ -108,6 +108,7 @@ export async function createLeaveRequest(input: {
   startDate: string;
   endDate: string;
   reason: string;
+  attachmentUrl?: string;
 }): Promise<LeaveRequest | { error: string }> {
   if (IS_DEMO_MODE) return storeCreate(input);
   const employee = await getEmployee(input.employeeId);
@@ -128,6 +129,7 @@ export async function createLeaveRequest(input: {
       endDate: input.endDate,
       days: String(days),
       reason: input.reason,
+      attachmentUrl: input.attachmentUrl ?? null,
       status: "pending",
     })
     .returning();

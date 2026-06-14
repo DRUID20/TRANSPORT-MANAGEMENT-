@@ -6,6 +6,7 @@ import { Loader2, Save } from "lucide-react";
 import { createEmployee } from "@/server/actions/hr";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { FileUpload, type UploadedAttachment } from "@/components/ui/file-upload";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select } from "@/components/ui/select";
@@ -56,6 +57,7 @@ export function EmployeeCreateForm({
   const [jobTitle, setJobTitle] = useState("");
   const [lineManagerId, setLineManagerId] = useState("");
   const [driverId, setDriverId] = useState("");
+  const [photo, setPhoto] = useState<UploadedAttachment | null>(null);
   const [notes, setNotes] = useState("");
 
   async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
@@ -89,6 +91,7 @@ export function EmployeeCreateForm({
       jobTitle,
       lineManagerId: lineManagerId || undefined,
       driverId: driverId || undefined,
+      photoUrl: photo?.storageKey,
       notes: notes || undefined,
     });
     if (!result.ok) {
@@ -179,6 +182,16 @@ export function EmployeeCreateForm({
               <option value="probation">Probation</option>
               <option value="active">Active</option>
             </Select>
+          </Field>
+          <Field label="Profile photo (optional)" className="sm:col-span-2">
+            <FileUpload
+              namespace="employee"
+              accept="image/jpeg,image/png,image/webp"
+              value={photo}
+              onUploaded={setPhoto}
+              onCleared={() => setPhoto(null)}
+              hint="Passport-style headshot. JPG, PNG or WebP, max 25 MB."
+            />
           </Field>
         </CardContent>
       </Card>

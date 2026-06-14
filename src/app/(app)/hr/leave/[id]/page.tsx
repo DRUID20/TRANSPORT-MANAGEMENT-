@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { CalendarDays, MessageSquare, User } from "lucide-react";
+import { CalendarDays, ExternalLink, MessageSquare, Paperclip, User } from "lucide-react";
 import { getLeaveRequestById } from "@/server/actions/leave";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { PageHeader } from "@/components/layout/page-header";
@@ -63,6 +63,28 @@ export default async function LeaveDetailPage({
           <p className="text-sm text-fg-primary">{r.reason}</p>
         </CardContent>
       </Card>
+
+      {r.attachmentUrl && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Paperclip className="size-4 text-fg-tertiary" />
+              Supporting document
+            </CardTitle>
+            <CardDescription>Stored privately in Supabase Storage.</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <a
+              href={`/api/files/${r.attachmentUrl.split("/").map(encodeURIComponent).join("/")}`}
+              target="_blank"
+              rel="noopener"
+              className="inline-flex items-center gap-1.5 text-sm text-brand-blue hover:underline"
+            >
+              <ExternalLink className="size-3.5" /> View attachment
+            </a>
+          </CardContent>
+        </Card>
+      )}
 
       <LeaveActions
         id={r.id}

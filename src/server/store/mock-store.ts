@@ -5634,6 +5634,7 @@ export function createLeaveRequest(input: {
   startDate: string;
   endDate: string;
   reason: string;
+  attachmentUrl?: string;
 }): LeaveRequest | { error: string } {
   if (!employees.has(input.employeeId)) return { error: "Employee not found" };
   const days = workingDaysBetween(input.startDate, input.endDate);
@@ -5649,6 +5650,7 @@ export function createLeaveRequest(input: {
     endDate: input.endDate,
     days,
     reason: input.reason,
+    attachmentUrl: input.attachmentUrl,
     status: "pending",
     createdAt: new Date().toISOString(),
   };

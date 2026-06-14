@@ -17,6 +17,7 @@ export const leaveRequestCreateSchema = z
     startDate: z.string().min(1),
     endDate: z.string().min(1),
     reason: z.string().min(2, "Reason required"),
+    attachmentUrl: z.string().optional(),
   })
   .refine((v) => new Date(v.endDate) >= new Date(v.startDate), {
     message: "End date must be on or after start date",

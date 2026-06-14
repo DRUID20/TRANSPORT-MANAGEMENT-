@@ -16,6 +16,7 @@ import { getEmployeeById } from "@/server/actions/hr";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { PageHeader } from "@/components/layout/page-header";
+import { EmployeeAvatar } from "@/components/hr/employee-avatar";
 import { EmployeeStatusPill } from "@/components/hr/employee-status-pill";
 import { EmployeeComplianceCard } from "@/components/hr/employee-compliance-card";
 import { EmployeeLeaveCard } from "@/components/hr/employee-leave-card";
@@ -54,6 +55,16 @@ export default async function EmployeeDetailPage({
       {/* Profile + employment quick facts */}
       <Card>
         <CardContent className="!p-6">
+          <div className="mb-5 flex items-center gap-4 border-b border-border pb-5">
+            <EmployeeAvatar name={e.fullName} photoUrl={e.photoUrl} size="lg" />
+            <div>
+              <div className="text-base font-medium text-fg-primary">{e.fullName}</div>
+              <div className="text-sm text-fg-tertiary">
+                {e.jobTitle}
+                {e.preferredName ? ` · “${e.preferredName}”` : ""}
+              </div>
+            </div>
+          </div>
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             <Stat icon={IdCard} label="National ID" value={e.nationalId} mono />
             <Stat icon={IdCard} label="KRA PIN" value={e.kraPin ?? "—"} mono />

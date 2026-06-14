@@ -6,6 +6,7 @@ import { Loader2, Save } from "lucide-react";
 import { createLeaveRequest } from "@/server/actions/leave";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { FileUpload, type UploadedAttachment } from "@/components/ui/file-upload";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select } from "@/components/ui/select";
@@ -32,6 +33,7 @@ export function LeaveRequestForm({
   const [startDate, setStartDate] = useState(new Date().toISOString().slice(0, 10));
   const [endDate, setEndDate] = useState(new Date().toISOString().slice(0, 10));
   const [reason, setReason] = useState("");
+  const [attachment, setAttachment] = useState<UploadedAttachment | null>(null);
   const days = workingDaysBetween(startDate, endDate);
 
   async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
@@ -44,6 +46,7 @@ export function LeaveRequestForm({
       startDate,
       endDate,
       reason,
+      attachmentUrl: attachment?.storageKey,
     });
     if (!result.ok) {
       setError(result.error);
@@ -124,6 +127,15 @@ export function LeaveRequestForm({
               onChange={(e) => setReason(e.currentTarget.value)}
               rows={3}
               placeholder="Brief reason for the leave."
+            />
+          </Field>
+          <Field label="Supporting document (optional)" className="sm:col-span-2">
+            <FileUpload
+              namespace="leave"
+              value={attachment}
+              onUploaded={setAttachment}
+              onCleared={() => setAttachment(null)}
+              hint="Sick note, court summons, or other evidence. PDF or photo, max 25 MB."
             />
           </Field>
         </CardContent>
