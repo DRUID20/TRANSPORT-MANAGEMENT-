@@ -20,15 +20,9 @@ Nile Valley Logistics — fuel-haulage TMS. **Production-deployed, near go-live.
 - **File uploads — DONE & verified on prod.** Supabase Storage private `documents` bucket (25MB, mime allowlist). `src/server/storage/files.ts` (service-role client), `POST /api/files/upload`, `GET /api/files/[...key]` (auth-proxied, org-isolated → cross-org 404), `<FileUpload>` component (`src/components/ui/file-upload.tsx`). Wired into **trip documents** (+ driver POD scan) and **employee HR-compliance** (`<AddComplianceForm>` modal on the employee page). Verified end-to-end: upload→bucket→download→isolation all pass.
 - **Vercel env now set:** DATABASE_URL, SESSION_SECRET, RESEND_API_KEY, NEXT_PUBLIC_SUPABASE_URL, NEXT_PUBLIC_SUPABASE_ANON_KEY, SUPABASE_SERVICE_ROLE_KEY (user added the Supabase 3 on 2026-06-14).
 
-## NEXT — in progress (do these now, same FileUpload pattern)
-1. **Leave-request attachments.** Schema + repo already have `attachment_url`.
-   - `src/lib/validators/leave.ts` — add `attachmentUrl: z.string().optional()` to the create schema.
-   - `src/server/actions/leave.ts` `createLeaveRequest` — pass it through; on cancel/reject no file delete needed (attachments are evidence, keep).
-   - `src/server/repos/leave.ts` `createLeaveRequest` — accept + persist `attachmentUrl` (currently the insert omits it).
-   - Leave create form (`src/app/(app)/hr/leave/new/*`) — add `<FileUpload namespace="leave" />`, store `storageKey` in form state, submit it. Add a "View" link on the leave detail page.
-2. **Employee profile photo.** `employee` storage namespace already exists; `employees.photo_url` column + type field exist.
-   - Employee create/edit form (`src/app/(app)/hr/employees/new/*`) — add `<FileUpload namespace="employee" accept="image/*">`, submit `photoUrl=storageKey`.
-   - Validator (`src/lib/validators/hr.ts`) + `createEmployee` action + `repos/hr.ts` createEmployee already has `photoUrl` — confirm it's threaded; render the avatar from `/api/files/{photoUrl}` on the employee page/list (fallback to initials).
+## NEXT — DONE (2026-06-14, commit 250e9b4)
+1. ✅ **Leave-request attachments.** `attachmentUrl` threaded through validator → action → repo (Postgres + mock store); `<FileUpload namespace="leave">` on the create form; auth-proxied "View attachment" card on the leave detail page.
+2. ✅ **Employee profile photo.** `photoUrl` added to `employeeCreateSchema`; threaded through action → repo; `<FileUpload namespace="employee" accept=image/*>` on the create form. New reusable `src/components/hr/employee-avatar.tsx` (`<EmployeeAvatar>`) renders the photo (or initials fallback) on the employee detail header + roster list.
 
 ## THEN — go-live ops (USER must do; needs their accounts)
 - `RESEND_FROM` → verified domain (currently may be `onboarding@resend.dev` = only reaches own inbox).
