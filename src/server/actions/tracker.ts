@@ -1,27 +1,27 @@
 "use server";
 
 import {
-  customerRouteMatrix as storeMatrix,
-  idleTrucks as storeIdle,
-  truckLeaderboard as storeLeaderboard,
-  truckScorecard as storeScorecard,
-} from "@/server/store/mock-store";
+  customerRouteMatrix as repoMatrix,
+  idleTrucks as repoIdle,
+  truckLeaderboard as repoLeaderboard,
+  truckScorecard as repoScorecard,
+} from "@/server/repos/tracker";
 
 export async function truckLeaderboard(range?: { fromDate?: string; toDate?: string }) {
-  return storeLeaderboard(range);
+  return repoLeaderboard(range);
 }
 
 export async function truckScorecard(
   truckId: string,
   range?: { fromDate?: string; toDate?: string },
 ) {
-  return storeScorecard(truckId, range);
+  return repoScorecard(truckId, range);
 }
 
 export async function idleTrucks(withinDays = 14) {
-  return storeIdle(withinDays);
+  return repoIdle(withinDays);
 }
 
 export async function customerRouteMatrix(range?: { fromDate?: string; toDate?: string }) {
-  return storeMatrix(range);
+  return repoMatrix(range);
 }

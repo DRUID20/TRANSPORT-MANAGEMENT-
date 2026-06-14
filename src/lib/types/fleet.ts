@@ -72,8 +72,53 @@ export interface Subcontractor {
   mpesaNumber?: string;            // for year-end settlement
   bankName?: string;
   bankAccount?: string;
+  /** Commission we keep per trip (decimal); they earn (1 − rate). Default 0.10. */
+  commissionRate?: number;
   notes?: string;
   createdAt: string;
+}
+
+export type SubcontractorPaymentMethod = "cash" | "mpesa" | "bank" | "supplier_direct";
+
+/** A debit on a subcontractor's current account — money paid out to/for them. */
+export interface SubcontractorPayment {
+  id: string;
+  number: string;
+  subcontractorId: string;
+  date: string;
+  amountKes: number;
+  method: SubcontractorPaymentMethod;
+  /** Set when method = supplier_direct (the supplier who paid them on our behalf). */
+  supplierId?: string;
+  /** The AP bill raised for the supplier-direct payment, if any. */
+  billId?: string;
+  reference?: string;
+  notes?: string;
+  createdAt: string;
+}
+
+export interface SubcontractorLedgerRow {
+  date: string;
+  ref: string;
+  description: string;
+  /** Their earnings (share of completed-trip freight). */
+  credit: number;
+  /** Money paid out to/for them. */
+  debit: number;
+  /** Running balance — positive = we still owe them. */
+  balance: number;
+}
+
+export interface SubcontractorAccount {
+  subcontractorId: string;
+  name: string;
+  commissionRate: number;
+  openingBalance: number;
+  rows: SubcontractorLedgerRow[];
+  totalEarned: number;
+  totalPaid: number;
+  /** Positive = we owe the subcontractor; negative = they're overdrawn. */
+  closingBalance: number;
 }
 
 // ============================================================

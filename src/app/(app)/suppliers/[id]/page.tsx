@@ -1,9 +1,11 @@
+import Link from "next/link";
 import { notFound } from "next/navigation";
 import { CreditCard, FileText, Mail, Phone, Smartphone, Tag, User } from "lucide-react";
 import { getSupplierById } from "@/server/actions/suppliers";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { PageHeader } from "@/components/layout/page-header";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 
 const termsLabel = {
   cash_on_delivery: "Cash on delivery",
@@ -41,6 +43,12 @@ export default async function SupplierDetailPage({
           <>
             <Badge variant="info">{termsLabel[sup.paymentTerms]}</Badge>
             <Badge variant="outline">{methodLabel[sup.defaultPaymentMethod]}</Badge>
+            <Button asChild size="sm" variant="secondary">
+              <Link href={`/suppliers/${sup.id}/statement`}>
+                <FileText className="size-3.5" />
+                Statement
+              </Link>
+            </Button>
           </>
         }
       />

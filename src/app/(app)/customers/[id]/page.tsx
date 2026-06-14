@@ -53,6 +53,12 @@ export default async function CustomerDetailPage({
           <>
             <Badge variant="info">{c.billingCurrency}</Badge>
             <Badge variant="outline">Net {c.paymentTermsDays}d</Badge>
+            <Button asChild size="sm" variant="secondary">
+              <Link href={`/customers/${c.id}/statement`}>
+                <FileText className="size-3.5" />
+                Statement
+              </Link>
+            </Button>
             <Button asChild size="sm">
               <Link href={{ pathname: "/bookings/new", query: { customer: c.id } }}>
                 <Plus className="size-3.5" />

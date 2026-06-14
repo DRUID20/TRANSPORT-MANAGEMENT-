@@ -217,10 +217,45 @@ export const subcontractors = pgTable(
     mpesaNumber: varchar("mpesa_number", { length: 32 }),
     bankName: text("bank_name"),
     bankAccount: varchar("bank_account", { length: 64 }),
+    /** Commission we keep per trip (decimal, e.g. 0.10 = 10%); they earn the rest. */
+    commissionRate: numeric("commission_rate", { precision: 5, scale: 4 }).notNull().default("0.10"),
     notes: text("notes"),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => ({ byOrg: index("subcontractors_org_idx").on(t.organizationId) }),
+);
+
+/**
+ * Subcontractor current-account payments (memo ledger). Credits to the account
+ * are derived from completed trips (their share of freight); these rows are the
+ * debits — cash/mpesa/bank withdrawals, or "supplier_direct" where a fuel
+ * supplier paid them on our behalf (which also raises an AP bill to that
+ * supplier, linked via billId).
+ */
+export const subcontractorPayments = pgTable(
+  "subcontractor_payments",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    organizationId: uuid("organization_id")
+      .notNull()
+      .references(() => organizations.id, { onDelete: "cascade" }),
+    number: varchar("number", { length: 24 }).notNull(),
+    subcontractorId: uuid("subcontractor_id")
+      .notNull()
+      .references(() => subcontractors.id, { onDelete: "restrict" }),
+    date: date("date").notNull(),
+    amountKes: numeric("amount_kes", { precision: 14, scale: 2 }).notNull(),
+    method: varchar("method", { length: 16 }).notNull(), // cash | mpesa | bank | supplier_direct
+    supplierId: uuid("supplier_id").references(() => suppliers.id, { onDelete: "set null" }),
+    billId: uuid("bill_id").references(() => supplierBills.id, { onDelete: "set null" }),
+    reference: text("reference"),
+    notes: text("notes"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => ({
+    byOrg: index("subcontractor_payments_org_idx").on(t.organizationId),
+    bySub: index("subcontractor_payments_sub_idx").on(t.subcontractorId, t.date),
+  }),
 );
 
 // ---------- Suppliers (AP / workshop vendors) ----------

@@ -9,10 +9,12 @@ import {
   Smartphone,
   Truck as TruckIcon,
 } from "lucide-react";
-import { getSubcontractorById } from "@/server/actions/subcontractors";
+import { getSubcontractorById, getSubcontractorAccount } from "@/server/actions/subcontractors";
+import { listSuppliers } from "@/server/actions/suppliers";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { PageHeader } from "@/components/layout/page-header";
 import { TruckStatusPill } from "@/components/fleet/truck-status-pill";
+import { RecordSubcontractorPayment } from "@/components/subcontractors/record-payment";
 
 export default async function SubcontractorDetailPage({
   params,
@@ -22,6 +24,11 @@ export default async function SubcontractorDetailPage({
   const { id } = await params;
   const sub = await getSubcontractorById(id);
   if (!sub) notFound();
+  const [account, suppliers] = await Promise.all([
+    getSubcontractorAccount(id),
+    listSuppliers(),
+  ]);
+  const commissionPct = Math.round((sub.commissionRate ?? 0.1) * 100);
 
   return (
     <div className="flex flex-col gap-6">
@@ -52,8 +59,8 @@ export default async function SubcontractorDetailPage({
         {/* Settlement card */}
         <Card>
           <CardHeader>
-            <CardTitle>Year-end settlement</CardTitle>
-            <CardDescription>Rate methodology TBD</CardDescription>
+            <CardTitle>Settlement</CardTitle>
+            <CardDescription>We keep {commissionPct}% commission per trip</CardDescription>
           </CardHeader>
           <CardContent className="flex flex-col gap-3">
             {sub.mpesaNumber && (
@@ -92,6 +99,75 @@ export default async function SubcontractorDetailPage({
           </CardContent>
         </Card>
       </div>
+
+      {/* Account / current-account statement */}
+      {account && (
+        <Card>
+          <CardHeader>
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <div>
+                <CardTitle>Account</CardTitle>
+                <CardDescription>
+                  Their {100 - commissionPct}% share of completed trips, less payments. Positive balance = we owe them.
+                </CardDescription>
+              </div>
+              <RecordSubcontractorPayment
+                subcontractorId={id}
+                suppliers={suppliers.map((s) => ({ id: s.id, name: s.name }))}
+              />
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="mb-4 grid grid-cols-1 gap-4 sm:grid-cols-3">
+              <AccountStat label="Earned (their share)" value={account.totalEarned} tone="info" />
+              <AccountStat label="Paid out" value={account.totalPaid} tone="warning" />
+              <AccountStat
+                label={account.closingBalance >= 0 ? "Balance we owe" : "Overdrawn"}
+                value={Math.abs(account.closingBalance)}
+                tone={account.closingBalance >= 0 ? "success" : "danger"}
+              />
+            </div>
+            {account.rows.length === 0 ? (
+              <p className="py-6 text-center text-sm text-fg-tertiary">
+                No trip earnings or payments yet.
+              </p>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b border-border text-left text-[11px] font-semibold uppercase tracking-wider text-fg-secondary">
+                      <th className="px-3 py-2">Date</th>
+                      <th className="px-3 py-2">Ref</th>
+                      <th className="px-3 py-2">Description</th>
+                      <th className="px-3 py-2 text-right">Earned</th>
+                      <th className="px-3 py-2 text-right">Paid</th>
+                      <th className="px-3 py-2 text-right">Balance</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-border">
+                    {account.rows.map((r, i) => (
+                      <tr key={`${r.ref}-${i}`} className="transition-colors hover:bg-bg-base/40">
+                        <td className="px-3 py-2 font-mono text-[11px] tnum text-fg-tertiary">{r.date}</td>
+                        <td className="px-3 py-2 font-mono text-[11px] text-fg-secondary">{r.ref}</td>
+                        <td className="px-3 py-2 text-fg-primary">{r.description}</td>
+                        <td className="px-3 py-2 text-right font-mono tnum text-status-success">
+                          {r.credit ? Math.round(r.credit).toLocaleString() : "—"}
+                        </td>
+                        <td className="px-3 py-2 text-right font-mono tnum text-status-warning">
+                          {r.debit ? Math.round(r.debit).toLocaleString() : "—"}
+                        </td>
+                        <td className="px-3 py-2 text-right font-mono tnum font-semibold text-fg-primary">
+                          {Math.round(r.balance).toLocaleString()}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
 
       {/* Trucks list */}
       <Card>
@@ -161,6 +237,30 @@ export default async function SubcontractorDetailPage({
           </CardContent>
         </Card>
       )}
+    </div>
+  );
+}
+
+function AccountStat({
+  label,
+  value,
+  tone = "default",
+}: {
+  label: string;
+  value: number;
+  tone?: "default" | "info" | "warning" | "success" | "danger";
+}) {
+  const colour =
+    tone === "info" ? "text-brand-blue" :
+    tone === "warning" ? "text-status-warning" :
+    tone === "success" ? "text-status-success" :
+    tone === "danger" ? "text-status-danger" : "text-fg-primary";
+  return (
+    <div className="rounded-lg border border-border bg-bg-elevated p-4">
+      <div className="text-xs font-semibold uppercase tracking-wider text-fg-tertiary">{label}</div>
+      <div className={`mt-1 font-mono tnum text-lg font-medium ${colour}`}>
+        KSh {Math.round(value).toLocaleString()}
+      </div>
     </div>
   );
 }

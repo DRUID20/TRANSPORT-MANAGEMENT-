@@ -155,6 +155,14 @@ const reports: Report[] = [
     ready: true,
     group: "Operations",
   },
+  {
+    href: "/reports/truck-statement",
+    title: "Truck Statement",
+    desc: "Per-truck monthly retained earnings carried forward — owned or subcontracted.",
+    icon: Truck,
+    ready: true,
+    group: "Operations",
+  },
 
   // Cash flow + later
   {
