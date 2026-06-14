@@ -46,6 +46,10 @@ export const expenseCreateSchema = z.object({
   supplierId: z.string().optional(),
   receiptDocumentId: z.string().optional(),
   submittedBy: z.string().default("Dispatcher"),
+}).refine((v) => !v.truckId || !!v.tripId, {
+  // A truck expense must be tied to a trip — the truck is derived from the trip.
+  message: "A truck expense must have an associated trip.",
+  path: ["tripId"],
 });
 export type ExpenseCreateInput = z.infer<typeof expenseCreateSchema>;
 

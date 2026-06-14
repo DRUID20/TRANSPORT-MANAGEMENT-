@@ -12,13 +12,16 @@ export default async function NewExpensePage({
   searchParams: Promise<{ trip?: string; truck?: string }>;
 }) {
   const { trip, truck } = await searchParams;
-  const trips = (await listTrips()).map((t) => ({
-    id: t.id,
-    number: t.number,
-    label: `${t.number} · ${t.origin} → ${t.destination}`,
-    truckId: t.truckId,
-    driverId: t.driverId,
-  }));
+  // A closed/cancelled trip is finalised — it can't take new expenses.
+  const trips = (await listTrips())
+    .filter((t) => t.status !== "closed" && t.status !== "cancelled")
+    .map((t) => ({
+      id: t.id,
+      number: t.number,
+      label: `${t.number} · ${t.origin} → ${t.destination}`,
+      truckId: t.truckId,
+      driverId: t.driverId,
+    }));
   const trucks = (await listTrucks()).map((t) => ({ id: t.id, registration: t.registration }));
   const drivers = (await listDrivers()).map((d) => ({ id: d.id, fullName: d.fullName }));
   const suppliers = (await listSuppliers()).map((s) => ({ id: s.id, name: s.name }));

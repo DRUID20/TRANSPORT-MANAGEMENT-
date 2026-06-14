@@ -32,6 +32,7 @@ export function ExpenseCreateForm({
   preselectTruckId?: string;
 }) {
   const router = useRouter();
+  const truckById = new Map(trucks.map((t) => [t.id, t.registration]));
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [tripId, setTripId] = useState(preselectTripId ?? "");
@@ -42,10 +43,10 @@ export function ExpenseCreateForm({
   function onTripChange(value: string) {
     setTripId(value);
     const t = trips.find((x) => x.id === value);
-    if (t) {
-      setTruckId(t.truckId);
-      setDriverId(t.driverId);
-    }
+    // Truck (and driver) are derived from the trip — a truck expense can only
+    // exist via a trip. Clearing the trip clears the truck.
+    setTruckId(t?.truckId ?? "");
+    setDriverId(t?.driverId ?? "");
   }
 
   async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
@@ -183,18 +184,13 @@ export function ExpenseCreateForm({
             ))}
           </Select>
         </FormField>
-        <FormField label="Truck" hint="OPTIONAL">
-          <Select
-            value={truckId}
-            onChange={(e) => setTruckId(e.currentTarget.value)}
-          >
-            <option value="">— None —</option>
-            {trucks.map((t) => (
-              <option key={t.id} value={t.id}>
-                {t.registration}
-              </option>
-            ))}
-          </Select>
+        <FormField label="Truck" helper="Set from the trip — a truck expense must go through a trip.">
+          <Input
+            readOnly
+            value={truckId ? truckById.get(truckId) ?? "—" : ""}
+            placeholder="Select a trip first"
+            className="bg-bg-base/40"
+          />
         </FormField>
         <FormField label="Driver" hint="OPTIONAL">
           <Select
