@@ -29,11 +29,13 @@ export default async function CustomerDetailPage({
   const totalRevenue = c.bookings.reduce(
     (sum, b) =>
       sum +
-      computeFuelRevenue({
-        basis: b.agreedBasis,
-        amount: b.agreedAmount,
-        cargoQuantityLitres: b.cargoQuantity,
-      }),
+      (b.agreedAmount != null && b.agreedBasis != null
+        ? computeFuelRevenue({
+            basis: b.agreedBasis,
+            amount: b.agreedAmount,
+            cargoQuantityLitres: b.cargoQuantity,
+          })
+        : 0),
     0,
   );
   const activeBookings = c.bookings.filter(
@@ -178,7 +180,9 @@ export default async function CustomerDetailPage({
                       <BookingStatusPill status={b.status} />
                     </td>
                     <td className="px-5 py-3 text-right font-mono tnum text-fg-secondary">
-                      {b.agreedAmount} {b.agreedCurrency}/{b.agreedBasis.replace("per_", "")}
+                      {b.agreedAmount != null && b.agreedBasis
+                        ? `${b.agreedAmount} ${b.agreedCurrency}/${b.agreedBasis.replace("per_", "")}`
+                        : "—"}
                     </td>
                   </tr>
                 ))}

@@ -175,6 +175,12 @@ export default async function TripDetailPage({
         confirmedBy={trip.destinationConfirmedBy}
         canForce={trip.status === "planned" || trip.status === "loading"}
         defaultActor="Dispatcher"
+        origin={trip.origin}
+        customerId={trip.customer?.id ?? trip.booking?.customerId}
+        cargoClass={trip.product}
+        cargoQuantity={trip.cargoQuantity}
+        revenueAmount={trip.revenueAmount}
+        revenueCurrency={trip.revenueCurrency}
       />
 
       {/* FUEL CARGO — the operational heart */}

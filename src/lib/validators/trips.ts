@@ -52,9 +52,10 @@ export const bookingCreateSchema = z.object({
   /** Kept for legacy seeds; new bookings will have it auto-derived from product. */
   cargoType: z.string().min(1).optional(),
   requestedDate: z.string().min(1, "Requested date is required"),
-  agreedAmount: z.coerce.number().positive(),
-  agreedBasis: basisEnum,
-  agreedCurrency: currencyEnum,
+  /** Rate is set on the trip after the destination is bound — optional here. */
+  agreedAmount: z.coerce.number().positive().optional(),
+  agreedBasis: basisEnum.optional(),
+  agreedCurrency: currencyEnum.optional(),
   notes: z.string().optional(),
 });
 export type BookingCreateInput = z.infer<typeof bookingCreateSchema>;

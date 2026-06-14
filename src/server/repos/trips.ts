@@ -19,6 +19,8 @@ import {
   trucks as trucksTable,
 } from "@/server/db/schema";
 import { nextDocumentNumber } from "@/server/repos/counters";
+import { getBooking } from "@/server/repos/bookings";
+import { lookupRate } from "@/server/repos/rates";
 import {
   eventsForTrip as storeEvents,
   getTrip as storeGet,
@@ -258,11 +260,17 @@ export async function planTrip(input: PlanTripInput): Promise<Trip | undefined> 
   // Only confirmed bookings can be planned.
   if (!bk || bk.status !== "confirmed") return undefined;
 
-  const revenue = computeFuelRevenue({
-    basis: bk.agreedBasis as RateBasis,
-    amount: Number(bk.agreedAmount),
-    cargoQuantityLitres: Number(bk.cargoQuantity),
-  });
+  // Revenue is only known once the destination is bound on the trip and the
+  // rate is looked up. If a deal was pre-agreed at booking, seed it; otherwise
+  // start at 0 and let confirmTripDestination set it from the rate card.
+  const hasPreAgreedRate = bk.agreedAmount != null && bk.agreedBasis != null;
+  const revenue = hasPreAgreedRate
+    ? computeFuelRevenue({
+        basis: bk.agreedBasis as RateBasis,
+        amount: Number(bk.agreedAmount),
+        cargoQuantityLitres: Number(bk.cargoQuantity),
+      })
+    : 0;
   const number = await nextDocumentNumber(orgId, "TRP", "trip");
 
   const trip = await db.transaction(async (tx) => {
@@ -286,7 +294,9 @@ export async function planTrip(input: PlanTripInput): Promise<Trip | undefined> 
           cargoQuantity: String(bk.cargoQuantity),
           cargoUnit: bk.cargoUnit,
           revenueAmount: String(revenue),
-          revenueCurrency: bk.agreedCurrency,
+          // Provisional until the rate is applied on destination confirm;
+          // falls back to the customer's billing currency at booking.
+          revenueCurrency: bk.agreedCurrency ?? "KES",
           driverAdvanceKes: input.driverAdvanceKes != null ? String(input.driverAdvanceKes) : null,
           plannedDepartureDate: input.plannedDepartureDate ?? null,
           plannedDeliveryDate: input.plannedDeliveryDate ?? null,
@@ -499,12 +509,15 @@ export async function confirmTripDestination(input: {
   actorName: string;
   location?: string;
   force?: boolean;
+  /** Manual rate override; if omitted the rate is looked up from the card. */
+  rateAmount?: number;
+  rateBasis?: RateBasis;
+  rateCurrency?: Currency;
 }): Promise<Trip | { error: string }> {
   if (IS_DEMO_MODE) {
     const t = await storeGet(input.tripId);
     if (!t) return { error: "Trip not found" };
     if (t.destination && !input.force) return { error: "Destination already confirmed" };
-    // Best-effort store update; mock store doesn't model the new fields.
     return { ...t, destination: input.destination };
   }
   const dest = input.destination.trim();
@@ -532,20 +545,57 @@ export async function confirmTripDestination(input: {
     return { error: "Destination already confirmed for this trip" };
   }
 
+  // Resolve the rate now that origin→destination is known: explicit override
+  // wins, else look it up from the rate card (customer-specific → cargo-class
+  // → plain default). Revenue is priced on the BOOKED volume here; the invoice
+  // later re-prices on the delivered L20.
+  const cargoLitres = Number(trip.cargoQuantity);
+  let revenueAmount: number | undefined;
+  let revenueCurrency: string | undefined;
+  if (input.rateAmount != null && input.rateBasis && input.rateCurrency) {
+    revenueAmount = computeFuelRevenue({
+      basis: input.rateBasis,
+      amount: input.rateAmount,
+      cargoQuantityLitres: cargoLitres,
+    });
+    revenueCurrency = input.rateCurrency;
+  } else {
+    const bk = await getBooking(trip.bookingId);
+    const rate = await lookupRate({
+      origin: trip.origin,
+      destination: dest,
+      customerId: bk?.customerId,
+      cargoClass: trip.product ?? undefined,
+    });
+    if (rate) {
+      revenueAmount = computeFuelRevenue({
+        basis: rate.basis,
+        amount: rate.amount,
+        cargoQuantityLitres: cargoLitres,
+      });
+      revenueCurrency = rate.currency;
+    }
+  }
+
   const updated = await db.transaction(async (tx) => {
+    const set: Partial<typeof table.$inferInsert> = {
+      destination: dest,
+      destinationConfirmedAt: new Date(),
+      destinationConfirmedBy: input.actorName,
+    };
+    if (revenueAmount !== undefined) set.revenueAmount = String(revenueAmount);
+    if (revenueCurrency !== undefined) set.revenueCurrency = revenueCurrency;
     const r = (
       await tx
         .update(table)
-        .set({
-          destination: dest,
-          destinationConfirmedAt: new Date(),
-          destinationConfirmedBy: input.actorName,
-        })
+        .set(set)
         .where(and(eq(table.id, input.tripId), eq(table.organizationId, orgId)))
         .returning()
     )[0]!;
-    // Timeline event — keep `toStatus` = current status so it slots into the
-    // existing per-status timeline without polluting the status machine.
+    const rateNote =
+      revenueAmount !== undefined
+        ? ` · rate applied: ${revenueCurrency} ${Math.round(revenueAmount).toLocaleString()}`
+        : " · no rate card found — set the rate manually";
     await tx.insert(eventsTable).values({
       organizationId: orgId,
       tripId: input.tripId,
@@ -553,7 +603,7 @@ export async function confirmTripDestination(input: {
       toStatus: trip.status,
       actorName: input.actorName,
       location: input.location ?? null,
-      note: `Destination confirmed: ${dest}`,
+      note: `Destination confirmed: ${dest}${rateNote}`,
     });
     return r;
   });

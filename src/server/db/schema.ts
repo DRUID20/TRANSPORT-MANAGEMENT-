@@ -465,9 +465,13 @@ export const bookings = pgTable(
     cargoQuantity: numeric("cargo_quantity", { precision: 14, scale: 2 }).notNull(),
     cargoUnit: varchar("cargo_unit", { length: 12 }).notNull().default("litres"),
     requestedDate: date("requested_date").notNull(),
-    agreedAmount: numeric("agreed_amount", { precision: 18, scale: 4 }).notNull(),
-    agreedBasis: varchar("agreed_basis", { length: 16 }).notNull(),
-    agreedCurrency: varchar("agreed_currency", { length: 3 }).notNull(),
+    // Rate is NOT known at booking — it depends on the destination, which is
+    // only set on the trip (at the depot / transit border). The rate is looked
+    // up from the rate card (origin→destination) and applied to the trip when
+    // the destination is confirmed. Kept nullable here for any pre-agreed deal.
+    agreedAmount: numeric("agreed_amount", { precision: 18, scale: 4 }),
+    agreedBasis: varchar("agreed_basis", { length: 16 }),
+    agreedCurrency: varchar("agreed_currency", { length: 3 }),
     status: varchar("status", { length: 16 }).notNull().default("draft"),
     tripId: uuid("trip_id"), // soft link — set when planned
     notes: text("notes"),

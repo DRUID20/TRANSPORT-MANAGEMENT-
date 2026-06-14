@@ -141,7 +141,9 @@ export default async function BookingsPage({
                     <BookingStatusPill status={b.status} />
                   </DataTableCell>
                   <DataTableCell mono align="right" className="text-fg-secondary">
-                    {b.agreedAmount} {b.agreedCurrency}/{basisShort[b.agreedBasis]}
+                    {b.agreedAmount != null && b.agreedBasis
+                      ? `${b.agreedAmount} ${b.agreedCurrency}/${basisShort[b.agreedBasis]}`
+                      : "—"}
                   </DataTableCell>
                 </DataTableRow>
               );

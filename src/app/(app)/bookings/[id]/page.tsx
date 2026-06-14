@@ -42,11 +42,16 @@ export default async function BookingDetailPage({
   if (!booking) notFound();
   const trip = booking.tripId ? await getTripById(booking.tripId) : undefined;
 
-  const totalRevenue = computeFuelRevenue({
-    basis: booking.agreedBasis,
-    amount: booking.agreedAmount,
-    cargoQuantityLitres: booking.cargoQuantity,
-  });
+  // Rate is bound on the trip after the destination is set, so a booking may
+  // not have one yet.
+  const hasRate = booking.agreedAmount != null && booking.agreedBasis != null;
+  const totalRevenue = hasRate
+    ? computeFuelRevenue({
+        basis: booking.agreedBasis!,
+        amount: booking.agreedAmount!,
+        cargoQuantityLitres: booking.cargoQuantity,
+      })
+    : 0;
 
   // Only load assignable inventory if we'll actually show the plan form.
   const needsAssignment = booking.status === "confirmed";
@@ -141,18 +146,26 @@ export default async function BookingDetailPage({
           <span className="font-mono text-[10px] uppercase tracking-[0.16em] text-fg-tertiary">
             Revenue
           </span>
-          <div className="flex items-baseline gap-1.5">
-            <span className="font-mono tnum text-2xl font-semibold text-fg-primary">
-              {totalRevenue.toLocaleString()}
+          {hasRate ? (
+            <>
+              <div className="flex items-baseline gap-1.5">
+                <span className="font-mono tnum text-2xl font-semibold text-fg-primary">
+                  {totalRevenue.toLocaleString()}
+                </span>
+                <span className="text-[11px] font-medium uppercase tracking-wider text-fg-tertiary">
+                  {booking.agreedCurrency}
+                </span>
+              </div>
+              <span className="text-[11px] text-fg-tertiary">
+                {booking.agreedAmount!.toLocaleString()} {booking.agreedCurrency}{" "}
+                {basisLabel[booking.agreedBasis!]}
+              </span>
+            </>
+          ) : (
+            <span className="text-sm italic text-fg-tertiary">
+              Priced on the trip once the destination is set
             </span>
-            <span className="text-[11px] font-medium uppercase tracking-wider text-fg-tertiary">
-              {booking.agreedCurrency}
-            </span>
-          </div>
-          <span className="text-[11px] text-fg-tertiary">
-            {booking.agreedAmount.toLocaleString()} {booking.agreedCurrency}{" "}
-            {basisLabel[booking.agreedBasis]}
-          </span>
+          )}
         </div>
       </section>
 

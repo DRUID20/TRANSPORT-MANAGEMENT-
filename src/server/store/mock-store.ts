@@ -1462,13 +1462,15 @@ function seedTrips() {
       cargoType: b.cargoType,
       cargoQuantity: b.cargoQuantity,
       cargoUnit: b.cargoUnit,
-      revenueAmount: computeFuelRevenue({
-        basis: b.agreedBasis,
-        amount: b.agreedAmount,
-        cargoQuantityLitres: b.cargoQuantity,
-
-      }),
-      revenueCurrency: b.agreedCurrency,
+      revenueAmount:
+        b.agreedAmount != null && b.agreedBasis != null
+          ? computeFuelRevenue({
+              basis: b.agreedBasis,
+              amount: b.agreedAmount,
+              cargoQuantityLitres: b.cargoQuantity,
+            })
+          : 0,
+      revenueCurrency: b.agreedCurrency ?? "KES",
       driverAdvanceKes: 35000,
       plannedDepartureDate: b.requestedDate,
       createdAt: new Date(Date.now() - (plannedBookings.length - i) * 86400000).toISOString(),
@@ -1594,12 +1596,14 @@ export function planTrip(input: {
   if (booking.status !== "confirmed") return undefined;
 
   const id = randomUUID();
-  const revenue = computeFuelRevenue({
-    basis: booking.agreedBasis,
-    amount: booking.agreedAmount,
-    cargoQuantityLitres: booking.cargoQuantity,
-
-  });
+  const revenue =
+    booking.agreedAmount != null && booking.agreedBasis != null
+      ? computeFuelRevenue({
+          basis: booking.agreedBasis,
+          amount: booking.agreedAmount,
+          cargoQuantityLitres: booking.cargoQuantity,
+        })
+      : 0;
   const trip: Trip = {
     id,
     number: nextTripNumber(),
@@ -1614,7 +1618,7 @@ export function planTrip(input: {
     cargoQuantity: booking.cargoQuantity,
     cargoUnit: booking.cargoUnit,
     revenueAmount: revenue,
-    revenueCurrency: booking.agreedCurrency,
+    revenueCurrency: booking.agreedCurrency ?? "KES",
     driverAdvanceKes: input.driverAdvanceKes,
     plannedDepartureDate: input.plannedDepartureDate,
     plannedDeliveryDate: input.plannedDeliveryDate,

@@ -19,12 +19,15 @@ import { getCustomer } from "@/server/repos/customers";
 import { getTruck } from "@/server/repos/trucks";
 import { getTrailer } from "@/server/repos/trailers";
 import { getDriver } from "@/server/repos/drivers";
+import { lookupRate as repoLookupRate } from "@/server/repos/rates";
 import {
   correctVolumeTo20C,
   isTerminal,
   ullageVariancePct,
+  type RateBasis,
   type TripStatus,
 } from "@/lib/types/trips";
+import type { Currency } from "@/lib/types/ledger";
 import {
   tripPlanSchema,
   tripReconcileSchema,
@@ -138,6 +141,9 @@ export async function confirmTripDestination(input: {
   actorName: string;
   location?: string;
   force?: boolean;
+  rateAmount?: number;
+  rateBasis?: RateBasis;
+  rateCurrency?: Currency;
 }): Promise<ActionResult> {
   if (!input.destination.trim()) return { ok: false, error: "Destination is required" };
   if (!input.actorName.trim()) return { ok: false, error: "Your name is required" };
@@ -145,7 +151,18 @@ export async function confirmTripDestination(input: {
   if ("error" in r) return { ok: false, error: r.error };
   revalidatePath("/trips");
   revalidatePath(`/trips/${input.tripId}`);
+  revalidatePath("/invoices");
   return { ok: true, id: r.id };
+}
+
+/** Preview the rate-card rate for a route (used by the confirm-destination UI). */
+export async function lookupRateForTrip(input: {
+  origin: string;
+  destination: string;
+  customerId?: string;
+  cargoClass?: string;
+}) {
+  return repoLookupRate(input);
 }
 
 /**

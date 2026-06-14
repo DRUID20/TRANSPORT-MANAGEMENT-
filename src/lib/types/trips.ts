@@ -107,11 +107,12 @@ export interface Booking {
   cargoUnit: CargoUnit;
   /** Required pick-up date. */
   requestedDate: string;   // ISO date
-  /** The rate agreed for this booking, snapshotted at confirmation time
-   * (so later rate-table edits don't change historical bookings). */
-  agreedAmount: number;
-  agreedBasis: RateBasis;
-  agreedCurrency: Currency;
+  /** Rate is set on the TRIP after the destination is bound (looked up from
+   *  the rate card for origin→destination). Optional here — only present if a
+   *  deal was pre-agreed at booking. */
+  agreedAmount?: number;
+  agreedBasis?: RateBasis;
+  agreedCurrency?: Currency;
   status: BookingStatus;
   tripId?: string;         // set once a Trip is planned from this booking
   notes?: string;
