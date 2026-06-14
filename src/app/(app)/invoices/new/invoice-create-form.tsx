@@ -65,6 +65,8 @@ export function InvoiceCreateForm({
     cargoUnit: string;
     cargoType: string;
     revenueAmount: number;
+    loadedL20?: number;
+    deliveredL20?: number;
   };
 }) {
   const router = useRouter();
@@ -91,25 +93,28 @@ export function InvoiceCreateForm({
   const [taxRate, setTaxRate] = useState("0");
   const [notes, setNotes] = useState("");
 
+  // Litres cargo is billed on the DELIVERED quantity corrected to 20 °C (L20),
+  // falling back to loaded L20, then the booked quantity. The per-litre rate
+  // stays the same (revenue ÷ booked litres); any short between loaded and
+  // delivered is recovered from the driver (handled server-side on save).
+  const litreCargo = preselectTrip?.cargoUnit === "litres";
+  const tripRatePerUnit =
+    preselectTrip && preselectTrip.cargoQty > 0
+      ? litreCargo
+        ? Math.round((preselectTrip.revenueAmount / preselectTrip.cargoQty) * 10_000) / 10_000
+        : Math.round((preselectTrip.revenueAmount / preselectTrip.cargoQty) * 100) / 100
+      : (preselectTrip?.revenueAmount ?? 0);
+  const tripBillQty = litreCargo
+    ? preselectTrip?.deliveredL20 ?? preselectTrip?.loadedL20 ?? preselectTrip?.cargoQty ?? 0
+    : preselectTrip?.cargoQty ?? 0;
+
   const initialLines: LineRow[] = preselectTrip
     ? [
         {
-          description: `Freight ${preselectTrip.number} · ${preselectTrip.cargoType}`,
-          quantity: String(preselectTrip.cargoQty),
+          description: `Freight ${preselectTrip.number} · ${preselectTrip.cargoType}${litreCargo ? " — delivered L20 @20°C" : ""}`,
+          quantity: String(tripBillQty),
           unit: preselectTrip.cargoUnit,
-          unitPrice: String(
-            preselectTrip.cargoQty > 0
-              ? preselectTrip.cargoUnit === "litres"
-                ? Math.round(
-                    (preselectTrip.revenueAmount / preselectTrip.cargoQty) *
-                      10_000,
-                  ) / 10_000
-                : Math.round(
-                    (preselectTrip.revenueAmount / preselectTrip.cargoQty) *
-                      100,
-                  ) / 100
-              : preselectTrip.revenueAmount,
-          ),
+          unitPrice: String(tripRatePerUnit),
         },
       ]
     : [{ ...EMPTY_LINE }];

@@ -40,6 +40,8 @@ export default async function NewInvoicePage({
         cargoUnit: string;
         cargoType: string;
         revenueAmount: number;
+        loadedL20?: number;
+        deliveredL20?: number;
       }
     | undefined;
   if (trip) {
@@ -54,6 +56,8 @@ export default async function NewInvoicePage({
         cargoUnit: t.cargoUnit,
         cargoType: t.cargoType,
         revenueAmount: t.revenueAmount,
+        loadedL20: t.loadedLitres20C,
+        deliveredL20: t.dischargedLitres20C,
       };
     }
   }
