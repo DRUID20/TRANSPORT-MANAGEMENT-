@@ -223,7 +223,7 @@ export default async function EmployeeDetailPage({
             </>
           ) : (
             <p className="py-6 text-center text-sm text-fg-tertiary">
-              No contract on file. Contracts will be addable in Phase 6 (HR forms).
+              No contract on file. Add one from the employee record.
             </p>
           )}
         </CardContent>

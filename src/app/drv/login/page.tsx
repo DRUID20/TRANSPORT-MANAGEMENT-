@@ -41,7 +41,7 @@ export default async function DriverLoginPage() {
             Sign in
           </h1>
           <p className="mb-5 text-center text-xs text-fg-secondary">
-            Pick your name to sign in. Real phone-OTP arrives in Phase 2F+.
+            Pick your name to sign in.
           </p>
 
           <ul className="flex max-h-[60vh] flex-col gap-1.5 overflow-y-auto">

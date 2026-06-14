@@ -18,7 +18,7 @@ import { listBills } from "@/server/repos/ap";
 import { listTrips } from "@/server/repos/trips";
 import { listFuelLogs } from "@/server/repos/fuel";
 import { listExpenses } from "@/server/repos/expenses";
-import { listBorderCrossings } from "@/server/repos/borders";
+import { borderChargesByTrip } from "@/server/repos/borders";
 import { jobCardsForTruck, getJobCard, listJobCards } from "@/server/repos/workshop";
 import { listTrucks, getTruck } from "@/server/repos/trucks";
 import { listCustomers } from "@/server/repos/customers";
@@ -186,14 +186,8 @@ export async function tripProfitability(): Promise<TripProfitRow[]> {
     workshopByTrip.set(jc.tripId, (workshopByTrip.get(jc.tripId) ?? 0) + jc.totalKes);
   }
 
-  // Border charges: gather per-trip charges across all trips.
-  const borderCharges = await Promise.all(
-    trips.map(async (t) => {
-      const crossings = await listBorderCrossings(t.id);
-      return [t.id, crossings.reduce((s, b) => s + (b.chargesKes ?? 0), 0)] as const;
-    }),
-  );
-  const borderByTrip = new Map(borderCharges);
+  // Border charges — batched: one round-trip for all trips instead of N.
+  const borderByTrip = await borderChargesByTrip(trips.map((t) => t.id));
 
   const rows: TripProfitRow[] = [];
   for (const trip of trips) {
@@ -677,14 +671,9 @@ export async function truckProfitAndLoss(
       ? odoSorted[odoSorted.length - 1]!.odometerKm - odoSorted[0]!.odometerKm
       : 0;
 
-  // Direct: border charges (across this truck's trips in range)
-  const borderTotals = await Promise.all(
-    truckTrips.map(async (t) => {
-      const crossings = await listBorderCrossings(t.id);
-      return crossings.reduce((s, b) => s + (b.chargesKes ?? 0), 0);
-    }),
-  );
-  const borderChargesKes = borderTotals.reduce((s, v) => s + v, 0);
+  // Direct: border charges (across this truck's trips in range) — batched.
+  const borderByTrip = await borderChargesByTrip(truckTrips.map((t) => t.id));
+  const borderChargesKes = [...borderByTrip.values()].reduce((s, v) => s + v, 0);
 
   // Direct: driver advance used (sum across trips)
   const driverAdvanceUsedKes = truckTrips.reduce(
@@ -757,12 +746,12 @@ export async function truckProfitAndLoss(
 
 export async function fleetProfitAndLoss(range?: Range): Promise<TruckPnL[]> {
   const trucks = await listTrucks();
-  const out: TruckPnL[] = [];
-  for (const t of trucks) {
-    const pl = await truckProfitAndLoss(t.id, range);
-    if (pl) out.push(pl);
-  }
-  return out.sort((a, b) => b.operatingProfit - a.operatingProfit);
+  // Run per-truck P&Ls in parallel instead of sequentially — the bottleneck
+  // was: for-each truck, await everything. Concurrency = trucks.length.
+  const results = await Promise.all(trucks.map((t) => truckProfitAndLoss(t.id, range)));
+  return results
+    .filter((p): p is TruckPnL => !!p)
+    .sort((a, b) => b.operatingProfit - a.operatingProfit);
 }
 
 // ============================================================
@@ -947,13 +936,8 @@ export async function monthlyPerformance(months = 12): Promise<MonthlyPerformanc
     listExpenses(),
   ]);
 
-  const borderCharges = await Promise.all(
-    trips.map(async (t) => {
-      const crossings = await listBorderCrossings(t.id);
-      return [t.id, crossings.reduce((s, b) => s + (b.chargesKes ?? 0), 0)] as const;
-    }),
-  );
-  const borderByTrip = new Map(borderCharges);
+  // Border charges — batched across all trips in the window.
+  const borderByTrip = await borderChargesByTrip(trips.map((t) => t.id));
 
   const revenueByTrip = new Map<string, number>();
   for (const inv of invoices) {

@@ -46,6 +46,34 @@ export async function listBorderCrossings(tripId: string): Promise<BorderCrossin
   return rows.map(toCrossing);
 }
 
+/**
+ * Batched fetch for cost aggregators (reports / tracker / statements / truck
+ * statement). Replaces the per-trip Promise.all(listBorderCrossings(t.id))
+ * pattern — one round-trip instead of N. Returns a Map<tripId, total KES>.
+ */
+export async function borderChargesByTrip(tripIds: string[]): Promise<Map<string, number>> {
+  const out = new Map<string, number>();
+  if (tripIds.length === 0) return out;
+  if (IS_DEMO_MODE) {
+    for (const id of tripIds) {
+      const xs = await storeListForTrip(id);
+      out.set(id, xs.reduce((s, b) => s + (b.chargesKes ?? 0), 0));
+    }
+    return out;
+  }
+  const db = getDb();
+  const orgId = await requireOrgId();
+  const rows = await db
+    .select({ tripId: table.tripId, chargesKes: table.chargesKes })
+    .from(table)
+    .where(and(eq(table.organizationId, orgId), inArray(table.tripId, tripIds)));
+  for (const r of rows) {
+    const charges = r.chargesKes === null ? 0 : Number(r.chargesKes);
+    out.set(r.tripId, (out.get(r.tripId) ?? 0) + charges);
+  }
+  return out;
+}
+
 export async function listAllActiveBorderCrossings(): Promise<BorderCrossing[]> {
   if (IS_DEMO_MODE) return storeListActive();
   const db = getDb();

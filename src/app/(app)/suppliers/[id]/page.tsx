@@ -87,7 +87,7 @@ export default async function SupplierDetailPage({
       <Card>
         <CardHeader>
           <CardTitle>AP activity</CardTitle>
-          <CardDescription>Bills + payments will appear here in Phase 5</CardDescription>
+          <CardDescription>Open the supplier statement for the full bill + payment ledger.</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="py-12 text-center text-xs text-fg-tertiary">

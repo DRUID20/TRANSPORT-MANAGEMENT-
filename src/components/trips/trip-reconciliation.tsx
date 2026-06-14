@@ -145,7 +145,7 @@ export function TripReconciliation(props: TripReconciliationProps) {
             label="Known direct costs (KES)"
             value={`KSh ${totalKnownCostsKes.toLocaleString()}`}
             tone="warning"
-            hint="Border + driver allowance. Fuel + tolls + maintenance roll up in Phase 4-5."
+            hint="Border + driver allowance reconciled here; fuel, tolls and workshop appear via their own modules."
           />
           {fuelEff && (
             <SummaryStat

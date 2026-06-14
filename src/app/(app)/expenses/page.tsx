@@ -16,6 +16,7 @@ import {
 } from "@/components/ui/data-table";
 import { PageHeader } from "@/components/layout/page-header";
 import { ExpenseStatusPill } from "@/components/expenses/expense-status-pill";
+import { DeleteExpenseButton } from "@/components/expenses/delete-expense-button";
 import { ExpensesFilters } from "./expenses-filters";
 import {
   expenseCategoryLabel,
@@ -134,6 +135,7 @@ export default async function ExpensesPage({
               <DataTableHeaderCell>Paid by</DataTableHeaderCell>
               <DataTableHeaderCell>Status</DataTableHeaderCell>
               <DataTableHeaderCell align="right">Amount (KES)</DataTableHeaderCell>
+              <DataTableHeaderCell align="right"> </DataTableHeaderCell>
             </tr>
           </DataTableHead>
           <DataTableBody>
@@ -194,6 +196,9 @@ export default async function ExpensesPage({
                   </DataTableCell>
                   <DataTableCell mono align="right">
                     {e.amountKes.toLocaleString()}
+                  </DataTableCell>
+                  <DataTableCell align="right">
+                    {e.status !== "reimbursed" && <DeleteExpenseButton expenseId={e.id} variant="row" />}
                   </DataTableCell>
                 </DataTableRow>
               );

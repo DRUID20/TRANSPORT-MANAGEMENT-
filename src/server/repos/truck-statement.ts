@@ -11,7 +11,7 @@ import { getTruck } from "@/server/repos/trucks";
 import { listTrips } from "@/server/repos/trips";
 import { listFuelLogs } from "@/server/repos/fuel";
 import { listExpenses } from "@/server/repos/expenses";
-import { listBorderCrossings } from "@/server/repos/borders";
+import { borderChargesByTrip } from "@/server/repos/borders";
 import { jobCardsForTruck } from "@/server/repos/workshop";
 import { getSubcontractor } from "@/server/repos/subcontractors";
 import { getRatesToKesMap } from "@/server/repos/fx";
@@ -87,14 +87,8 @@ export async function truckStatement(truckId: string): Promise<TruckStatement | 
   const truckTrips = trips.filter((t) => t.truckId === truckId && t.status === "closed");
   const tripIds = new Set(truckTrips.map((t) => t.id));
 
-  // Per-trip border charges.
-  const borderByTrip = new Map<string, number>();
-  await Promise.all(
-    truckTrips.map(async (t) => {
-      const xs = await listBorderCrossings(t.id);
-      borderByTrip.set(t.id, xs.reduce((s, b) => s + (b.chargesKes ?? 0), 0));
-    }),
-  );
+  // Per-trip border charges — batched into one round-trip.
+  const borderByTrip = await borderChargesByTrip(truckTrips.map((t) => t.id));
 
   const fuelByTrip = new Map<string, number>();
   for (const f of fuelLogs) {
