@@ -12,12 +12,15 @@ import { Select } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 
 type T = { id: string; registration: string };
+type TripOpt = { id: string; label: string };
 
 export function JobCardCreateForm({
   trucks,
+  trips,
   preselectTruckId,
 }: {
   trucks: T[];
+  trips: TripOpt[];
   preselectTruckId?: string;
 }) {
   const router = useRouter();
@@ -31,6 +34,7 @@ export function JobCardCreateForm({
     const fd = new FormData(e.currentTarget);
     const result = await createJobCard({
       truckId: String(fd.get("truckId") ?? ""),
+      tripId: String(fd.get("tripId") ?? "") || undefined,
       mechanicName: String(fd.get("mechanicName") ?? ""),
       openingOdometer: fd.get("openingOdometer")
         ? Number(fd.get("openingOdometer"))
@@ -68,6 +72,18 @@ export function JobCardCreateForm({
             </Select>
             <span className="text-[11px] text-fg-tertiary">
               Truck status auto-changes to <span className="font-mono">In Workshop</span> when this card opens.
+            </span>
+          </div>
+          <div className="flex flex-col gap-1.5 sm:col-span-2">
+            <Label>Linked trip (optional)</Label>
+            <Select name="tripId" defaultValue="">
+              <option value="">— None (truck / general maintenance) —</option>
+              {trips.map((t) => (
+                <option key={t.id} value={t.id}>{t.label}</option>
+              ))}
+            </Select>
+            <span className="text-[11px] text-fg-tertiary">
+              Only set this for an en-route breakdown so the repair flows into that trip&apos;s P&amp;L.
             </span>
           </div>
           <div className="flex flex-col gap-1.5">

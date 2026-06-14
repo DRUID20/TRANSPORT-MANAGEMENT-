@@ -5,6 +5,7 @@ import {
   addJobCardService as repoAddSvc,
   addJobCardSpare as repoAddSpare,
   closeJobCard as repoClose,
+  completeAndBillJobCard as repoCompleteAndBill,
   createJobCard as repoCreate,
   getJobCard,
   jobCardsForTruck as repoForTruck,
@@ -115,4 +116,30 @@ export async function closeJobCard(
   revalidatePath(`/workshop/${jobCardId}`);
   revalidatePath(`/trucks/${jc.truckId}`);
   return { ok: true, id: jc.id };
+}
+
+export type CompleteResult =
+  | { ok: true; id: string; billNumbers: string[]; nonBillableCount: number }
+  | { ok: false; error: string };
+
+export async function completeAndBillJobCard(
+  jobCardId: string,
+  input: JobCardCloseInput,
+): Promise<CompleteResult> {
+  const parsed = jobCardCloseSchema.safeParse(input);
+  if (!parsed.success) {
+    return { ok: false, error: parsed.error.errors.map((e) => e.message).join("; ") };
+  }
+  const r = await repoCompleteAndBill({ jobCardId, ...parsed.data });
+  if ("error" in r) return { ok: false, error: r.error };
+  revalidatePath("/workshop");
+  revalidatePath(`/workshop/${jobCardId}`);
+  revalidatePath(`/trucks/${r.jobCard.truckId}`);
+  revalidatePath("/bills");
+  return {
+    ok: true,
+    id: r.jobCard.id,
+    billNumbers: r.billNumbers,
+    nonBillableCount: r.nonBillableCount,
+  };
 }

@@ -20,7 +20,7 @@ export default async function ProfitPerTripPage() {
         breadcrumbs={[{ label: "Reports", href: "/reports" }, { label: "Profit per Trip" }]}
         eyebrow="Finance"
         title="Profit per Trip"
-        description="Revenue from invoices minus border charges + driver advance + expenses + fuel — per trip in KES."
+        description="Revenue from invoices minus border charges + driver advance + expenses + fuel + linked workshop — per trip in KES."
       />
 
       <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
@@ -53,6 +53,7 @@ export default async function ProfitPerTripPage() {
                   <th className="px-5 py-2 text-right font-medium">Advance used</th>
                   <th className="px-5 py-2 text-right font-medium">Expenses</th>
                   <th className="px-5 py-2 text-right font-medium">Fuel</th>
+                  <th className="px-5 py-2 text-right font-medium">Workshop</th>
                   <th className="px-5 py-2 text-right font-medium">Profit</th>
                   <th className="px-5 py-2 text-right font-medium">Margin</th>
                 </tr>
@@ -89,6 +90,9 @@ export default async function ProfitPerTripPage() {
                     <td className="px-5 py-2.5 text-right font-mono tnum text-fg-secondary">
                       {r.fuelKes ? r.fuelKes.toLocaleString() : "—"}
                     </td>
+                    <td className="px-5 py-2.5 text-right font-mono tnum text-fg-secondary">
+                      {r.workshopKes ? r.workshopKes.toLocaleString() : "—"}
+                    </td>
                     <td
                       className={
                         "px-5 py-2.5 text-right font-mono tnum font-semibold " +
@@ -113,7 +117,7 @@ export default async function ProfitPerTripPage() {
                 ))}
                 {rows.length === 0 && (
                   <tr>
-                    <td colSpan={10} className="px-5 py-12 text-center text-sm text-fg-tertiary">
+                    <td colSpan={11} className="px-5 py-12 text-center text-sm text-fg-tertiary">
                       No trips with cost data yet.
                     </td>
                   </tr>
@@ -126,7 +130,7 @@ export default async function ProfitPerTripPage() {
                     <td className="px-5 py-2 text-right font-mono tnum font-semibold text-status-success">
                       {totalRevenue.toLocaleString()}
                     </td>
-                    <td colSpan={4}></td>
+                    <td colSpan={5}></td>
                     <td
                       className={
                         "px-5 py-2 text-right font-mono tnum font-semibold " +

@@ -2,12 +2,14 @@
 
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
+import Link from "next/link";
 import {
   CheckCircle2,
   Clock,
   Loader2,
   Package,
   Plus,
+  Receipt,
   Save,
   Trash2,
   Wrench,
@@ -15,12 +17,13 @@ import {
 import {
   addService,
   addSpare,
-  closeJobCard,
+  completeAndBillJobCard,
   removeService,
   removeSpare,
   setStatus,
   updateAnalysis,
 } from "@/server/actions/job-cards";
+import { toast } from "@/components/ui/toast";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -47,6 +50,12 @@ export function JobCardEditor({
   const router = useRouter();
   const supplierById = new Map(suppliers.map((s) => [s.id, s]));
   const readOnly = jobCard.status === "completed" || jobCard.status === "cancelled";
+
+  // Bill preview: spares with a supplier roll onto draft bills (one per
+  // supplier); spares without a supplier are internal/non-billable.
+  const billableSpares = jobCard.spares.filter((s) => !s.posted && s.supplierId);
+  const supplierCount = new Set(billableSpares.map((s) => s.supplierId)).size;
+  const internalCount = jobCard.spares.filter((s) => !s.posted && !s.supplierId).length;
 
   // Analysis edit
   const [analysis, setAnalysis] = useState(jobCard.mechanicAnalysis);
@@ -130,10 +139,10 @@ export function JobCardEditor({
     });
   }
 
-  async function onClose() {
+  async function onComplete() {
     reset();
     startClosing(async () => {
-      const r = await closeJobCard(jobCard.id, {
+      const r = await completeAndBillJobCard(jobCard.id, {
         closingOdometer: closingOdo ? Number(closingOdo) : undefined,
         notes: closeNotes || undefined,
       });
@@ -141,6 +150,12 @@ export function JobCardEditor({
         setError(r.error);
         return;
       }
+      toast.success("Job card completed", {
+        description:
+          r.billNumbers.length > 0
+            ? `Draft supplier bill(s): ${r.billNumbers.join(", ")}`
+            : "No billable spares — nothing posted to AP.",
+      });
       router.refresh();
     });
   }
@@ -351,8 +366,9 @@ export function JobCardEditor({
             Spares used
           </CardTitle>
           <CardDescription>
-            Each spare posts a cost to this truck. Phase 5 will create the
-            supplier AP bill automatically.
+            Spares with a supplier become draft supplier bills (AP) when you
+            complete the card; spares with no supplier are treated as internal
+            (non-billable). In-house labour above isn&apos;t billed.
           </CardDescription>
         </CardHeader>
         <CardContent className="!p-0">
@@ -369,6 +385,7 @@ export function JobCardEditor({
                   <th className="px-5 py-2 font-medium">Qty</th>
                   <th className="px-5 py-2 text-right font-medium">Unit (KES)</th>
                   <th className="px-5 py-2 text-right font-medium">Total (KES)</th>
+                  <th className="px-5 py-2 font-medium">Status</th>
                   <th className="w-12 px-5 py-2" />
                 </tr>
               </thead>
@@ -390,8 +407,22 @@ export function JobCardEditor({
                       <td className="px-5 py-3 text-right font-mono tnum text-fg-primary">
                         {s.totalCostKes.toLocaleString()}
                       </td>
+                      <td className="px-5 py-3">
+                        {s.posted && s.billId ? (
+                          <Link
+                            href={`/bills/${s.billId}`}
+                            className="inline-flex items-center gap-1 text-xs text-brand-blue hover:underline"
+                          >
+                            <Receipt className="size-3" /> Billed
+                          </Link>
+                        ) : s.supplierId ? (
+                          <span className="text-[11px] text-fg-tertiary">To bill</span>
+                        ) : (
+                          <span className="text-[11px] text-status-warning">Internal</span>
+                        )}
+                      </td>
                       <td className="px-5 py-3 text-right">
-                        {!readOnly && (
+                        {!readOnly && !s.posted && (
                           <button
                             onClick={() => onRemoveSpare(s.id)}
                             className="text-fg-tertiary transition-colors hover:text-status-danger"
@@ -411,6 +442,7 @@ export function JobCardEditor({
                   <td className="px-5 py-2 text-right font-mono tnum font-semibold text-fg-primary">
                     {jobCard.sparesTotalKes.toLocaleString()}
                   </td>
+                  <td />
                   <td />
                 </tr>
               </tbody>
@@ -510,14 +542,17 @@ export function JobCardEditor({
         </CardContent>
       </Card>
 
-      {/* Close */}
+      {/* Complete */}
       {!readOnly && (
         <Card>
           <CardHeader>
-            <CardTitle>Close Job Card</CardTitle>
+            <CardTitle>Complete Job Card</CardTitle>
             <CardDescription>
-              Once closed, totals lock. Truck status returns to Active if no
-              other open Job Cards.
+              {supplierCount > 0
+                ? `Completing raises ${supplierCount} draft supplier bill${supplierCount === 1 ? "" : "s"} for the spares (post to AP when you send them).`
+                : "No spares with a supplier to bill."}
+              {internalCount > 0 && ` ${internalCount} internal spare${internalCount === 1 ? "" : "s"} (no supplier) won't be billed.`}
+              {" "}Totals lock; the truck returns to Active if no other open cards.
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -546,16 +581,16 @@ export function JobCardEditor({
                 />
               </div>
               <div className="flex items-end">
-                <Button onClick={onClose} disabled={closing} variant="success">
+                <Button onClick={onComplete} disabled={closing} variant="success">
                   {closing ? (
                     <>
                       <Loader2 className="size-4 animate-spin" />
-                      Closing…
+                      Completing…
                     </>
                   ) : (
                     <>
                       <CheckCircle2 className="size-4" />
-                      Close & Complete
+                      {supplierCount > 0 ? "Complete & Raise Bills" : "Complete"}
                     </>
                   )}
                 </Button>

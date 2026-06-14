@@ -27,7 +27,10 @@ export interface JobCardSpare {
   unitCostKes: number;
   totalCostKes: number;
   supplierId?: string;
-  // Posting bookkeeping (Phase 5 will create the actual AP bill)
+  /** CoA Direct-Cost account this spare bills to (derived from description if unset). */
+  accountCode?: string;
+  /** Set once rolled onto a supplier bill (AP). */
+  billId?: string;
   posted: boolean;
   postedAt?: string;
   consumedAt: string;
@@ -43,6 +46,7 @@ export interface JobCard {
   closingOdometer?: number;   // set on close
   mechanicAnalysis: string;   // free-text diagnostic
   notes?: string;
+  tripId?: string;            // optional en-route-breakdown link
   openedAt: string;           // ISO datetime
   closedAt?: string;
   // Computed totals (recomputed on every mutation)

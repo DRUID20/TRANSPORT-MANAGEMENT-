@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getJobCardById } from "@/server/actions/job-cards";
 import { getTruck } from "@/server/actions/trucks";
+import { getTripById } from "@/server/actions/trips";
 import { listSuppliers } from "@/server/actions/suppliers";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { PageHeader } from "@/components/layout/page-header";
@@ -18,6 +19,7 @@ export default async function JobCardDetailPage({
   if (!jc) notFound();
   const truck = await getTruck(jc.truckId);
   const suppliers = await listSuppliers();
+  const trip = jc.tripId ? await getTripById(jc.tripId) : undefined;
 
   return (
     <div className="flex flex-col gap-6">
@@ -95,6 +97,26 @@ export default async function JobCardDetailPage({
               </span>
               <span className="text-xs text-fg-secondary">
                 {truck.make} {truck.model}
+              </span>
+            </Link>
+          </CardContent>
+        </Card>
+      )}
+
+      {trip && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Linked trip</CardTitle>
+            <CardDescription>En-route breakdown — this repair flows into the trip&apos;s P&amp;L.</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Link
+              href={`/trips/${trip.id}`}
+              className="inline-flex items-center gap-3 rounded-md border border-border bg-bg-base px-3 py-2 transition-colors hover:border-border-strong"
+            >
+              <span className="font-mono text-sm font-semibold text-fg-primary">{trip.number}</span>
+              <span className="text-xs text-fg-secondary">
+                {trip.origin} → {trip.destination}
               </span>
             </Link>
           </CardContent>

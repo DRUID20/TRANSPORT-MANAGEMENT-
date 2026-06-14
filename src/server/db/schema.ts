@@ -648,6 +648,9 @@ export const jobCards = pgTable(
       .references(() => organizations.id, { onDelete: "cascade" }),
     number: varchar("number", { length: 24 }).notNull(),
     truckId: uuid("truck_id").notNull().references(() => trucks.id, { onDelete: "restrict" }),
+    // Optional link — set only for an en-route breakdown so the repair can flow
+    // into that trip's profitability. Blank = truck/period maintenance.
+    tripId: uuid("trip_id").references(() => trips.id, { onDelete: "set null" }),
     status: varchar("status", { length: 16 }).notNull().default("open"),
     mechanicName: text("mechanic_name").notNull(),
     openingOdometer: integer("opening_odometer"),
@@ -689,6 +692,11 @@ export const jobCardSpares = pgTable(
     unitCostKes: numeric("unit_cost_kes", { precision: 14, scale: 4 }).notNull(),
     totalCostKes: numeric("total_cost_kes", { precision: 14, scale: 2 }).notNull(),
     supplierId: uuid("supplier_id").references(() => suppliers.id, { onDelete: "set null" }),
+    // CoA Direct-Cost account this spare posts to (defaults are derived from the
+    // description at bill time: tyres → 504100, tyre repair → 504200, etc.).
+    accountCode: varchar("account_code", { length: 12 }),
+    // Set once the spare has been rolled onto a supplier bill (AP).
+    billId: uuid("bill_id").references(() => supplierBills.id, { onDelete: "set null" }),
     posted: boolean("posted").notNull().default(false),
     postedAt: timestamp("posted_at", { withTimezone: true }),
     consumedAt: timestamp("consumed_at", { withTimezone: true }).notNull().defaultNow(),

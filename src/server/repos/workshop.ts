@@ -18,6 +18,7 @@ import {
   trucks as trucksTable,
 } from "@/server/db/schema";
 import { nextDocumentNumber } from "@/server/repos/counters";
+import { createBill } from "@/server/repos/ap";
 import {
   addJobCardService as storeAddSvc,
   addJobCardSpare as storeAddSpare,
@@ -48,6 +49,7 @@ function toCard(r: CRow): JobCard {
     id: r.id,
     number: r.number,
     truckId: r.truckId,
+    tripId: r.tripId ?? undefined,
     status: r.status as JobCardStatus,
     mechanicName: r.mechanicName,
     openingOdometer: r.openingOdometer ?? undefined,
@@ -82,6 +84,8 @@ function toSpare(r: SpRow): JobCardSpare {
     unitCostKes: Number(r.unitCostKes),
     totalCostKes: Number(r.totalCostKes),
     supplierId: r.supplierId ?? undefined,
+    accountCode: r.accountCode ?? undefined,
+    billId: r.billId ?? undefined,
     posted: r.posted,
     postedAt: r.postedAt?.toISOString(),
     consumedAt: r.consumedAt.toISOString(),
@@ -157,6 +161,7 @@ export async function jobCardsForTruck(truckId: string): Promise<JobCard[]> {
 
 export async function createJobCard(input: {
   truckId: string;
+  tripId?: string;
   mechanicName: string;
   openingOdometer?: number;
   mechanicAnalysis?: string;
@@ -173,6 +178,7 @@ export async function createJobCard(input: {
           organizationId: orgId,
           number,
           truckId: input.truckId,
+          tripId: input.tripId ?? null,
           status: "open",
           mechanicName: input.mechanicName,
           openingOdometer: input.openingOdometer ?? null,
@@ -259,10 +265,10 @@ export async function addJobCardSpare(input: {
   quantity: number;
   unitCostKes: number;
   supplierId?: string;
+  accountCode?: string;
 }): Promise<JobCardSpare> {
   if (IS_DEMO_MODE) return storeAddSpare(input);
   const db = getDb();
-  const now = new Date();
   const total = input.quantity * input.unitCostKes;
   const rows = await db
     .insert(sparesTable)
@@ -273,8 +279,9 @@ export async function addJobCardSpare(input: {
       unitCostKes: String(input.unitCostKes),
       totalCostKes: String(total),
       supplierId: input.supplierId ?? null,
-      posted: true,
-      postedAt: now,
+      accountCode: input.accountCode ?? null,
+      // Not posted to the GL yet — billed when the job card is completed.
+      posted: false,
     })
     .returning();
   await autoProgress(input.jobCardId);
@@ -285,12 +292,18 @@ export async function addJobCardSpare(input: {
 export async function removeJobCardSpare(spareId: string): Promise<boolean> {
   if (IS_DEMO_MODE) return storeRemoveSpare(spareId);
   const db = getDb();
-  const rows = await db
-    .delete(sparesTable)
-    .where(eq(sparesTable.id, spareId))
-    .returning({ jobCardId: sparesTable.jobCardId });
-  if (rows.length === 0) return false;
-  await recomputeTotals(rows[0]!.jobCardId);
+  // A spare that's already been billed can't be deleted here — cancel the
+  // supplier bill (which reverses the GL) instead.
+  const existing = (
+    await db
+      .select({ jobCardId: sparesTable.jobCardId, posted: sparesTable.posted })
+      .from(sparesTable)
+      .where(eq(sparesTable.id, spareId))
+      .limit(1)
+  )[0];
+  if (!existing || existing.posted) return false;
+  await db.delete(sparesTable).where(eq(sparesTable.id, spareId));
+  await recomputeTotals(existing.jobCardId);
   return true;
 }
 
@@ -342,4 +355,87 @@ export async function closeJobCard(input: {
     }
     return toCard(updated);
   });
+}
+
+/** Map a spare's description to its CoA Direct-Cost account. */
+function mapSpareAccount(description: string): string {
+  const d = description.toLowerCase();
+  if (/vulcanis|tyre repair|tire repair|retread|puncture/.test(d)) return "504200"; // Tyre Repairs
+  if (/tyre|tire/.test(d)) return "504100"; // Tyres — Purchases
+  if (/tool/.test(d)) return "504700"; // Workshop Tools & Consumables
+  return "504300"; // Spare Parts & Consumables
+}
+
+/**
+ * Complete a job card and roll its un-billed spares onto draft supplier bills
+ * (one per supplier), then close the card (releasing the truck). In-house
+ * labour is never billed — it's already in payroll and stays on the card for
+ * operational costing only. Spares without a supplier are left as internal
+ * (non-billable) consumption.
+ */
+export async function completeAndBillJobCard(input: {
+  jobCardId: string;
+  closingOdometer?: number;
+  notes?: string;
+}): Promise<
+  | { jobCard: JobCard; billNumbers: string[]; nonBillableCount: number }
+  | { error: string }
+> {
+  if (IS_DEMO_MODE) {
+    const closed = await closeJobCard(input);
+    return closed
+      ? { jobCard: closed, billNumbers: [], nonBillableCount: 0 }
+      : { error: "Job card not found" };
+  }
+
+  const detail = await getJobCard(input.jobCardId);
+  if (!detail) return { error: "Job card not found" };
+  if (detail.status === "completed" || detail.status === "cancelled") {
+    return { error: `Job card is already ${detail.status}` };
+  }
+
+  const billable = detail.spares.filter((s) => !s.posted && s.supplierId);
+  const nonBillableCount = detail.spares.filter((s) => !s.posted && !s.supplierId).length;
+
+  const bySupplier = new Map<string, JobCardSpare[]>();
+  for (const s of billable) {
+    const arr = bySupplier.get(s.supplierId!) ?? [];
+    arr.push(s);
+    bySupplier.set(s.supplierId!, arr);
+  }
+
+  const db = getDb();
+  const today = new Date().toISOString().slice(0, 10);
+  const due = new Date(Date.now() + 30 * 86400_000).toISOString().slice(0, 10);
+  const billNumbers: string[] = [];
+
+  for (const [supplierId, spares] of bySupplier) {
+    const bill = await createBill({
+      supplierId,
+      supplierRef: detail.number,
+      issueDate: today,
+      dueDate: due,
+      currency: "KES",
+      fxRate: 1,
+      taxRate: 0,
+      notes: `Workshop job card ${detail.number}`,
+      lines: spares.map((s) => ({
+        description: s.description,
+        quantity: s.quantity,
+        unit: "ea",
+        unitPrice: s.unitCostKes,
+        expenseAccountCode: s.accountCode ?? mapSpareAccount(s.description),
+      })),
+    });
+    if ("error" in bill) return { error: `Could not raise supplier bill: ${bill.error}` };
+    billNumbers.push(bill.number);
+    await db
+      .update(sparesTable)
+      .set({ posted: true, postedAt: new Date(), billId: bill.id })
+      .where(inArray(sparesTable.id, spares.map((s) => s.id)));
+  }
+
+  const closed = await closeJobCard(input);
+  if (!closed) return { error: "Spares billed, but closing the job card failed" };
+  return { jobCard: closed, billNumbers, nonBillableCount };
 }

@@ -19,7 +19,7 @@ import { listTrips } from "@/server/repos/trips";
 import { listFuelLogs } from "@/server/repos/fuel";
 import { listExpenses } from "@/server/repos/expenses";
 import { listBorderCrossings } from "@/server/repos/borders";
-import { jobCardsForTruck, getJobCard } from "@/server/repos/workshop";
+import { jobCardsForTruck, getJobCard, listJobCards } from "@/server/repos/workshop";
 import { listTrucks, getTruck } from "@/server/repos/trucks";
 import { listCustomers } from "@/server/repos/customers";
 import { listSuppliers } from "@/server/repos/suppliers";
@@ -163,6 +163,7 @@ export interface TripProfitRow {
   driverAdvanceUsedKes: number;
   expensesKes: number;
   fuelKes: number;
+  workshopKes: number;
   totalCostsKes: number;
   grossProfitKes: number;
   marginPct: number | null;
@@ -170,12 +171,20 @@ export interface TripProfitRow {
 
 /** Profit per trip — revenue (from invoices) minus direct trip costs. */
 export async function tripProfitability(): Promise<TripProfitRow[]> {
-  const [trips, invoices, expenses, fuelLogs] = await Promise.all([
+  const [trips, invoices, expenses, fuelLogs, jobCards] = await Promise.all([
     listTrips(),
     listInvoices(),
     listExpenses(),
     listFuelLogs(),
+    listJobCards(),
   ]);
+
+  // Workshop repairs explicitly linked to a trip (en-route breakdowns).
+  const workshopByTrip = new Map<string, number>();
+  for (const jc of jobCards) {
+    if (!jc.tripId) continue;
+    workshopByTrip.set(jc.tripId, (workshopByTrip.get(jc.tripId) ?? 0) + jc.totalKes);
+  }
 
   // Border charges: gather per-trip charges across all trips.
   const borderCharges = await Promise.all(
@@ -211,7 +220,10 @@ export async function tripProfitability(): Promise<TripProfitRow[]> {
       .filter((f) => f.tripId === trip.id)
       .reduce((s, f) => s + f.costKes, 0);
 
-    const totalCostsKes = borderChargesKes + driverAdvanceUsedKes + expensesKes + fuelKes;
+    const workshopKes = workshopByTrip.get(trip.id) ?? 0;
+
+    const totalCostsKes =
+      borderChargesKes + driverAdvanceUsedKes + expensesKes + fuelKes + workshopKes;
     const grossProfitKes = revenueKes - totalCostsKes;
     const marginPct = revenueKes > 0 ? grossProfitKes / revenueKes : null;
 
@@ -226,6 +238,7 @@ export async function tripProfitability(): Promise<TripProfitRow[]> {
       driverAdvanceUsedKes,
       expensesKes,
       fuelKes,
+      workshopKes,
       totalCostsKes,
       grossProfitKes,
       marginPct,
