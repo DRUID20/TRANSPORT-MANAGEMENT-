@@ -16,6 +16,8 @@ import { getTrip } from "@/server/repos/trips";
 import { getEmployeeByDriverId } from "@/server/repos/hr";
 import { createLoan, listLoans } from "@/server/repos/payroll";
 import { getRatesToKesMap } from "@/server/repos/fx";
+import { logAudit } from "@/server/auth/audit";
+import { PermissionError, requireCapability } from "@/server/auth/permissions";
 import type { InvoiceStatus } from "@/lib/types/ar";
 import { ULLAGE_ALERT_THRESHOLD_PCT } from "@/lib/types/trips";
 import {
@@ -125,8 +127,14 @@ async function recordDriverShortageIfAny(tripId: string): Promise<void> {
 }
 
 export async function sendInvoice(id: string): Promise<ActionResult> {
+  try {
+    await requireCapability("finance.post");
+  } catch (e) {
+    return { ok: false, error: e instanceof PermissionError ? e.message : "Forbidden" };
+  }
   const r = await repoSend(id);
   if ("error" in r) return { ok: false, error: r.error };
+  await logAudit({ entityType: "invoice", entityId: id, action: "send" });
   revalidatePath("/invoices");
   revalidatePath(`/invoices/${id}`);
   revalidatePath("/ledger");
@@ -135,8 +143,14 @@ export async function sendInvoice(id: string): Promise<ActionResult> {
 }
 
 export async function cancelInvoice(id: string): Promise<ActionResult> {
+  try {
+    await requireCapability("finance.post");
+  } catch (e) {
+    return { ok: false, error: e instanceof PermissionError ? e.message : "Forbidden" };
+  }
   const r = await repoCancel(id);
   if ("error" in r) return { ok: false, error: r.error };
+  await logAudit({ entityType: "invoice", entityId: id, action: "cancel" });
   revalidatePath("/invoices");
   revalidatePath(`/invoices/${id}`);
   revalidatePath("/ledger");
@@ -144,12 +158,23 @@ export async function cancelInvoice(id: string): Promise<ActionResult> {
 }
 
 export async function recordPayment(input: PaymentRecordInput): Promise<ActionResult> {
+  try {
+    await requireCapability("finance.post");
+  } catch (e) {
+    return { ok: false, error: e instanceof PermissionError ? e.message : "Forbidden" };
+  }
   const parsed = paymentRecordSchema.safeParse(input);
   if (!parsed.success) {
     return { ok: false, error: parsed.error.errors.map((e) => e.message).join("; ") };
   }
   const result = await repoRecord(parsed.data);
   if ("error" in result) return { ok: false, error: result.error };
+  await logAudit({
+    entityType: "customer_payment",
+    entityId: result.id,
+    action: "create",
+    diff: { invoiceId: { from: null, to: parsed.data.invoiceId }, amount: { from: null, to: parsed.data.amount } },
+  });
   revalidatePath("/invoices");
   revalidatePath(`/invoices/${parsed.data.invoiceId}`);
   revalidatePath("/ledger");

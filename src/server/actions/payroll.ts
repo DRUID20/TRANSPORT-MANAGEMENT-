@@ -16,6 +16,8 @@ import {
   updatePayrollInput as repoUpdateInput,
 } from "@/server/repos/payroll";
 import { getEmployee } from "@/server/repos/hr";
+import { logAudit } from "@/server/auth/audit";
+import { PermissionError, requireCapability } from "@/server/auth/permissions";
 import type { LoanStatus, PayrollPeriodStatus } from "@/lib/types/payroll";
 import {
   loanCreateSchema,
@@ -89,19 +91,39 @@ export async function getLoanById(id: string) {
   return { ...l, employee };
 }
 export async function createLoan(input: LoanCreateInput): Promise<ActionResult> {
+  try {
+    await requireCapability("hr.write");
+  } catch (e) {
+    return { ok: false, error: e instanceof PermissionError ? e.message : "Forbidden" };
+  }
   const parsed = loanCreateSchema.safeParse(input);
   if (!parsed.success) {
     return { ok: false, error: parsed.error.errors.map((e) => e.message).join("; ") };
   }
   const r = await repoCreateLoan(parsed.data);
   if ("error" in r) return { ok: false, error: r.error };
+  await logAudit({
+    entityType: "loan",
+    entityId: r.id,
+    action: "create",
+    diff: {
+      employeeId: { from: null, to: parsed.data.employeeId },
+      principal: { from: null, to: parsed.data.principal },
+    },
+  });
   revalidatePath("/hr/loans");
   revalidatePath(`/hr/employees/${parsed.data.employeeId}`);
   return { ok: true, id: r.id };
 }
 export async function cancelLoan(id: string): Promise<ActionResult> {
+  try {
+    await requireCapability("hr.write");
+  } catch (e) {
+    return { ok: false, error: e instanceof PermissionError ? e.message : "Forbidden" };
+  }
   const r = await repoCancelLoan(id);
   if ("error" in r) return { ok: false, error: r.error };
+  await logAudit({ entityType: "loan", entityId: id, action: "cancel" });
   revalidatePath("/hr/loans");
   revalidatePath(`/hr/loans/${id}`);
   return { ok: true, id: r.id };

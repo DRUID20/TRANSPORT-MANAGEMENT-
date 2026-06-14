@@ -10,6 +10,8 @@ import {
   reverseJournalEntry as repoReverse,
   trialBalance as repoTrialBalance,
 } from "@/server/repos/ledger";
+import { logAudit } from "@/server/auth/audit";
+import { PermissionError, requireCapability } from "@/server/auth/permissions";
 import type { JournalReferenceType, JournalStatus } from "@/lib/types/ledger";
 import {
   journalEntryCreateSchema,
@@ -50,12 +52,23 @@ export async function trialBalance(range?: { fromDate?: string; toDate?: string 
 export type ActionResult = { ok: true; id: string } | { ok: false; error: string };
 
 export async function postJournal(input: JournalEntryCreateInput): Promise<ActionResult> {
+  try {
+    await requireCapability("finance.post");
+  } catch (e) {
+    return { ok: false, error: e instanceof PermissionError ? e.message : "Forbidden" };
+  }
   const parsed = journalEntryCreateSchema.safeParse(input);
   if (!parsed.success) {
     return { ok: false, error: parsed.error.errors.map((e) => e.message).join("; ") };
   }
   const result = await postJournalEntry(parsed.data);
   if ("error" in result) return { ok: false, error: result.error };
+  await logAudit({
+    entityType: "journal_entry",
+    entityId: result.id,
+    action: "post",
+    diff: { memo: { from: null, to: parsed.data.memo } },
+  });
   revalidatePath("/ledger");
   revalidatePath("/ledger/trial-balance");
   for (const line of parsed.data.lines) {
@@ -65,8 +78,14 @@ export async function postJournal(input: JournalEntryCreateInput): Promise<Actio
 }
 
 export async function reverseJournal(entryId: string): Promise<ActionResult> {
+  try {
+    await requireCapability("finance.post");
+  } catch (e) {
+    return { ok: false, error: e instanceof PermissionError ? e.message : "Forbidden" };
+  }
   const result = await repoReverse({ entryId, postedBy: "Finance" });
   if ("error" in result) return { ok: false, error: result.error };
+  await logAudit({ entityType: "journal_entry", entityId: entryId, action: "reverse" });
   revalidatePath("/ledger");
   revalidatePath(`/ledger/${entryId}`);
   revalidatePath("/ledger/trial-balance");

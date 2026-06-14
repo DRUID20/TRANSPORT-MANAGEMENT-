@@ -11,6 +11,8 @@ import {
   refreshBillStatuses,
 } from "@/server/repos/ap";
 import { getSupplier } from "@/server/repos/suppliers";
+import { logAudit } from "@/server/auth/audit";
+import { PermissionError, requireCapability } from "@/server/auth/permissions";
 import type { BillStatus } from "@/lib/types/ap";
 import {
   billCreateSchema,
@@ -46,8 +48,14 @@ export async function createBill(input: BillCreateInput): Promise<ActionResult> 
 }
 
 export async function postBill(id: string): Promise<ActionResult> {
+  try {
+    await requireCapability("finance.post");
+  } catch (e) {
+    return { ok: false, error: e instanceof PermissionError ? e.message : "Forbidden" };
+  }
   const r = await repoPost(id);
   if ("error" in r) return { ok: false, error: r.error };
+  await logAudit({ entityType: "bill", entityId: id, action: "send" });
   revalidatePath("/bills");
   revalidatePath(`/bills/${id}`);
   revalidatePath("/ledger");
@@ -56,8 +64,14 @@ export async function postBill(id: string): Promise<ActionResult> {
 }
 
 export async function cancelBill(id: string): Promise<ActionResult> {
+  try {
+    await requireCapability("finance.post");
+  } catch (e) {
+    return { ok: false, error: e instanceof PermissionError ? e.message : "Forbidden" };
+  }
   const r = await repoCancel(id);
   if ("error" in r) return { ok: false, error: r.error };
+  await logAudit({ entityType: "bill", entityId: id, action: "cancel" });
   revalidatePath("/bills");
   revalidatePath(`/bills/${id}`);
   revalidatePath("/ledger");
@@ -65,12 +79,23 @@ export async function cancelBill(id: string): Promise<ActionResult> {
 }
 
 export async function payBill(input: BillPaymentInput): Promise<ActionResult> {
+  try {
+    await requireCapability("finance.post");
+  } catch (e) {
+    return { ok: false, error: e instanceof PermissionError ? e.message : "Forbidden" };
+  }
   const parsed = billPaymentSchema.safeParse(input);
   if (!parsed.success) {
     return { ok: false, error: parsed.error.errors.map((e) => e.message).join("; ") };
   }
   const result = await repoPay(parsed.data);
   if ("error" in result) return { ok: false, error: result.error };
+  await logAudit({
+    entityType: "supplier_payment",
+    entityId: result.id,
+    action: "create",
+    diff: { billId: { from: null, to: parsed.data.billId }, amount: { from: null, to: parsed.data.amount } },
+  });
   revalidatePath("/bills");
   revalidatePath(`/bills/${parsed.data.billId}`);
   revalidatePath("/ledger");

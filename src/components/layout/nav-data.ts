@@ -13,6 +13,7 @@ import {
   Users,
   Building2,
   BarChart3,
+  History,
   Settings,
   Wallet,
   Handshake,
@@ -122,6 +123,9 @@ export const navGroups: { title: string; items: NavItem[] }[] = [
   },
   {
     title: "Admin",
-    items: [{ href: "/settings", label: "Settings", icon: Settings }],
+    items: [
+      { href: "/settings", label: "Settings", icon: Settings },
+      { href: "/admin/audit-log", label: "Audit Log", icon: History },
+    ],
   },
 ];
