@@ -229,6 +229,18 @@ export async function createInvoice(input: {
   const customer = await getCustomer(input.customerId);
   if (!customer) return { error: "Customer not found" };
 
+  // One invoice per trip. Reject a second non-cancelled invoice on the same
+  // trip — the freight bill is the delivered L20, period.
+  if (input.tripId) {
+    const existing = await invoicesForTrip(input.tripId);
+    const live = existing.find((i) => i.status !== "cancelled");
+    if (live) {
+      return {
+        error: `Trip already has invoice ${live.number} (${live.status}). Cancel it before raising another.`,
+      };
+    }
+  }
+
   const subtotal = input.lines.reduce((s, l) => s + l.quantity * l.unitPrice, 0);
   const taxAmount = subtotal * input.taxRate;
   const total = subtotal + taxAmount;

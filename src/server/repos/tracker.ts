@@ -423,7 +423,7 @@ export async function customerRouteMatrix(range?: Range): Promise<CustomerRouteC
         customerName: cust.name,
         route,
         origin: trip.origin,
-        destination: trip.destination,
+        destination: trip.destination ?? "TBC",
         tripCount: 0,
         revenueKes: 0,
       });

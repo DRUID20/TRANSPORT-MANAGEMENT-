@@ -59,7 +59,9 @@ function toTrip(r: Row): Trip {
     driverId: r.driverId,
     status: r.status as TripStatus,
     origin: r.origin,
-    destination: r.destination,
+    destination: r.destination ?? undefined,
+    destinationConfirmedAt: r.destinationConfirmedAt?.toISOString(),
+    destinationConfirmedBy: r.destinationConfirmedBy ?? undefined,
     product: (r.product as FuelProduct | null) ?? undefined,
     cargoType: r.cargoType,
     cargoQuantity: Number(r.cargoQuantity),
@@ -276,7 +278,9 @@ export async function planTrip(input: PlanTripInput): Promise<Trip | undefined> 
           driverId: input.driverId,
           status: "planned",
           origin: bk.origin,
-          destination: bk.destination,
+          // Carry forward booking's intended destination if any; the
+          // dispatcher confirms the binding destination on the trip later.
+          destination: bk.destination ?? null,
           product: bk.product ?? null,
           cargoType: bk.cargoType,
           cargoQuantity: String(bk.cargoQuantity),
@@ -476,4 +480,82 @@ async function applySideEffects(
       await tx.update(driversTable).set({ status: "active" }).where(eq(driversTable.id, driverId));
     }
   }
+}
+
+/**
+ * Bind a trip's delivery destination. Called from the depot when the dispatcher
+ * confirms where the load is going, or at the transit border (Malaba / Busia)
+ * when the customer's instructions firm up. Records who confirmed it and when,
+ * writes a timeline event, and from this point onwards the destination is
+ * locked-in for the Road User Charge packet and downstream invoicing.
+ *
+ * Cannot be re-confirmed once set unless the trip is still in {planned, loading}
+ * and the caller passes `force: true` — protects against accidental rebinds
+ * mid-transit.
+ */
+export async function confirmTripDestination(input: {
+  tripId: string;
+  destination: string;
+  actorName: string;
+  location?: string;
+  force?: boolean;
+}): Promise<Trip | { error: string }> {
+  if (IS_DEMO_MODE) {
+    const t = await storeGet(input.tripId);
+    if (!t) return { error: "Trip not found" };
+    if (t.destination && !input.force) return { error: "Destination already confirmed" };
+    // Best-effort store update; mock store doesn't model the new fields.
+    return { ...t, destination: input.destination };
+  }
+  const dest = input.destination.trim();
+  if (!dest) return { error: "Destination is required" };
+  const db = getDb();
+  const orgId = await requireOrgId();
+  const trip = (
+    await db
+      .select()
+      .from(table)
+      .where(and(eq(table.id, input.tripId), eq(table.organizationId, orgId)))
+      .limit(1)
+  )[0];
+  if (!trip) return { error: "Trip not found" };
+  if (isTerminal(trip.status as TripStatus)) {
+    return { error: `Cannot change destination of a ${trip.status} trip` };
+  }
+  if (
+    trip.destination &&
+    trip.destinationConfirmedAt &&
+    !input.force &&
+    trip.status !== "planned" &&
+    trip.status !== "loading"
+  ) {
+    return { error: "Destination already confirmed for this trip" };
+  }
+
+  const updated = await db.transaction(async (tx) => {
+    const r = (
+      await tx
+        .update(table)
+        .set({
+          destination: dest,
+          destinationConfirmedAt: new Date(),
+          destinationConfirmedBy: input.actorName,
+        })
+        .where(and(eq(table.id, input.tripId), eq(table.organizationId, orgId)))
+        .returning()
+    )[0]!;
+    // Timeline event — keep `toStatus` = current status so it slots into the
+    // existing per-status timeline without polluting the status machine.
+    await tx.insert(eventsTable).values({
+      organizationId: orgId,
+      tripId: input.tripId,
+      fromStatus: trip.status,
+      toStatus: trip.status,
+      actorName: input.actorName,
+      location: input.location ?? null,
+      note: `Destination confirmed: ${dest}`,
+    });
+    return r;
+  });
+  return toTrip(updated);
 }

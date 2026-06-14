@@ -37,7 +37,10 @@ export type RateCreateInput = z.infer<typeof rateCreateSchema>;
 export const bookingCreateSchema = z.object({
   customerId: z.string().min(1, "Customer is required"),
   origin: z.string().min(2),
-  destination: z.string().min(2),
+  /** Destination is OPTIONAL at booking — bound on the trip at the depot
+   *  loading bay or the transit border (Malaba / Busia). Captured here only
+   *  if the customer told us up-front. */
+  destination: z.string().optional(),
   /** Fuel product. Optional during F-1 so the legacy create form keeps
    *  working; F-2 rewrites the form to make this required. */
   product: productEnum.optional(),

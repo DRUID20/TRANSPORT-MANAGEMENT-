@@ -454,7 +454,12 @@ export const bookings = pgTable(
     number: varchar("number", { length: 24 }).notNull(),
     customerId: uuid("customer_id").notNull().references(() => customers.id, { onDelete: "restrict" }),
     origin: text("origin").notNull(),
-    destination: text("destination").notNull(),
+    // Destination is unknown at booking — only customer, product and volume
+    // are agreed up-front. The truck is loaded at origin and the final
+    // destination is set en-route (at the loading depot or transit border)
+    // on the trip. Kept here as a non-binding "intended" destination if the
+    // dispatcher captures one.
+    destination: text("destination"),
     product: varchar("product", { length: 8 }), // PMS | AGO | null
     cargoType: text("cargo_type").notNull(),
     cargoQuantity: numeric("cargo_quantity", { precision: 14, scale: 2 }).notNull(),
@@ -490,7 +495,13 @@ export const trips = pgTable(
     driverId: uuid("driver_id").notNull().references(() => drivers.id, { onDelete: "restrict" }),
     status: varchar("status", { length: 16 }).notNull().default("planned"),
     origin: text("origin").notNull(),
-    destination: text("destination").notNull(),
+    // Set when the dispatcher confirms the delivery point — typically at the
+    // depot loading bay or the transit border (Malaba / Busia). Until then
+    // the trip is "destination TBC". Track who confirmed it and when so the
+    // Road User Charge packet is anchored to a real decision.
+    destination: text("destination"),
+    destinationConfirmedAt: timestamp("destination_confirmed_at", { withTimezone: true }),
+    destinationConfirmedBy: text("destination_confirmed_by"),
     product: varchar("product", { length: 8 }),
     cargoType: text("cargo_type").notNull(),
     cargoQuantity: numeric("cargo_quantity", { precision: 14, scale: 2 }).notNull(),

@@ -3795,7 +3795,7 @@ export function tripProfitability(): TripProfitRow[] {
       tripId: trip.id,
       number: trip.number,
       origin: trip.origin,
-      destination: trip.destination,
+      destination: trip.destination ?? "TBC",
       status: trip.status,
       revenueKes,
       borderChargesKes,
@@ -4509,7 +4509,7 @@ export function customerRouteMatrix(range?: {
         customerName: cust.name,
         route,
         origin: trip.origin,
-        destination: trip.destination,
+        destination: trip.destination ?? "TBC",
         tripCount: 0,
         revenueKes: 0,
       });

@@ -149,7 +149,7 @@ export async function ullageReport(range?: {
       tripNumber: trip.number,
       product: trip.product,
       origin: trip.origin,
-      destination: trip.destination,
+      destination: trip.destination ?? "TBC",
       truckRegistration: truck?.registration,
       driverName: driver?.fullName,
       customerName: customer?.name,

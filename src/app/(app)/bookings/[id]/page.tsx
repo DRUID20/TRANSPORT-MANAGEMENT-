@@ -115,7 +115,9 @@ export default async function BookingDetailPage({
           <div className="flex items-center gap-2 text-[15px] font-medium text-fg-primary">
             <span>{booking.origin}</span>
             <ArrowRight className="size-3.5 text-fg-tertiary" />
-            <span>{booking.destination}</span>
+            <span className={booking.destination ? "" : "italic text-fg-tertiary"}>
+              {booking.destination ?? "Destination TBC"}
+            </span>
           </div>
           <span className="font-mono text-[11px] tnum text-fg-tertiary">
             requested {new Date(booking.requestedDate).toLocaleDateString("en-GB")}

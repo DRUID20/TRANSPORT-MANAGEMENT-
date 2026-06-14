@@ -6,6 +6,7 @@
 export type TripDocumentKind =
   | "manifest"
   | "bill_of_lading"
+  | "road_user_charge"
   | "commercial_invoice"
   | "packing_list"
   | "waybill"
@@ -51,6 +52,7 @@ export interface TripDocument {
 export const documentKindLabel: Record<TripDocumentKind, string> = {
   manifest: "Manifest",
   bill_of_lading: "Bill of Lading",
+  road_user_charge: "Road User Charge",
   commercial_invoice: "Commercial Invoice",
   packing_list: "Packing List",
   waybill: "Waybill",
@@ -73,7 +75,7 @@ export const documentStages = [
   },
   {
     label: "Cross-border / transit",
-    kinds: ["t1_transit", "comesa_yellow_card", "certificate_of_origin"] as TripDocumentKind[],
+    kinds: ["road_user_charge", "t1_transit", "comesa_yellow_card", "certificate_of_origin"] as TripDocumentKind[],
   },
   {
     label: "Delivery",

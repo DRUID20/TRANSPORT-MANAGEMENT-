@@ -131,7 +131,9 @@ export default async function TripsPage({
                     <span className="inline-flex items-center gap-1.5 text-sm text-fg-primary">
                       {t.origin}
                       <ArrowRight className="size-3 text-fg-tertiary" />
-                      {t.destination}
+                      <span className={t.destination ? "" : "italic text-fg-tertiary"}>
+                        {t.destination ?? "TBC"}
+                      </span>
                     </span>
                   </DataTableCell>
                   <DataTableCell>

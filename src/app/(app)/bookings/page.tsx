@@ -123,7 +123,9 @@ export default async function BookingsPage({
                     <span className="inline-flex items-center gap-2 text-sm text-fg-primary">
                       <span>{b.origin}</span>
                       <ArrowRight className="size-3 text-fg-tertiary" />
-                      <span>{b.destination}</span>
+                      <span className={b.destination ? "" : "italic text-fg-tertiary"}>
+                        {b.destination ?? "TBC"}
+                      </span>
                     </span>
                   </DataTableCell>
                   <DataTableCell className="text-xs text-fg-secondary">

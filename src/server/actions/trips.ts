@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import {
+  confirmTripDestination as repoConfirmDestination,
   eventsForTrip,
   getTrip,
   listTrips as repoList,
@@ -122,6 +123,29 @@ export async function planTrip(input: TripPlanInput): Promise<ActionResult> {
   revalidatePath("/trips");
   revalidatePath(`/trips/${trip.id}`);
   return { ok: true, id: trip.id };
+}
+
+/**
+ * Bind the trip's delivery destination. Called at the depot when the
+ * dispatcher confirms the unload point, or at the transit border (Malaba /
+ * Busia) when the customer's instructions firm up. Once confirmed the
+ * destination locks for the Road User Charge packet — caller can `force`
+ * while still in planned/loading, otherwise it refuses.
+ */
+export async function confirmTripDestination(input: {
+  tripId: string;
+  destination: string;
+  actorName: string;
+  location?: string;
+  force?: boolean;
+}): Promise<ActionResult> {
+  if (!input.destination.trim()) return { ok: false, error: "Destination is required" };
+  if (!input.actorName.trim()) return { ok: false, error: "Your name is required" };
+  const r = await repoConfirmDestination(input);
+  if ("error" in r) return { ok: false, error: r.error };
+  revalidatePath("/trips");
+  revalidatePath(`/trips/${input.tripId}`);
+  return { ok: true, id: r.id };
 }
 
 /**

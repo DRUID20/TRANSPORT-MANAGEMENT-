@@ -60,6 +60,7 @@ function labelFor(kind: TripDocumentKind): string {
   const map: Record<TripDocumentKind, string> = {
     manifest: "Manifest",
     bill_of_lading: "Bill of Lading",
+    road_user_charge: "Road User Charge",
     commercial_invoice: "Commercial Invoice",
     packing_list: "Packing List",
     waybill: "Waybill",

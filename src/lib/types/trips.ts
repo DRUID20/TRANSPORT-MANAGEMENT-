@@ -94,7 +94,9 @@ export interface Booking {
   number: string;          // e.g. "BK-2026-0042"
   customerId: string;
   origin: string;          // depot, e.g. "KPC Mombasa"
-  destination: string;
+  /** Optional — destination is bound on the trip (at the depot or border),
+   *  not at booking. May still be captured as a non-binding intent here. */
+  destination?: string;
   /** Fuel product. Free-text cargoType is preserved for legacy seeds but
    *  every new booking now sets `product` instead. */
   product?: FuelProduct;
@@ -173,7 +175,12 @@ export interface Trip {
   status: TripStatus;
   /** Snapshot of route + cargo at planning time. */
   origin: string;          // depot, e.g. "KPC Mombasa"
-  destination: string;
+  /** Bound when the dispatcher confirms the delivery point — at the depot or
+   *  the transit border (Malaba / Busia). The Road User Charge packet uses
+   *  this; until set, the trip is "destination TBC". */
+  destination?: string;
+  destinationConfirmedAt?: string;
+  destinationConfirmedBy?: string;
   /** Fuel product. New trips always set this; legacy rows keep cargoType only. */
   product?: FuelProduct;
   cargoType: string;

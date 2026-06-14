@@ -43,7 +43,7 @@ export default async function DriverScanPage({
       tripId={trip.id}
       tripNumber={trip.number}
       origin={trip.origin}
-      destination={trip.destination}
+      destination={trip.destination ?? "TBC"}
       truckId={trip.truckId}
       driverId={driverId}
     />

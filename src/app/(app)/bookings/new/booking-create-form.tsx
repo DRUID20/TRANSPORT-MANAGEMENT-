@@ -136,7 +136,7 @@ export function BookingCreateForm({
     const next: Errors = {};
     if (!customerId) next.customerId = "Required.";
     if (!origin.trim()) next.origin = "Required.";
-    if (!destination.trim()) next.destination = "Required.";
+    // Destination is OPTIONAL — bound on the trip at the depot or border.
     if (!cargoQuantity || Number(cargoQuantity) <= 0) {
       next.cargoQuantity = "Enter litres.";
     }
@@ -156,7 +156,7 @@ export function BookingCreateForm({
     const result = await createBooking({
       customerId,
       origin: origin.trim(),
-      destination: destination.trim(),
+      destination: destination.trim() || undefined,
       product,
       cargoQuantity: Number(cargoQuantity),
       cargoUnit: "litres",
@@ -205,13 +205,15 @@ export function BookingCreateForm({
             error={Boolean(errors.origin)}
           />
         </FormField>
-        <FormField label="Destination" required error={errors.destination}>
+        <FormField
+          label="Destination"
+          hint="OPTIONAL"
+          helper="Bound on the trip — at the depot loading bay, or at the transit border (Malaba / Busia)."
+        >
           <Input
             value={destination}
             onChange={(e) => setDestination(e.currentTarget.value)}
-            placeholder="e.g. Kampala"
-            required
-            error={Boolean(errors.destination)}
+            placeholder="To be confirmed at loading / border"
           />
         </FormField>
       </FormSection>

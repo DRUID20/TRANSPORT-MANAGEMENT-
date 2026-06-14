@@ -225,7 +225,7 @@ export async function tripProfitability(): Promise<TripProfitRow[]> {
       tripId: trip.id,
       number: trip.number,
       origin: trip.origin,
-      destination: trip.destination,
+      destination: trip.destination ?? "TBC",
       status: trip.status,
       revenueKes,
       borderChargesKes,

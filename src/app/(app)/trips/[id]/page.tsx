@@ -23,6 +23,7 @@ import { listTripDocuments } from "@/server/actions/documents";
 import { listBorderCrossingsForTrip } from "@/server/actions/borders";
 import { PageHeader } from "@/components/layout/page-header";
 import { TripTimeline } from "@/components/trips/trip-timeline";
+import { ConfirmDestinationCard } from "@/components/trips/confirm-destination-card";
 import { TripStatusUpdate } from "@/components/trips/trip-status-update";
 import { TripDocuments } from "@/components/trips/trip-documents";
 import { TripBorders } from "@/components/trips/trip-borders";
@@ -60,8 +61,8 @@ export default async function TripDetailPage({
         title={trip.number}
         description={
           trip.customer
-            ? `${trip.customer.name} · ${trip.origin} to ${trip.destination}`
-            : `${trip.origin} to ${trip.destination}`
+            ? `${trip.customer.name} · ${trip.origin} to ${trip.destination ?? "destination TBC"}`
+            : `${trip.origin} to ${trip.destination ?? "destination TBC"}`
         }
         actions={
           trip.readyToInvoice ? <Badge variant="success">Ready to invoice</Badge> : null
@@ -165,6 +166,16 @@ export default async function TripDetailPage({
           mono
         />
       </section>
+
+      {/* DESTINATION — bound here at the depot or transit border (Malaba/Busia) */}
+      <ConfirmDestinationCard
+        tripId={trip.id}
+        current={trip.destination}
+        confirmedAt={trip.destinationConfirmedAt}
+        confirmedBy={trip.destinationConfirmedBy}
+        canForce={trip.status === "planned" || trip.status === "loading"}
+        defaultActor="Dispatcher"
+      />
 
       {/* FUEL CARGO — the operational heart */}
       <FuelCargoCard trip={trip} />
