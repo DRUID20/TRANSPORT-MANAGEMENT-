@@ -41,8 +41,18 @@ export async function deleteComplianceRecord(
   id: string,
   employeeId: string,
 ): Promise<ActionResult> {
+  const record = await getComplianceRecord(id);
   const ok = await repoDelete(id);
   if (!ok) return { ok: false, error: "Not found" };
+  // Best-effort: also remove the underlying file from Storage.
+  if (record?.attachmentUrl) {
+    try {
+      const { deleteFile } = await import("@/server/storage/files");
+      await deleteFile(record.attachmentUrl);
+    } catch (err) {
+      console.error("[hr-compliance] failed to delete storage object:", err);
+    }
+  }
   revalidatePath("/hr/compliance");
   revalidatePath(`/hr/employees/${employeeId}`);
   return { ok: true, id };

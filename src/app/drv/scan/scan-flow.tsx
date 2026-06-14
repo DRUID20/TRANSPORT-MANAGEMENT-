@@ -77,13 +77,28 @@ export function ScanFlow({
       const summary = extraction.fields
         .map((f) => `${f.label}: ${fields[f.key] ?? ""}`)
         .join("\n");
+      // Upload the captured image bytes first; trip-document metadata follows.
+      const blob = await (await fetch(image.dataUrl)).blob();
+      const file = new File([blob], image.fileName, { type: image.mimeType });
+      const form = new FormData();
+      form.set("file", file);
+      form.set("namespace", "trip");
+      const upRes = await fetch("/api/files/upload", { method: "POST", body: form });
+      const upJson = (await upRes.json()) as
+        | { ok: true; storageKey: string; fileName: string; fileSize: number; mimeType: string }
+        | { ok: false; error: string };
+      if (!upRes.ok || !upJson.ok) {
+        setError("error" in upJson ? upJson.error : "Upload failed");
+        return;
+      }
       const result = await uploadDocument({
         tripId,
         kind,
         name: `${documentKindLabel[kind]} — ${origin} → ${destination}`,
-        fileName: image.fileName,
-        fileSize: image.size,
-        mimeType: image.mimeType,
+        fileName: upJson.fileName,
+        fileSize: upJson.fileSize,
+        mimeType: upJson.mimeType,
+        storageKey: upJson.storageKey,
         uploadedBy: "Driver (scan)",
         notes: summary,
       });

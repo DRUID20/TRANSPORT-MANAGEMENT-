@@ -21,7 +21,8 @@ access to the Vercel + Supabase + Resend projects).
   DATABASE_URL=postgres://...    # Supabase pooler connection string (owner role)
   SESSION_SECRET=<at least 32 random chars>
   NEXT_PUBLIC_SUPABASE_URL=https://<ref>.supabase.co
-  NEXT_PUBLIC_SUPABASE_ANON_KEY=...    # only used for type generation, the app does NOT call PostgREST
+  NEXT_PUBLIC_SUPABASE_ANON_KEY=...    # not used by the app for queries (we use the owner role) — kept for tooling
+  SUPABASE_SERVICE_ROLE_KEY=...        # REQUIRED for file uploads/downloads. Supabase → Settings → API → service_role
   RESEND_API_KEY=re_...
   RESEND_FROM="Nile Valley Logistics <noreply@yourdomain.com>"
   ```
@@ -29,6 +30,11 @@ access to the Vercel + Supabase + Resend projects).
 The same `RESEND_API_KEY` may be reused across apps in the same Resend account.
 The `RESEND_FROM` address **must** be on a verified domain or mail will only
 deliver to your own Resend-account login email.
+
+`SUPABASE_SERVICE_ROLE_KEY` is server-only — **never** ship it to the client. It
+lets the server upload to + read from the private `documents` bucket without
+RLS policies. Without it, every file upload action throws a clear error
+(`"SUPABASE_SERVICE_ROLE_KEY is not set"`) and the document UI breaks.
 
 ---
 

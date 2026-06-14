@@ -37,6 +37,7 @@ export async function uploadDocument(input: DocumentUploadInput): Promise<Action
     fileName: parsed.data.fileName,
     fileSize: parsed.data.fileSize,
     mimeType: parsed.data.mimeType,
+    storageKey: parsed.data.storageKey,
     uploadedBy: parsed.data.uploadedBy,
     notes: parsed.data.notes,
   });
@@ -65,6 +66,15 @@ export async function removeDocument(id: string): Promise<ActionResult> {
   const doc = await getTripDocument(id);
   if (!doc) return { ok: false, error: "Document not found" };
   await repoDelete(id);
+  // Best-effort delete the underlying bytes too — never block the action on this.
+  if (doc.storageKey) {
+    try {
+      const { deleteFile } = await import("@/server/storage/files");
+      await deleteFile(doc.storageKey);
+    } catch (err) {
+      console.error("[documents] failed to delete storage object:", err);
+    }
+  }
   revalidatePath(`/trips/${doc.tripId}`);
   return { ok: true, id };
 }

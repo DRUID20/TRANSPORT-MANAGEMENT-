@@ -23,6 +23,8 @@ export const documentUploadSchema = z.object({
   fileName: z.string().min(1),
   fileSize: z.coerce.number().nonnegative(),
   mimeType: z.string().min(1),
+  /** Storage path returned by POST /api/files/upload — required for real uploads. */
+  storageKey: z.string().min(1, "Upload the file before saving."),
   uploadedBy: z.string().default("Dispatcher"),
   notes: z.string().optional(),
 });

@@ -25,6 +25,8 @@ export const complianceCreateSchema = z.object({
   issueDate: z.string().optional(),
   expiryDate: z.string().optional(),
   issuingAuthority: z.string().optional(),
+  /** Storage key (from /api/files/upload). Persisted as attachment_url. */
+  attachmentUrl: z.string().optional(),
   notes: z.string().optional(),
 });
 export type ComplianceCreateInput = z.infer<typeof complianceCreateSchema>;

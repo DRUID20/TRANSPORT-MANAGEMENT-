@@ -20,6 +20,7 @@ import {
   type TripDocumentKind,
 } from "@/lib/types/documents";
 import { Button } from "@/components/ui/button";
+import { FileUpload, type UploadedAttachment } from "@/components/ui/file-upload";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select } from "@/components/ui/select";
@@ -52,32 +53,26 @@ export function TripDocuments({
   // Upload form state
   const [kind, setKind] = useState<TripDocumentKind>("manifest");
   const [name, setName] = useState("");
-  const [fileMeta, setFileMeta] = useState<{ name: string; size: number; type: string } | null>(null);
+  const [attachment, setAttachment] = useState<UploadedAttachment | null>(null);
   const [notes, setNotes] = useState("");
   const [uploadedBy, setUploadedBy] = useState("Dispatcher");
-
-  function onFile(e: React.ChangeEvent<HTMLInputElement>) {
-    const f = e.currentTarget.files?.[0];
-    if (!f) return;
-    setFileMeta({ name: f.name, size: f.size, type: f.type || "application/octet-stream" });
-    if (!name) setName(`${documentKindLabel[kind]} — ${f.name}`);
-  }
 
   function onUpload(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setError(null);
-    if (!fileMeta) {
-      setError("Pick a file first.");
+    if (!attachment) {
+      setError("Upload the file first.");
       return;
     }
     startTransition(async () => {
       const result = await uploadDocument({
         tripId,
         kind,
-        name: name || `${documentKindLabel[kind]} — ${fileMeta.name}`,
-        fileName: fileMeta.name,
-        fileSize: fileMeta.size,
-        mimeType: fileMeta.type,
+        name: name || `${documentKindLabel[kind]} — ${attachment.fileName}`,
+        fileName: attachment.fileName,
+        fileSize: attachment.fileSize,
+        mimeType: attachment.mimeType,
+        storageKey: attachment.storageKey,
         uploadedBy,
         notes: notes || undefined,
       });
@@ -87,10 +82,8 @@ export function TripDocuments({
       }
       // Reset form
       setName("");
-      setFileMeta(null);
+      setAttachment(null);
       setNotes("");
-      const fileInput = document.getElementById("doc-file") as HTMLInputElement | null;
-      if (fileInput) fileInput.value = "";
       router.refresh();
     });
   }
@@ -184,17 +177,15 @@ export function TripDocuments({
             </div>
             <div className="flex flex-col gap-1.5 sm:col-span-2">
               <Label>File</Label>
-              <Input
-                id="doc-file"
-                type="file"
-                onChange={onFile}
-                className="cursor-pointer file:mr-3 file:rounded-md file:border file:border-border file:bg-bg-elevated file:px-3 file:py-1 file:text-xs file:font-medium file:text-fg-primary"
+              <FileUpload
+                namespace="trip"
+                value={attachment}
+                onUploaded={(f) => {
+                  setAttachment(f);
+                  if (!name) setName(`${documentKindLabel[kind]} — ${f.fileName}`);
+                }}
+                onCleared={() => setAttachment(null)}
               />
-              {fileMeta && (
-                <span className="font-mono text-[11px] text-fg-tertiary">
-                  {fileMeta.name} · {formatBytes(fileMeta.size)} · {fileMeta.type || "unknown"}
-                </span>
-              )}
             </div>
             <div className="flex flex-col gap-1.5">
               <Label>Uploaded by</Label>
@@ -214,7 +205,7 @@ export function TripDocuments({
             </div>
           </div>
           <div className="mt-3 flex items-center justify-end">
-            <Button type="submit" disabled={pending || !fileMeta}>
+            <Button type="submit" disabled={pending || !attachment}>
               {pending ? (
                 <Loader2 className="size-4 animate-spin" />
               ) : (
@@ -224,9 +215,9 @@ export function TripDocuments({
             </Button>
           </div>
           <p className="mt-2 text-[10px] text-fg-tertiary">
-            Mock storage. Supabase Storage will replace this once the
-            uploads endpoint lands; metadata persists until the dev server
-            restarts.
+            Stored privately in Supabase Storage. Authorised users can view
+            from the document row below; PODs and damage reports stay
+            org-scoped and aren&apos;t public.
           </p>
         </form>
       </div>
@@ -328,9 +319,15 @@ function DocRow({ doc }: { doc: TripDocument }) {
       {/* Action row */}
       <div className="flex flex-wrap items-center gap-1.5">
         {doc.storageKey && (
-          <Button variant="ghost" size="sm" disabled>
-            <ExternalLink className="size-3.5" />
-            View
+          <Button variant="ghost" size="sm" asChild>
+            <a
+              href={`/api/files/${doc.storageKey.split("/").map(encodeURIComponent).join("/")}`}
+              target="_blank"
+              rel="noopener"
+            >
+              <ExternalLink className="size-3.5" />
+              View
+            </a>
           </Button>
         )}
         {doc.status === "pending" && (
