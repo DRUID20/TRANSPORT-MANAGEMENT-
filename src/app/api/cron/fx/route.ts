@@ -8,21 +8,28 @@ import { refreshFxRates } from "@/server/repos/fx";
  * Pulls today's KES/USD/UGX rates from the live providers (CBK → ERAPI →
  * Frankfurter, first that succeeds) and upserts them into fx_rates.
  *
- * Auth: if CRON_SECRET (or FX_CRON_SECRET) is set, we require Vercel's
- * `Authorization: Bearer ${secret}` header. If neither is configured the job
- * still runs — it only fetches public rates and writes them — so live FX works
- * out of the box; set the secret to lock the endpoint down.
+ * Auth: requires `Authorization: Bearer ${CRON_SECRET}` (Vercel Cron sets this
+ * automatically when CRON_SECRET is configured in Vercel project settings).
+ * The route refuses to run without it — an open endpoint here would let
+ * anyone trigger writes to the fx_rates table.
  */
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 export async function GET(request: Request) {
   const secret = process.env.FX_CRON_SECRET ?? process.env.CRON_SECRET;
-  if (secret) {
-    const auth = request.headers.get("authorization");
-    if (auth !== `Bearer ${secret}`) {
-      return NextResponse.json({ error: "unauthorized" }, { status: 401 });
-    }
+  if (!secret) {
+    return NextResponse.json(
+      {
+        status: "misconfigured",
+        message: "CRON_SECRET (or FX_CRON_SECRET) must be set in Vercel for the FX cron to run.",
+      },
+      { status: 503 },
+    );
+  }
+  const auth = request.headers.get("authorization");
+  if (auth !== `Bearer ${secret}`) {
+    return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   }
 
   try {

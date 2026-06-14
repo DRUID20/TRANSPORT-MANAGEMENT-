@@ -225,13 +225,32 @@ export async function setJobCardStatus(
   return rows[0] ? toCard(rows[0]) : undefined;
 }
 
+/**
+ * Cross-org IDOR guard. Child writes on job_card_services / job_card_spares
+ * use only the child id (or jobCardId), so we MUST verify the parent job card
+ * belongs to the caller's org first.
+ */
+async function assertJobCardInOrg(jobCardId: string): Promise<boolean> {
+  const db = getDb();
+  const orgId = await requireOrgId();
+  const r = (
+    await db
+      .select({ id: cardsTable.id })
+      .from(cardsTable)
+      .where(and(eq(cardsTable.id, jobCardId), eq(cardsTable.organizationId, orgId)))
+      .limit(1)
+  )[0];
+  return !!r;
+}
+
 export async function addJobCardService(input: {
   jobCardId: string;
   description: string;
   hours: number;
   costKes: number;
-}): Promise<JobCardService> {
+}): Promise<JobCardService | undefined> {
   if (IS_DEMO_MODE) return storeAddSvc(input);
+  if (!(await assertJobCardInOrg(input.jobCardId))) return undefined;
   const db = getDb();
   const rows = await db
     .insert(servicesTable)
@@ -250,12 +269,19 @@ export async function addJobCardService(input: {
 export async function removeJobCardService(serviceId: string): Promise<boolean> {
   if (IS_DEMO_MODE) return storeRemoveSvc(serviceId);
   const db = getDb();
-  const rows = await db
-    .delete(servicesTable)
-    .where(eq(servicesTable.id, serviceId))
-    .returning({ jobCardId: servicesTable.jobCardId });
-  if (rows.length === 0) return false;
-  await recomputeTotals(rows[0]!.jobCardId);
+  // Look up the parent job card and verify it belongs to caller's org BEFORE
+  // touching the row (otherwise this was a one-shot cross-tenant delete).
+  const existing = (
+    await db
+      .select({ jobCardId: servicesTable.jobCardId })
+      .from(servicesTable)
+      .where(eq(servicesTable.id, serviceId))
+      .limit(1)
+  )[0];
+  if (!existing) return false;
+  if (!(await assertJobCardInOrg(existing.jobCardId))) return false;
+  await db.delete(servicesTable).where(eq(servicesTable.id, serviceId));
+  await recomputeTotals(existing.jobCardId);
   return true;
 }
 
@@ -266,8 +292,9 @@ export async function addJobCardSpare(input: {
   unitCostKes: number;
   supplierId?: string;
   accountCode?: string;
-}): Promise<JobCardSpare> {
+}): Promise<JobCardSpare | undefined> {
   if (IS_DEMO_MODE) return storeAddSpare(input);
+  if (!(await assertJobCardInOrg(input.jobCardId))) return undefined;
   const db = getDb();
   const total = input.quantity * input.unitCostKes;
   const rows = await db
@@ -302,6 +329,7 @@ export async function removeJobCardSpare(spareId: string): Promise<boolean> {
       .limit(1)
   )[0];
   if (!existing || existing.posted) return false;
+  if (!(await assertJobCardInOrg(existing.jobCardId))) return false;
   await db.delete(sparesTable).where(eq(sparesTable.id, spareId));
   await recomputeTotals(existing.jobCardId);
   return true;

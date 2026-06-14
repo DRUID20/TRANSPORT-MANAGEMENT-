@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { requireOrgId } from "@/server/auth/current-org";
 
 // exceljs needs Node APIs (Buffer/streams) — pin this route to the Node runtime.
 export const runtime = "nodejs";
@@ -38,6 +39,13 @@ export async function GET(
   req: Request,
   { params }: { params: Promise<{ report: string }> },
 ) {
+  // Reports leak cross-org financials if unauth — require a real session and
+  // let the org-scoped repos enforce isolation past this point.
+  try {
+    await requireOrgId();
+  } catch {
+    return new NextResponse("Unauthorized", { status: 401 });
+  }
   const { report } = await params;
   const url = new URL(req.url);
   const asOf = url.searchParams.get("asOf") ?? undefined;

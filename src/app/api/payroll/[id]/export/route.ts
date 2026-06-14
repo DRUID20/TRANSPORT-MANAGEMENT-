@@ -1,20 +1,38 @@
 import { NextResponse } from "next/server";
+import { requireOrgId } from "@/server/auth/current-org";
+import {
+  getEmployee,
+} from "@/server/repos/hr";
 import {
   getPayrollPeriod,
-  getEmployee,
   listPayrollInputs,
-} from "@/server/store/mock-store";
+} from "@/server/repos/payroll";
 
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
+
+/**
+ * Payroll period CSV export. Contains employee PII (national ID, KRA PIN,
+ * NSSF/SHA, bank, M-Pesa) + statutory math, so it MUST be auth-gated.
+ * `requireOrgId()` throws on missing session and every repo call is org-scoped.
+ */
 export async function GET(
   _req: Request,
   { params }: { params: Promise<{ id: string }> },
 ) {
+  // Auth + org gate. requireOrgId throws on no session.
+  try {
+    await requireOrgId();
+  } catch {
+    return new NextResponse("Unauthorized", { status: 401 });
+  }
+
   const { id } = await params;
-  const period = getPayrollPeriod(id);
+  const period = await getPayrollPeriod(id);
   if (!period) {
     return new NextResponse("Period not found", { status: 404 });
   }
-  const inputs = listPayrollInputs(id);
+  const inputs = await listPayrollInputs(id);
 
   const headers = [
     "employee_number",
@@ -51,7 +69,7 @@ export async function GET(
 
   const rows: string[] = [headers.join(",")];
   for (const p of inputs) {
-    const e = getEmployee(p.employeeId);
+    const e = await getEmployee(p.employeeId);
     if (!e) continue;
     const taxable = p.allowances.filter((a) => a.taxable).reduce((s, a) => s + a.amount, 0);
     const nontax = p.allowances.filter((a) => !a.taxable).reduce((s, a) => s + a.amount, 0);

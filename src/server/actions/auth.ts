@@ -157,7 +157,11 @@ export async function requestPasswordResetOtp(formData: FormData): Promise<Actio
         const { sendPasswordResetOtp } = await import("@/server/email/send-otp");
         await sendPasswordResetOtp({ to: user.email, fullName: user.fullName, code });
       } catch (err) {
-        console.error("[auth] OTP email failed:", err);
+        // Scrub: log only the error type/message — Resend errors can echo
+        // back the recipient address or request body, which we don't want
+        // in plain prod logs.
+        const msg = err instanceof Error ? err.name + ": " + err.message : "unknown";
+        console.error("[auth] OTP email failed:", msg);
         // Don't fail — the user already saw the generic "if it exists…" message.
       }
     }

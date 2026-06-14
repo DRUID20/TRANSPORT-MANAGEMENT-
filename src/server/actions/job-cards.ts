@@ -75,6 +75,7 @@ export async function addService(
     return { ok: false, error: parsed.error.errors.map((e) => e.message).join("; ") };
   }
   const svc = await repoAddSvc({ jobCardId, ...parsed.data });
+  if (!svc) return { ok: false, error: "Job card not found" };
   revalidatePath(`/workshop/${jobCardId}`);
   return { ok: true, id: svc.id };
 }
@@ -93,6 +94,7 @@ export async function addSpare(
     return { ok: false, error: parsed.error.errors.map((e) => e.message).join("; ") };
   }
   const spare = await repoAddSpare({ jobCardId, ...parsed.data });
+  if (!spare) return { ok: false, error: "Job card not found" };
   revalidatePath(`/workshop/${jobCardId}`);
   return { ok: true, id: spare.id };
 }

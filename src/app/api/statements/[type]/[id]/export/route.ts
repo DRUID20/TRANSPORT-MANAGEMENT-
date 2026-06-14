@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { requireOrgId } from "@/server/auth/current-org";
 
 // exceljs needs Node APIs (Buffer/streams) — pin this route to the Node runtime.
 export const runtime = "nodejs";
@@ -58,6 +59,12 @@ export async function GET(
   req: Request,
   { params }: { params: Promise<{ type: string; id: string }> },
 ) {
+  // Statements include full customer/supplier transaction history — auth required.
+  try {
+    await requireOrgId();
+  } catch {
+    return new NextResponse("Unauthorized", { status: 401 });
+  }
   const { type, id } = await params;
   const url = new URL(req.url);
   const def = defaultStatementRange();
