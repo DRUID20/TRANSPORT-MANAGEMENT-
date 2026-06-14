@@ -104,6 +104,15 @@ export async function planTrip(input: TripPlanInput): Promise<ActionResult> {
   if (!parsed.success) {
     return { ok: false, error: parsed.error.errors.map((e) => e.message).join("; ") };
   }
+  // A truck can't take a new trip until its previous one is closed/cancelled.
+  const truckTrips = await repoForTruck(parsed.data.truckId);
+  const open = truckTrips.find((t) => t.status !== "closed" && t.status !== "cancelled");
+  if (open) {
+    return {
+      ok: false,
+      error: `That truck is still on ${open.number} (${open.status.replace(/_/g, " ")}). Close or cancel that trip before dispatching it again.`,
+    };
+  }
   const trip = await repoPlan(parsed.data);
   if (!trip) {
     return { ok: false, error: "Booking not found or already planned/cancelled." };
