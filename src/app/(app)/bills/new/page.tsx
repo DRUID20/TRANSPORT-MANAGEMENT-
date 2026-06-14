@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { listSuppliers } from "@/server/actions/suppliers";
 import { listAccounts } from "@/server/actions/accounts";
+import { getRatesToKesMap } from "@/server/actions/fx";
 import { PageHeader } from "@/components/layout/page-header";
 import { BillCreateForm } from "./bill-create-form";
 
@@ -10,6 +11,7 @@ export default async function NewBillPage({
   searchParams: Promise<{ supplier?: string }>;
 }) {
   const { supplier } = await searchParams;
+  const ratesToKes = await getRatesToKesMap();
   const suppliers = (await listSuppliers()).map((s) => ({ id: s.id, name: s.name }));
 
   // Only show expense-class accounts for bill lines
@@ -35,6 +37,7 @@ export default async function NewBillPage({
       <BillCreateForm
         suppliers={suppliers}
         expenseAccounts={expenseAccounts}
+        ratesToKes={ratesToKes}
         preselectSupplierId={supplier}
       />
       <div className="text-center">

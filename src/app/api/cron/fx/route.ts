@@ -1,39 +1,43 @@
 import { NextResponse } from "next/server";
+import { refreshFxRates } from "@/server/repos/fx";
 
 /**
- * Vercel Cron — daily FX refresh at 17:30 EAT (= 14:30 UTC).
- * Phase 0: stub returns OK with todo. Real implementation lands with the
- * Supabase fx_rates table.
+ * Vercel Cron — daily FX refresh at 17:30 EAT (= 14:30 UTC, Mon–Fri).
+ * Schedule lives in vercel.json: { "schedule": "30 14 * * 1-5" }
  *
- * Cron schedule lives in vercel.json: { "schedule": "30 14 * * 1-5" }
+ * Pulls today's KES/USD/UGX rates from the live providers (CBK → ERAPI →
+ * Frankfurter, first that succeeds) and upserts them into fx_rates.
  *
- * Auth: Vercel Cron sends `Authorization: Bearer ${CRON_SECRET}` using the
- * reserved CRON_SECRET env var, so we accept that name as well as the
- * project-specific FX_CRON_SECRET. With neither configured the stub
- * answers 200/skipped — a missing secret on a no-op stub should not page
- * anyone with 5xx noise in the cron logs.
+ * Auth: if CRON_SECRET (or FX_CRON_SECRET) is set, we require Vercel's
+ * `Authorization: Bearer ${secret}` header. If neither is configured the job
+ * still runs — it only fetches public rates and writes them — so live FX works
+ * out of the box; set the secret to lock the endpoint down.
  */
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 export async function GET(request: Request) {
-  const auth = request.headers.get("authorization");
   const secret = process.env.FX_CRON_SECRET ?? process.env.CRON_SECRET;
+  if (secret) {
+    const auth = request.headers.get("authorization");
+    if (auth !== `Bearer ${secret}`) {
+      return NextResponse.json({ error: "unauthorized" }, { status: 401 });
+    }
+  }
 
-  if (!secret) {
+  try {
+    const result = await refreshFxRates();
     return NextResponse.json({
-      status: "skipped",
-      message: "No cron secret configured — set CRON_SECRET (or FX_CRON_SECRET) in Vercel.",
+      status: result.ok ? "ok" : "failed",
+      source: result.source ?? null,
+      rates: result.rates,
+      error: result.error ?? null,
+      ranAt: new Date().toISOString(),
     });
+  } catch (err) {
+    return NextResponse.json(
+      { status: "error", message: err instanceof Error ? err.message : "unknown", ranAt: new Date().toISOString() },
+      { status: 500 },
+    );
   }
-  if (auth !== `Bearer ${secret}`) {
-    return NextResponse.json({ error: "unauthorized" }, { status: 401 });
-  }
-
-  // TODO (Phase 5): try CBK → fallback to Frankfurter → upsert into fx_rates.
-  return NextResponse.json({
-    status: "stub",
-    message: "FX cron not yet implemented (Phase 5).",
-    ranAt: new Date().toISOString(),
-  });
 }

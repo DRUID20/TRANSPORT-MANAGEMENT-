@@ -40,6 +40,7 @@ import {
   Grid3X3,
   FileBarChart,
   Calendar,
+  Coins,
 } from "lucide-react";
 
 export type NavItem = {
@@ -78,6 +79,7 @@ export const navGroups: { title: string; items: NavItem[] }[] = [
     items: [
       { href: "/expenses", label: "Expenses", icon: Receipt },
       { href: "/fuel", label: "Fuel", icon: FuelIcon },
+      { href: "/fx", label: "FX Rates", icon: Coins },
       { href: "/accounts", label: "Chart of Accounts", icon: BookOpen },
       { href: "/ledger", label: "General Ledger", icon: ListChecks },
       { href: "/ledger/trial-balance", label: "Trial Balance", icon: Scale },

@@ -3,7 +3,7 @@
  * tracking-platform-specific source without touching business logic.
  * See docs/finance/fx-rate-strategy.md.
  */
-export type FxRateProviderName = "CBK" | "FRANKFURTER" | "MANUAL";
+export type FxRateProviderName = "CBK" | "FRANKFURTER" | "ERAPI" | "MANUAL";
 
 export interface FxRate {
   date: string; // YYYY-MM-DD

@@ -43,15 +43,19 @@ const EMPTY_LINE: LineRow = {
   unitPrice: "",
 };
 
+const FALLBACK_TO_KES: Record<Currency, number> = { KES: 1, USD: 129.41, UGX: 0.0347 };
+
 export function InvoiceCreateForm({
   customers,
   trips,
   preselectCustomerId,
   preselectTrip,
+  ratesToKes,
 }: {
   customers: Cus[];
   trips: T[];
   preselectCustomerId?: string;
+  ratesToKes?: Partial<Record<Currency, number>>;
   preselectTrip?: {
     id: string;
     number: string;
@@ -78,10 +82,12 @@ export function InvoiceCreateForm({
         .slice(0, 10)
     : new Date(Date.now() + 30 * 86400_000).toISOString().slice(0, 10);
   const [dueDate, setDueDate] = useState(defaultDue);
+  const rateFor = (c: Currency) =>
+    c === "KES" ? "1" : String(ratesToKes?.[c] ?? FALLBACK_TO_KES[c]);
   const [currency, setCurrency] = useState<Currency>(
     (preselectTrip?.currency as Currency) ?? "USD",
   );
-  const [fxRate, setFxRate] = useState(currency === "KES" ? "1" : "129.30");
+  const [fxRate, setFxRate] = useState(rateFor(currency));
   const [taxRate, setTaxRate] = useState("0");
   const [notes, setNotes] = useState("");
 
@@ -178,7 +184,7 @@ export function InvoiceCreateForm({
               const c = customers.find((x) => x.id === id);
               if (c) {
                 setCurrency(c.billingCurrency);
-                setFxRate(c.billingCurrency === "KES" ? "1" : "129.30");
+                setFxRate(rateFor(c.billingCurrency));
                 setDueDate(
                   new Date(Date.now() + c.paymentTermsDays * 86400_000)
                     .toISOString()
@@ -233,8 +239,9 @@ export function InvoiceCreateForm({
           <Select
             value={currency}
             onChange={(e) => {
-              setCurrency(e.currentTarget.value as Currency);
-              if (e.currentTarget.value === "KES") setFxRate("1");
+              const v = e.currentTarget.value as Currency;
+              setCurrency(v);
+              setFxRate(rateFor(v));
             }}
           >
             <option value="KES">KES</option>
@@ -242,7 +249,12 @@ export function InvoiceCreateForm({
             <option value="UGX">UGX</option>
           </Select>
         </FormField>
-        <FormField label="FX rate" required hint="TO KES">
+        <FormField
+          label="FX rate"
+          required
+          hint="TO KES"
+          helper="Auto-filled from the latest live rate — editable for a contracted rate."
+        >
           <Input
             type="number"
             step="0.0001"

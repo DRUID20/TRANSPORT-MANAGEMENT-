@@ -31,15 +31,21 @@ const EMPTY_LINE: LineRow = {
   expenseAccountCode: "",
 };
 
+const FALLBACK_TO_KES: Record<Currency, number> = { KES: 1, USD: 129.41, UGX: 0.0347 };
+
 export function BillCreateForm({
   suppliers,
   expenseAccounts,
   preselectSupplierId,
+  ratesToKes,
 }: {
   suppliers: Sup[];
   expenseAccounts: Acc[];
   preselectSupplierId?: string;
+  ratesToKes?: Partial<Record<Currency, number>>;
 }) {
+  const rateFor = (c: Currency) =>
+    c === "KES" ? "1" : String(ratesToKes?.[c] ?? FALLBACK_TO_KES[c]);
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -140,8 +146,9 @@ export function BillCreateForm({
             <Select
               value={currency}
               onChange={(e) => {
-                setCurrency(e.currentTarget.value as Currency);
-                if (e.currentTarget.value === "KES") setFxRate("1");
+                const v = e.currentTarget.value as Currency;
+                setCurrency(v);
+                setFxRate(rateFor(v));
               }}
             >
               <option value="KES">KES</option>
@@ -176,6 +183,9 @@ export function BillCreateForm({
               onChange={(e) => setFxRate(e.currentTarget.value)}
               className="font-mono tnum"
             />
+            <span className="text-[11px] text-fg-tertiary">
+              Auto-filled from the latest live rate — editable.
+            </span>
           </Field>
           <Field label="VAT rate">
             <Input

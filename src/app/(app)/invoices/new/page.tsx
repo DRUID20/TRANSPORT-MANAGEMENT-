@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { listCustomers } from "@/server/actions/customers";
 import { getTripById, listTrips } from "@/server/actions/trips";
+import { getRatesToKesMap } from "@/server/actions/fx";
 import { PageHeader } from "@/components/layout/page-header";
 import { InvoiceCreateForm } from "./invoice-create-form";
 
@@ -10,6 +11,7 @@ export default async function NewInvoicePage({
   searchParams: Promise<{ trip?: string; customer?: string }>;
 }) {
   const { trip, customer } = await searchParams;
+  const ratesToKes = await getRatesToKesMap();
   const customers = (await listCustomers()).map((c) => ({
     id: c.id,
     name: c.name,
@@ -71,6 +73,7 @@ export default async function NewInvoicePage({
       <InvoiceCreateForm
         customers={customers}
         trips={trips}
+        ratesToKes={ratesToKes}
         preselectCustomerId={customer ?? preTripData?.customerId}
         preselectTrip={preTripData}
       />
