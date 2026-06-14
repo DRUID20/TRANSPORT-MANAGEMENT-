@@ -74,22 +74,6 @@ export const navGroups: { title: string; items: NavItem[] }[] = [
     ],
   },
   {
-    title: "People",
-    items: [
-      { href: "/hr", label: "HR Hub", icon: Users },
-      { href: "/hr/employees", label: "Employees", icon: IdCard },
-      { href: "/hr/departments", label: "Departments", icon: Building2 },
-      { href: "/hr/compliance", label: "HR Compliance", icon: ShieldCheck },
-      { href: "/hr/leave", label: "Leave", icon: CalendarRange },
-      { href: "/hr/attendance", label: "Attendance", icon: CalendarDays },
-      { href: "/hr/payroll", label: "Payroll", icon: Wallet },
-      { href: "/hr/loans", label: "Loans", icon: Wallet },
-      { href: "/hr/appraisals", label: "Appraisals", icon: GraduationCap },
-      { href: "/hr/job-descriptions", label: "Job Descriptions", icon: KeyRound },
-      { href: "/hr/permissions", label: "Permission Matrix", icon: KeyRound },
-    ],
-  },
-  {
     title: "Finance",
     items: [
       { href: "/expenses", label: "Expenses", icon: Receipt },
@@ -104,6 +88,22 @@ export const navGroups: { title: string; items: NavItem[] }[] = [
       { href: "/bank", label: "Bank Reconciliation", icon: Banknote },
       { href: "/reports", label: "Reports", icon: BarChart3 },
       { href: "/management-pack", label: "Management Pack", icon: FileBarChart },
+    ],
+  },
+  {
+    title: "People",
+    items: [
+      { href: "/hr", label: "HR Hub", icon: Users },
+      { href: "/hr/employees", label: "Employees", icon: IdCard },
+      { href: "/hr/departments", label: "Departments", icon: Building2 },
+      { href: "/hr/compliance", label: "HR Compliance", icon: ShieldCheck },
+      { href: "/hr/leave", label: "Leave", icon: CalendarRange },
+      { href: "/hr/attendance", label: "Attendance", icon: CalendarDays },
+      { href: "/hr/payroll", label: "Payroll", icon: Wallet },
+      { href: "/hr/loans", label: "Loans", icon: Wallet },
+      { href: "/hr/appraisals", label: "Appraisals", icon: GraduationCap },
+      { href: "/hr/job-descriptions", label: "Job Descriptions", icon: KeyRound },
+      { href: "/hr/permissions", label: "Permission Matrix", icon: KeyRound },
     ],
   },
   {

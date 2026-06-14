@@ -23,6 +23,20 @@ export function SidebarBody({
 }) {
   const pathname = usePathname();
 
+  // Only the single most-specific item should highlight. A plain
+  // `startsWith` lights up every ancestor too — e.g. "HR Hub" (/hr) would
+  // stay active on /hr/employees, /hr/leave, … (two items lit at once, and it
+  // reads as "stuck"). Resolve the longest matching href and activate only it.
+  const activeHref = navGroups
+    .flatMap((g) => g.items)
+    .reduce(
+      (best, it) => {
+        const matches = pathname === it.href || pathname.startsWith(it.href + "/");
+        return matches && it.href.length > best.len ? { href: it.href, len: it.href.length } : best;
+      },
+      { href: "", len: -1 },
+    ).href;
+
   return (
     <>
       {/* Brand */}
@@ -53,7 +67,7 @@ export function SidebarBody({
         {navGroups.map((group) => (
           <div key={group.title} className={cn("mb-1 mt-5 first:mt-1", collapsed ? "px-2" : "px-3")}>
             {!collapsed ? (
-              <div className="mb-1 px-2 text-[11px] font-semibold uppercase tracking-[0.08em] text-fg-tertiary">
+              <div className="mb-1 px-2 text-[11px] font-bold uppercase tracking-[0.08em] text-fg-secondary">
                 {group.title}
               </div>
             ) : (
@@ -61,9 +75,7 @@ export function SidebarBody({
             )}
             <div className="flex flex-col gap-0.5">
               {group.items.map((item) => {
-                const active =
-                  pathname === item.href ||
-                  (item.href !== "/dashboard" && pathname.startsWith(item.href + "/"));
+                const active = item.href === activeHref;
                 const Icon = item.icon;
                 return (
                   <Link
@@ -73,7 +85,7 @@ export function SidebarBody({
                     title={collapsed ? item.label : undefined}
                     aria-current={active ? "page" : undefined}
                     className={cn(
-                      "group relative flex h-9 items-center gap-2.5 rounded-lg text-[13px] font-medium transition-colors duration-150",
+                      "group relative flex h-9 items-center gap-2.5 rounded-lg text-[13px] font-semibold transition-colors duration-150",
                       collapsed ? "justify-center px-0" : "px-2.5",
                       active
                         ? "bg-bg-elevated-2 text-fg-primary"
