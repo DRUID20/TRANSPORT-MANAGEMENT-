@@ -59,8 +59,9 @@ export function DataTableHead({
   return (
     <thead
       className={cn(
-        // §8: --bg-surface-2 header, 12px Inter 600 UPPERCASE +0.05em, muted.
-        "border-b border-border bg-bg-elevated text-left text-[11px] font-semibold uppercase tracking-[0.05em] text-fg-tertiary",
+        // Bolder, higher-contrast header with a firm 2px underline so columns
+        // read clearly and don't strain the eyes (UNOC).
+        "border-b-2 border-border-strong bg-bg-surface text-left text-[12px] font-bold uppercase tracking-[0.06em] text-fg-secondary",
         sticky && "sticky top-0 z-10",
         className,
       )}

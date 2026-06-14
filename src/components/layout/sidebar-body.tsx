@@ -104,12 +104,12 @@ export function SidebarBody({
                   type="button"
                   onClick={() => toggle(group.title)}
                   aria-expanded={isOpen}
-                  className="mb-1 flex w-full items-center justify-between rounded-md px-2 py-1 text-[11px] font-bold uppercase tracking-[0.1em] text-sidebar-muted transition-colors hover:text-sidebar-fg"
+                  className="mb-1.5 flex w-full items-center justify-between rounded-md px-2 py-1.5 text-[12.5px] font-extrabold uppercase tracking-[0.12em] text-sidebar-muted transition-colors hover:text-sidebar-fg"
                 >
                   {group.title}
                   <ChevronDown
                     className={cn(
-                      "size-3.5 shrink-0 transition-transform duration-200",
+                      "size-4 shrink-0 transition-transform duration-300 ease-[cubic-bezier(0.16,1,0.3,1)]",
                       isOpen ? "rotate-0" : "-rotate-90",
                     )}
                   />
@@ -132,17 +132,17 @@ export function SidebarBody({
                           title={collapsed ? item.label : undefined}
                           aria-current={active ? "page" : undefined}
                           className={cn(
-                            "group relative flex h-9 items-center gap-2.5 rounded-lg text-[13px] font-semibold transition-colors duration-150",
-                            collapsed ? "justify-center px-0" : "px-2.5",
+                            "group relative flex h-10 items-center gap-3 rounded-lg text-[14.5px] font-bold tracking-[0.2px] transition-colors duration-150",
+                            collapsed ? "justify-center px-0" : "px-3",
                             active
                               ? "bg-gold text-sidebar-active-fg shadow-sm"
                               : "text-sidebar-muted hover:bg-white/10 hover:text-sidebar-fg",
                           )}
                         >
                           <Icon
-                            strokeWidth={1.75}
+                            strokeWidth={2}
                             className={cn(
-                              "size-[18px] shrink-0 transition-colors",
+                              "size-5 shrink-0 transition-colors",
                               active ? "text-sidebar-active-fg" : "text-sidebar-muted group-hover:text-sidebar-fg",
                             )}
                           />
