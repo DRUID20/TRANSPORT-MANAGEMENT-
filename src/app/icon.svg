@@ -1,0 +1,5 @@
+<svg width="64" height="64" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Nile Valley Logistics">
+  <rect width="64" height="64" rx="14" fill="#0F4C81"/>
+  <path d="M4 40 C 22 12, 42 12, 60 24" stroke="#2563EB" stroke-opacity="0.7" stroke-width="3" stroke-linecap="round" fill="none"/>
+  <text x="32" y="33" dominant-baseline="central" text-anchor="middle" fill="#FFFFFF" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="20" font-weight="700" letter-spacing="-0.5">NVL</text>
+</svg>

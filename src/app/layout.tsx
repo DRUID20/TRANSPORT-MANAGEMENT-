@@ -17,10 +17,8 @@ export const metadata: Metadata = {
     title: "TX System",
     statusBarStyle: "black-translucent",
   },
-  icons: {
-    icon: "/favicon.ico",
-    apple: "/icons/apple-touch-icon.png",
-  },
+  // Favicon / tab icon is generated from the App Router `app/icon.svg`
+  // convention (the NVL brand mark) — Next injects the <link rel="icon">.
 };
 
 export const viewport: Viewport = {
