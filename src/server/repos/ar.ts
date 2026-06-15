@@ -11,7 +11,7 @@
  * Writes go through a transaction so the entry, lines, and ledger posting are
  * either all committed or all rolled back.
  */
-import { and, asc, desc, eq, inArray } from "drizzle-orm";
+import { and, asc, desc, eq, inArray, sql } from "drizzle-orm";
 import { IS_DEMO_MODE } from "@/server/auth/session-secret";
 import { requireOrgId } from "@/server/auth/current-org";
 import { getDb } from "@/server/db/client";
@@ -145,8 +145,20 @@ export async function refreshInvoiceStatuses(): Promise<void> {
   }
   const orgId = await requireOrgId();
   const db = getDb();
-  const ids = await db
-    .select({ id: invoicesTable.id })
+  // Read-path refresh: this runs on every list/get (dashboard, invoices, trip
+  // cards). Do it in TWO queries — pull the open invoices + a single grouped
+  // sum of their payments — then write back ONLY the rows whose status/balance
+  // actually changed, instead of a SELECT+UPDATE per invoice. Same result,
+  // a fraction of the round-trips.
+  const open = await db
+    .select({
+      id: invoicesTable.id,
+      total: invoicesTable.total,
+      dueDate: invoicesTable.dueDate,
+      status: invoicesTable.status,
+      paidAmount: invoicesTable.paidAmount,
+      balance: invoicesTable.balance,
+    })
     .from(invoicesTable)
     .where(
       and(
@@ -154,7 +166,39 @@ export async function refreshInvoiceStatuses(): Promise<void> {
         inArray(invoicesTable.status, ["sent", "partially_paid", "overdue"]),
       ),
     );
-  for (const { id } of ids) await recompute(id, orgId);
+  if (open.length === 0) return;
+
+  const ids = open.map((i) => i.id);
+  const paidRows = await db
+    .select({
+      invoiceId: paymentsTable.invoiceId,
+      paid: sql<string>`coalesce(sum(${paymentsTable.amount}), 0)`,
+    })
+    .from(paymentsTable)
+    .where(inArray(paymentsTable.invoiceId, ids))
+    .groupBy(paymentsTable.invoiceId);
+  const paidById = new Map(paidRows.map((r) => [r.invoiceId, Number(r.paid)]));
+
+  const now = Date.now();
+  for (const inv of open) {
+    const paid = paidById.get(inv.id) ?? 0;
+    const total = Number(inv.total);
+    const balance = Math.max(0, total - paid);
+    let status = inv.status as InvoiceStatus;
+    if (balance < 0.01) status = "paid";
+    else if (paid > 0) status = "partially_paid";
+    else status = new Date(inv.dueDate).getTime() < now ? "overdue" : "sent";
+
+    const changed =
+      status !== inv.status ||
+      Math.abs(Number(inv.paidAmount) - paid) > 0.005 ||
+      Math.abs(Number(inv.balance) - balance) > 0.005;
+    if (!changed) continue;
+    await db
+      .update(invoicesTable)
+      .set({ paidAmount: String(paid), balance: String(balance), status })
+      .where(eq(invoicesTable.id, inv.id));
+  }
 }
 
 export async function listInvoices(filter?: {
