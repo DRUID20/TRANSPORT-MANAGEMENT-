@@ -27,7 +27,9 @@ export function DataTable({
   density?: "comfortable" | "compact";
 }) {
   return (
-    <div className={cn("surface-card overflow-hidden", className)}>
+    // border-2 + surface-3d gives the "thick, lifted" table the user asked
+    // for — header underline is doubled separately in DataTableHead.
+    <div className={cn("surface-card surface-3d overflow-hidden border-2 border-border", className)}>
       <div className="overflow-x-auto">
         <table
           className={cn(

@@ -52,7 +52,7 @@ export default async function TripsPage({
   };
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="page-3d-bg flex flex-col gap-6">
       <PageHeader
         eyebrow="Operations"
         title="Trips"

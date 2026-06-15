@@ -7,13 +7,13 @@ import {
   ClipboardList,
   Container,
   Droplet,
+  FileText,
   Fuel as FuelIcon,
   IdCard as IdCardIcon,
-  Thermometer,
+  Lock,
   Truck as TruckIcon,
 } from "lucide-react";
 import {
-  correctVolumeTo20C,
   ullageVariancePct,
   ULLAGE_ALERT_THRESHOLD_PCT,
 } from "@/lib/types/trips";
@@ -52,9 +52,14 @@ export default async function TripDetailPage({
   ]);
 
   const pipeline = tripStatusIndex(trip.status);
+  // BOL gate — every operational section (fuel cargo, borders, expenses,
+  // invoice, reconciliation) is locked until the dispatcher uploads the
+  // Bill of Lading. That document is the legal basis for everything that
+  // follows; without it nothing should be edited.
+  const hasBOL = documents.some((d) => d.kind === "bill_of_lading");
 
   return (
-    <div className="stagger-children flex flex-col gap-5">
+    <div className="page-3d-bg stagger-children flex flex-col gap-5">
       <PageHeader
         breadcrumbs={[{ label: "Trips", href: "/trips" }, { label: trip.number }]}
         eyebrow="Trip"
@@ -167,42 +172,53 @@ export default async function TripDetailPage({
         />
       </section>
 
-      {/* DESTINATION — bound here at the depot or transit border (Malaba/Busia) */}
-      <ConfirmDestinationCard
-        tripId={trip.id}
-        current={trip.destination}
-        confirmedAt={trip.destinationConfirmedAt}
-        confirmedBy={trip.destinationConfirmedBy}
-        canForce={trip.status === "planned" || trip.status === "loading"}
-        defaultActor="Dispatcher"
-        origin={trip.origin}
-        customerId={trip.customer?.id ?? trip.booking?.customerId}
-        cargoClass={trip.product}
-        cargoQuantity={trip.cargoQuantity}
-        revenueAmount={trip.revenueAmount}
-        revenueCurrency={trip.revenueCurrency}
-      />
-
-      {/* FUEL CARGO — the operational heart */}
-      <FuelCargoCard trip={trip} />
-
-      {/* Documents / borders / expenses / invoice — kept as-is */}
+      {/* STEP 1 — Bill of Lading. Must be uploaded before anything else. */}
+      {!hasBOL && <BOLGate />}
       <TripDocuments tripId={trip.id} documents={documents} />
-      <TripBorders tripId={trip.id} borders={borders} />
-      <TripExpensesCard tripId={trip.id} />
-      <TripInvoiceCard tripId={trip.id} readyToInvoice={!!trip.readyToInvoice} />
 
-      <TripReconciliation
-        tripId={trip.id}
-        status={trip.status}
-        revenueAmount={trip.revenueAmount}
-        revenueCurrency={trip.revenueCurrency}
-        driverAdvanceKes={trip.driverAdvanceKes ?? 0}
-        borderChargesKes={trip.borderChargesKes}
-        initialActualKm={trip.actualKm}
-        initialActualFuelLitres={trip.actualFuelLitres}
-        initialDriverAdvanceUsedKes={trip.driverAdvanceUsedKes}
-      />
+      {/* STEP 2 — destination (the route on which everything else hinges). */}
+      <LockedStep locked={!hasBOL} stepNumber={2} title="Confirm destination">
+        <ConfirmDestinationCard
+          tripId={trip.id}
+          current={trip.destination}
+          confirmedAt={trip.destinationConfirmedAt}
+          confirmedBy={trip.destinationConfirmedBy}
+          canForce={trip.status === "planned" || trip.status === "loading"}
+          defaultActor="Dispatcher"
+          origin={trip.origin}
+          customerId={trip.customer?.id ?? trip.booking?.customerId}
+          cargoClass={trip.product}
+          cargoQuantity={trip.cargoQuantity}
+          revenueAmount={trip.revenueAmount}
+          revenueCurrency={trip.revenueCurrency}
+        />
+      </LockedStep>
+
+      {/* STEP 3 — fuel cargo (loading + discharge + variance). */}
+      <LockedStep locked={!hasBOL} stepNumber={3} title="Capture loading & discharge">
+        <FuelCargoCard trip={trip} bolVolumeL={trip.cargoQuantity} />
+      </LockedStep>
+
+      {/* STEP 4 — borders, expenses, invoice, reconciliation. */}
+      <LockedStep locked={!hasBOL} stepNumber={4} title="Borders & expenses">
+        <TripBorders tripId={trip.id} borders={borders} />
+        <TripExpensesCard tripId={trip.id} />
+      </LockedStep>
+
+      <LockedStep locked={!hasBOL} stepNumber={5} title="Invoice & reconcile">
+        <TripInvoiceCard tripId={trip.id} readyToInvoice={!!trip.readyToInvoice} />
+        <TripReconciliation
+          tripId={trip.id}
+          status={trip.status}
+          revenueAmount={trip.revenueAmount}
+          revenueCurrency={trip.revenueCurrency}
+          driverAdvanceKes={trip.driverAdvanceKes ?? 0}
+          borderChargesKes={trip.borderChargesKes}
+          initialActualKm={trip.actualKm}
+          initialActualFuelLitres={trip.actualFuelLitres}
+          initialDriverAdvanceUsedKes={trip.driverAdvanceUsedKes}
+        />
+      </LockedStep>
 
       {trip.status === "closed" && (
         <section className="surface-card overflow-hidden border-status-success/25 bg-status-success/[0.04]">
@@ -334,13 +350,14 @@ function NextActionPanel({
             Capture depot loading
           </h2>
           <p className="text-xs text-fg-tertiary">
-            Litres, temperature, density, seal numbers from the loading sheet.
+            BOL volume (already @ 20 °C) and seal numbers — that's it.
           </p>
         </div>
         <CaptureLoadingButton
           tripId={trip.id}
           product={product}
           initialLitres={trip.loadedLitres}
+          bolVolumeL={trip.cargoQuantity}
           hasExisting={trip.loadedLitres !== undefined}
         />
       </section>
@@ -355,7 +372,7 @@ function NextActionPanel({
             Capture discharge
           </h2>
           <p className="text-xs text-fg-tertiary">
-            Customer-side litres, temperature and seal verification.
+            Customer-side litres (BOL @ 20 °C) and seal verification.
           </p>
         </div>
         <CaptureDischargeButton
@@ -517,25 +534,20 @@ type TripForFuelCard = {
   ullagePct?: number;
 };
 
-function FuelCargoCard({ trip }: { trip: TripForFuelCard }) {
+function FuelCargoCard({
+  trip,
+  bolVolumeL,
+}: {
+  trip: TripForFuelCard;
+  bolVolumeL?: number;
+}) {
   const hasLoading = trip.loadedLitres !== undefined;
   const hasDischarge = trip.dischargedLitres !== undefined;
   const editable = trip.status !== "closed" && trip.status !== "cancelled";
 
-  const loaded20C =
-    trip.loadedLitres20C ??
-    (trip.loadedLitres !== undefined &&
-    trip.loadingTempC !== undefined &&
-    (trip.product === "PMS" || trip.product === "AGO")
-      ? correctVolumeTo20C(trip.product, trip.loadedLitres, trip.loadingTempC)
-      : undefined);
-  const discharged20C =
-    trip.dischargedLitres20C ??
-    (trip.dischargedLitres !== undefined &&
-    trip.dischargeTempC !== undefined &&
-    (trip.product === "PMS" || trip.product === "AGO")
-      ? correctVolumeTo20C(trip.product, trip.dischargedLitres, trip.dischargeTempC)
-      : undefined);
+  // BOL volume is already at 20 °C — observed = corrected.
+  const loaded20C = trip.loadedLitres20C ?? trip.loadedLitres;
+  const discharged20C = trip.dischargedLitres20C ?? trip.dischargedLitres;
   const ullage =
     trip.ullagePct ??
     (loaded20C !== undefined && discharged20C !== undefined
@@ -543,8 +555,8 @@ function FuelCargoCard({ trip }: { trip: TripForFuelCard }) {
       : undefined);
 
   return (
-    <section className="surface-card overflow-hidden">
-      <header className="flex items-center justify-between gap-3 border-b border-border px-5 py-3.5">
+    <section className="surface-card surface-3d overflow-hidden">
+      <header className="flex items-center justify-between gap-3 border-b-2 border-border px-5 py-3.5">
         <div className="flex items-center gap-2">
           <FuelIcon className="size-4 text-fg-tertiary" />
           <h2 className="text-[13px] font-semibold tracking-tight text-fg-primary">
@@ -552,7 +564,7 @@ function FuelCargoCard({ trip }: { trip: TripForFuelCard }) {
           </h2>
           {trip.product && (
             <span className="font-mono text-[10px] uppercase tracking-wider text-fg-tertiary">
-              {trip.product} · {trip.cargoQuantity.toLocaleString()} L agreed
+              {trip.product} · {trip.cargoQuantity.toLocaleString()} L per BOL @ 20 °C
             </span>
           )}
         </div>
@@ -561,23 +573,8 @@ function FuelCargoCard({ trip }: { trip: TripForFuelCard }) {
         <FuelBlock title="Depot loading">
           <KV
             icon={Droplet}
-            label="Observed"
+            label="Loaded (@ 20 °C)"
             value={trip.loadedLitres === undefined ? "—" : `${trip.loadedLitres.toLocaleString()} L`}
-          />
-          <KV
-            icon={Thermometer}
-            label="Temp"
-            value={trip.loadingTempC === undefined ? "—" : `${trip.loadingTempC.toFixed(1)} °C`}
-          />
-          <KV
-            icon={Droplet}
-            label="Density 15 °C"
-            value={trip.density15C === undefined ? "—" : `${trip.density15C.toFixed(3)} kg/L`}
-          />
-          <KV
-            icon={Droplet}
-            label="@ 20 °C"
-            value={loaded20C === undefined ? "—" : `${loaded20C.toLocaleString()} L`}
             highlight
           />
           <KV
@@ -591,6 +588,7 @@ function FuelCargoCard({ trip }: { trip: TripForFuelCard }) {
               tripId={trip.id}
               product={trip.product}
               initialLitres={trip.loadedLitres}
+              bolVolumeL={bolVolumeL}
               hasExisting={hasLoading}
             />
           )}
@@ -599,18 +597,8 @@ function FuelCargoCard({ trip }: { trip: TripForFuelCard }) {
         <FuelBlock title="Customer discharge">
           <KV
             icon={Droplet}
-            label="Observed"
+            label="Discharged (@ 20 °C)"
             value={trip.dischargedLitres === undefined ? "—" : `${trip.dischargedLitres.toLocaleString()} L`}
-          />
-          <KV
-            icon={Thermometer}
-            label="Temp"
-            value={trip.dischargeTempC === undefined ? "—" : `${trip.dischargeTempC.toFixed(1)} °C`}
-          />
-          <KV
-            icon={Droplet}
-            label="@ 20 °C"
-            value={discharged20C === undefined ? "—" : `${discharged20C.toLocaleString()} L`}
             highlight
           />
           <KV
@@ -665,6 +653,74 @@ function FuelCargoCard({ trip }: { trip: TripForFuelCard }) {
         </FuelBlock>
       </div>
     </section>
+  );
+}
+
+/**
+ * BOLGate — top-of-page banner shown when no Bill of Lading is attached
+ * to the trip. Hard rule from operations: the BOL is the legal basis for
+ * the volume, the seal numbers, and everything financial that follows.
+ * Until it's uploaded, the operational sections below it stay locked.
+ */
+function BOLGate() {
+  return (
+    <section className="surface-card surface-3d flex flex-col gap-3 border-status-warning/40 bg-status-warning/[0.05] px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
+      <div className="flex items-start gap-3">
+        <div className="grid size-9 shrink-0 place-items-center rounded-lg bg-status-warning/20 text-status-warning">
+          <FileText className="size-5" />
+        </div>
+        <div>
+          <h2 className="text-[14px] font-semibold text-fg-primary">
+            Upload the Bill of Lading first
+          </h2>
+          <p className="mt-0.5 text-xs text-fg-tertiary">
+            The BOL prints the agreed volume at 20 °C and the seal numbers. Every
+            section below — loading, borders, expenses, invoice, reconciliation —
+            unlocks once it's attached. Drop the file into <em>Documents</em> below
+            and pick <strong>Bill of Lading</strong> as the kind.
+          </p>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+/**
+ * LockedStep — wraps a group of operational sections so they're visually
+ * disabled until an earlier step (currently the BOL upload) is done. The
+ * overlay is a soft, non-blocking mask: pointer events are off so the
+ * dispatcher can't accidentally edit anything before the BOL is in.
+ */
+function LockedStep({
+  locked,
+  stepNumber,
+  title,
+  children,
+}: {
+  locked: boolean;
+  stepNumber: number;
+  title: string;
+  children: React.ReactNode;
+}) {
+  if (!locked) {
+    return <div className="flex flex-col gap-5">{children}</div>;
+  }
+  return (
+    <div className="relative">
+      <div className="pointer-events-none flex flex-col gap-5 opacity-40 blur-[1px]" aria-hidden>
+        {children}
+      </div>
+      <div className="absolute inset-0 grid place-items-center">
+        <div className="surface-card flex items-center gap-3 border-border-strong px-4 py-2.5 text-[13px] shadow-card">
+          <Lock className="size-4 text-fg-tertiary" />
+          <span className="font-mono text-[10px] uppercase tracking-[0.16em] text-fg-tertiary">
+            Step {stepNumber}
+          </span>
+          <span className="font-semibold text-fg-secondary">{title}</span>
+          <span className="text-fg-tertiary">— upload the BOL to unlock</span>
+        </div>
+      </div>
+    </div>
   );
 }
 

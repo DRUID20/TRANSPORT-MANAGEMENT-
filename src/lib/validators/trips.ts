@@ -66,18 +66,23 @@ export type BookingCreateInput = z.infer<typeof bookingCreateSchema>;
  * come from the trip record, not from the operator's form.
  */
 export const tripLoadingSchema = z.object({
+  // BOL prints the volume already standardized to 20 °C. The dispatcher
+  // types that number — no observed-vs-corrected back-calculation needed,
+  // so temp + density are optional (kept for back-compat with legacy data
+  // entered before the simplification).
   loadedLitres: z.coerce.number().positive(),
-  loadingTempC: z.coerce.number().min(-10).max(60),
-  density15C: z.coerce.number().min(0.6).max(1.0),
+  loadingTempC: z.coerce.number().min(-10).max(60).optional(),
+  density15C: z.coerce.number().min(0.6).max(1.0).optional(),
   loadingSealNumbers: z.string().min(1, "Seal numbers are required"),
   transitBondNumber: z.string().optional(),
 });
 export type TripLoadingInput = z.infer<typeof tripLoadingSchema>;
 
-/** Schema for capturing customer-side discharge readings at delivery. */
+/** Schema for capturing customer-side discharge readings at delivery.
+ *  Volume is in BOL @20 °C litres — no temperature correction at this step. */
 export const tripDischargeSchema = z.object({
   dischargedLitres: z.coerce.number().positive(),
-  dischargeTempC: z.coerce.number().min(-10).max(60),
+  dischargeTempC: z.coerce.number().min(-10).max(60).optional(),
   dischargeSealNumbers: z.string().min(1, "Seal numbers are required"),
 });
 export type TripDischargeInput = z.infer<typeof tripDischargeSchema>;

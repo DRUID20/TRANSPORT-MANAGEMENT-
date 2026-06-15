@@ -195,12 +195,12 @@ export async function captureTripLoading(
       error: "Trip is missing a fuel product. Set it on the booking before capturing loading.",
     };
   }
-  const loaded20C = correctVolumeTo20C(
-    trip.product,
-    parsed.data.loadedLitres,
-    parsed.data.loadingTempC,
-  );
-  // Recompute ullage if discharge is already captured.
+  // BOL is already at 20 °C — observed = corrected. If a legacy entry still
+  // supplies temp/density, the correction stays mathematically right (it's
+  // a no-op when temp = 20).
+  const loaded20C = parsed.data.loadingTempC !== undefined
+    ? correctVolumeTo20C(trip.product, parsed.data.loadedLitres, parsed.data.loadingTempC)
+    : parsed.data.loadedLitres;
   const ullage =
     trip.dischargedLitres20C !== undefined
       ? ullageVariancePct(loaded20C, trip.dischargedLitres20C)
@@ -252,11 +252,10 @@ export async function captureTripDischarge(
       error: "Capture depot loading observations before discharge.",
     };
   }
-  const discharged20C = correctVolumeTo20C(
-    trip.product,
-    parsed.data.dischargedLitres,
-    parsed.data.dischargeTempC,
-  );
+  // BOL volume is at 20 °C, so observed = corrected when temp isn't given.
+  const discharged20C = parsed.data.dischargeTempC !== undefined
+    ? correctVolumeTo20C(trip.product, parsed.data.dischargedLitres, parsed.data.dischargeTempC)
+    : parsed.data.dischargedLitres;
   const ullage = ullageVariancePct(trip.loadedLitres20C, discharged20C);
 
   await repoUpdateTrip(tripId, {

@@ -41,7 +41,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           fontDisplay.variable,
           fontSans.variable,
           fontMono.variable,
-          "min-h-screen bg-bg-base font-sans text-[15px] text-fg-primary",
+          // 100dvh (not 100vh) so on mobile the body never grows past the
+          // visible viewport — kills the "blank page below the content" gap.
+          "min-h-[100dvh] bg-bg-base font-sans text-[15px] text-fg-primary",
         )}
       >
         <ThemeProvider>{children}</ThemeProvider>

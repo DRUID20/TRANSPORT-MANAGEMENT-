@@ -1,9 +1,10 @@
-import { Outfit, Inter, JetBrains_Mono } from "next/font/google";
+import { Outfit, JetBrains_Mono } from "next/font/google";
 
 /**
- * Fonts per DESIGN.md §3.
- * - Display/headings: Outfit (500/600/700 — 700 logo only)
- * - Body/UI: Inter
+ * Fonts per DESIGN.md §3 + UNOC template.
+ * - Display/headings: Outfit (500/600/700)
+ * - Body/UI: Outfit (400/500/600/700) — single typeface across the system
+ *   (matches the UNOC / Mofi reference). Inter is retired.
  * - Data/numbers: JetBrains Mono (tabular figures)
  */
 export const fontDisplay = Outfit({
@@ -13,9 +14,9 @@ export const fontDisplay = Outfit({
   display: "swap",
 });
 
-export const fontSans = Inter({
+export const fontSans = Outfit({
   subsets: ["latin"],
-  weight: ["400", "500", "600"],
+  weight: ["400", "500", "600", "700"],
   variable: "--font-sans",
   display: "swap",
 });
