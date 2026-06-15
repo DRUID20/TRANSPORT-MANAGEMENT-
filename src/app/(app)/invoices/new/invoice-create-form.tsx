@@ -93,10 +93,12 @@ export function InvoiceCreateForm({
   const [taxRate, setTaxRate] = useState("0");
   const [notes, setNotes] = useState("");
 
-  // Litres cargo is billed on the DELIVERED quantity corrected to 20 °C (L20),
-  // falling back to loaded L20, then the booked quantity. The per-litre rate
-  // stays the same (revenue ÷ booked litres); any short between loaded and
-  // delivered is recovered from the driver (handled server-side on save).
+  // Litres cargo is billed on the LOADED quantity corrected to 20 °C (L20) —
+  // the BOL figure — falling back to the booked quantity only if loading
+  // hasn't been captured. The per-litre rate stays the same (revenue ÷ booked
+  // litres); any short between loaded and delivered is recovered from the
+  // driver (handled server-side), so the customer is still billed the full
+  // loaded volume.
   const litreCargo = preselectTrip?.cargoUnit === "litres";
   const tripRatePerUnit =
     preselectTrip && preselectTrip.cargoQty > 0
@@ -105,13 +107,13 @@ export function InvoiceCreateForm({
         : Math.round((preselectTrip.revenueAmount / preselectTrip.cargoQty) * 100) / 100
       : (preselectTrip?.revenueAmount ?? 0);
   const tripBillQty = litreCargo
-    ? preselectTrip?.deliveredL20 ?? preselectTrip?.loadedL20 ?? preselectTrip?.cargoQty ?? 0
+    ? preselectTrip?.loadedL20 ?? preselectTrip?.cargoQty ?? 0
     : preselectTrip?.cargoQty ?? 0;
 
   const initialLines: LineRow[] = preselectTrip
     ? [
         {
-          description: `Freight ${preselectTrip.number} · ${preselectTrip.cargoType}${litreCargo ? " — delivered L20 @20°C" : ""}`,
+          description: `Freight ${preselectTrip.number} · ${preselectTrip.cargoType}${litreCargo ? " — loaded L20 @20°C" : ""}`,
           quantity: String(tripBillQty),
           unit: preselectTrip.cargoUnit,
           unitPrice: String(tripRatePerUnit),

@@ -16,6 +16,7 @@ import { jobCardsForTruck } from "@/server/repos/workshop";
 import { getSubcontractor } from "@/server/repos/subcontractors";
 import { getRatesToKesMap } from "@/server/repos/fx";
 import type { OwnerType } from "@/lib/types/fleet";
+import { billableFreight } from "@/lib/types/trips";
 
 export interface TruckStatementMonth {
   month: string; // YYYY-MM
@@ -131,10 +132,11 @@ export async function truckStatement(truckId: string): Promise<TruckStatement | 
   for (const t of truckTrips) {
     const { key, label } = monthMeta(tripRef(t));
     const b = ensure(key, label);
-    // Convert non-KES freight to KES via the live rate so cross-border trips
-    // aren't ~140× under-credited on the statement.
+    // Freight is billed on the LOADED L20 (final invoice amount), not the
+    // booked volume. Convert non-KES freight to KES via the live rate so
+    // cross-border trips aren't ~140× under-credited on the statement.
     const fx = fxToKes[t.revenueCurrency] ?? 1;
-    b.revenueKes += t.revenueAmount * fx * revenueShare;
+    b.revenueKes += billableFreight(t).amount * fx * revenueShare;
     b.fuelKes += fuelByTrip.get(t.id) ?? 0;
     b.expensesKes += expenseByTrip.get(t.id) ?? 0;
     b.borderKes += borderByTrip.get(t.id) ?? 0;

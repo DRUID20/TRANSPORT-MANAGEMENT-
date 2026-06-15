@@ -8,6 +8,7 @@ import {
   ScrollText,
 } from "lucide-react";
 import { getInvoiceById } from "@/server/actions/ar";
+import { PAYMENT_METHOD_LABEL } from "@/lib/types/ar";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { PageHeader } from "@/components/layout/page-header";
@@ -158,7 +159,7 @@ export default async function InvoiceDetailPage({
                   <tr key={p.id}>
                     <td className="px-5 py-2 font-mono text-xs text-fg-primary">{p.number}</td>
                     <td className="px-5 py-2 font-mono tnum text-xs text-fg-secondary">{p.date}</td>
-                    <td className="px-5 py-2 text-xs text-fg-secondary capitalize">{p.paymentMethod}</td>
+                    <td className="px-5 py-2 text-xs text-fg-secondary">{PAYMENT_METHOD_LABEL[p.paymentMethod] ?? p.paymentMethod}</td>
                     <td className="px-5 py-2 text-xs text-fg-secondary">{p.reference ?? "—"}</td>
                     <td className="px-5 py-2 text-right font-mono tnum text-fg-primary">
                       {p.amount.toLocaleString()} {p.currency}

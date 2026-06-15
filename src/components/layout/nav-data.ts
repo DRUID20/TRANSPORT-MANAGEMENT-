@@ -124,6 +124,7 @@ export const navGroups: { title: string; items: NavItem[] }[] = [
   {
     title: "Admin",
     items: [
+      { href: "/admin/users", label: "Users & Roles", icon: Users },
       { href: "/settings", label: "Settings", icon: Settings },
       { href: "/admin/audit-log", label: "Audit Log", icon: History },
     ],

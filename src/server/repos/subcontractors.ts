@@ -12,6 +12,7 @@ import { listTrips } from "@/server/repos/trips";
 import { listTrucks } from "@/server/repos/trucks";
 import { createBill } from "@/server/repos/ap";
 import { getRatesToKesMap } from "@/server/repos/fx";
+import { billableFreight } from "@/lib/types/trips";
 import {
   createSubcontractor as storeCreate,
   getSubcontractor as storeGet,
@@ -248,16 +249,18 @@ export async function subcontractorAccount(
     const date = (
       t.actualDeliveryAt ?? t.actualDepartureAt ?? t.plannedDepartureDate ?? t.createdAt
     ).slice(0, 10);
-    // Freight may be in USD/UGX for cross-border trips — convert to KES using
-    // the live KES-equivalent rate so the account isn't ~140× under-credited.
+    // Freight is billed on the LOADED L20 (final invoice amount), not the
+    // booked volume. May be in USD/UGX for cross-border trips — convert to KES
+    // using the live rate so the account isn't ~140× under-credited.
+    const freight = billableFreight(t).amount;
     const fx = fxToKes[t.revenueCurrency] ?? 1;
-    const revenueKes = t.revenueAmount * fx;
+    const revenueKes = freight * fx;
     all.push({
       date,
       ref: t.number,
       description:
         `Trip ${t.origin} → ${t.destination} · ${((1 - rate) * 100).toFixed(0)}% of freight` +
-        (t.revenueCurrency !== "KES" ? ` (from ${t.revenueAmount.toLocaleString()} ${t.revenueCurrency})` : ""),
+        (t.revenueCurrency !== "KES" ? ` (from ${freight.toLocaleString()} ${t.revenueCurrency})` : ""),
       credit: revenueKes * (1 - rate),
       debit: 0,
       balance: 0,

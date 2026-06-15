@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { ArrowRight, Plus, Route as RouteIcon, Truck as TruckIcon } from "lucide-react";
 import { listTrips } from "@/server/actions/trips";
+import { billableFreight } from "@/lib/types/trips";
 import { listTrucks } from "@/server/actions/trucks";
 import { listDrivers } from "@/server/actions/drivers";
 import { listCustomers } from "@/server/actions/customers";
@@ -190,7 +191,10 @@ export default async function TripsPage({
                     <TripStatusPill status={t.status} />
                   </DataTableCell>
                   <DataTableCell mono align="right">
-                    {t.revenueAmount.toLocaleString()} {t.revenueCurrency}
+                    {(() => {
+                      const bill = billableFreight(t);
+                      return `${bill.amount.toLocaleString()} ${bill.currency}`;
+                    })()}
                   </DataTableCell>
                 </DataTableRow>
               );

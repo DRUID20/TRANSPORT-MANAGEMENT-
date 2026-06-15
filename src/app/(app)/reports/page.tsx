@@ -76,7 +76,7 @@ const reports: Report[] = [
   {
     href: "/reports/expenses",
     title: "Expense Breakdown",
-    desc: "Approved + reimbursed expenses sliced by category, truck or currency.",
+    desc: "Approved expenses sliced by category, truck or currency.",
     icon: Receipt,
     ready: true,
     group: "Finance",

@@ -57,7 +57,17 @@ export interface InvoiceWithLines extends CustomerInvoice {
   payments: CustomerPayment[];
 }
 
-export type PaymentMethod = "bank" | "mpesa" | "cash" | "cheque";
+export type PaymentMethod = "bank" | "mpesa" | "mobile_money_ugx" | "cash" | "cheque";
+
+/** Human labels for payment methods (M-Pesa is KES; Mobile Money UGX is
+ *  MTN MoMo / Airtel in Uganda). */
+export const PAYMENT_METHOD_LABEL: Record<PaymentMethod, string> = {
+  bank: "Bank transfer",
+  mpesa: "M-Pesa",
+  mobile_money_ugx: "Mobile Money (UGX)",
+  cash: "Cash",
+  cheque: "Cheque",
+};
 
 export interface CustomerPayment {
   id: string;

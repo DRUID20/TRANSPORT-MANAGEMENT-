@@ -50,6 +50,7 @@ Code,Name,Class,Group,Type,Normal Balance,Currency,Status,Notes
 124100,Bank — TZS,Asset,Current,Bank,Debit,TZS,Active,Placeholder
 125100,Bank — RWF,Asset,Current,Bank,Debit,RWF,Active,Placeholder
 129100,M-Pesa Paybill — Float,Asset,Current,Mobile Money,Debit,KES,Active,NEW
+129200,Mobile Money UGX — Float,Asset,Current,Mobile Money,Debit,UGX,Active,UGX mobile money (MTN MoMo / Airtel)
 200100,Long-term Loans / Debt,Liability,Non-current,Debt,Credit,KES,Active,
 200200,Gratuity Payable (Long-term),Liability,Non-current,Provision,Credit,KES,Active,
 200300,Accrued Non-current Liabilities,Liability,Non-current,Accrual,Credit,KES,Active,

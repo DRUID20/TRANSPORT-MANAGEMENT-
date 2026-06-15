@@ -14,6 +14,7 @@ import {
 import { getComplianceSummary } from "@/server/actions/compliance";
 import { getCurrentUser } from "@/server/auth/current-user";
 import { listTrips } from "@/server/actions/trips";
+import { billableFreight } from "@/lib/types/trips";
 import { listTrucks } from "@/server/actions/trucks";
 import { listDrivers } from "@/server/actions/drivers";
 import { listInvoices } from "@/server/actions/ar";
@@ -71,7 +72,7 @@ function tripsToRows(
     km: t.actualKm ?? 0,
     driver: driversById.get(t.driverId)?.fullName ?? "—",
     status: t.status,
-    revenue: t.revenueAmount,
+    revenue: billableFreight(t).amount,
   }));
 }
 

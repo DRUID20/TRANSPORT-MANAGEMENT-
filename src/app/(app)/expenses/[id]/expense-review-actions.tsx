@@ -2,8 +2,8 @@
 
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
-import { CheckCircle2, Loader2, Send, XCircle } from "lucide-react";
-import { markReimbursed, reviewExpense } from "@/server/actions/expenses";
+import { CheckCircle2, Loader2, XCircle } from "lucide-react";
+import { reviewExpense } from "@/server/actions/expenses";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -60,23 +60,14 @@ export function ExpenseReviewActions({
     });
   }
 
-  function reimburseManual() {
-    setError(null);
-    start(async () => {
-      const r = await markReimbursed(expenseId);
-      if (!r.ok) setError(r.error);
-      router.refresh();
-    });
-  }
-
   return (
     <Card>
       <CardHeader>
         <CardTitle>Actions</CardTitle>
         <CardDescription>
           {status === "pending"
-            ? "Approve to release for reimbursement, or reject with reason."
-            : "Mark reimbursed once the driver has been paid back."}
+            ? "Approve to accept the spend, or reject with a reason. The cashier issues cash on request — there's no separate reimbursement step."
+            : "Approved. The cashier disburses funds on request; nothing further to record here."}
         </CardDescription>
       </CardHeader>
       <CardContent className="flex flex-col gap-3">
@@ -95,15 +86,6 @@ export function ExpenseReviewActions({
             <Button onClick={reject} disabled={pending} variant="outline">
               <XCircle className="size-4" />
               Reject
-            </Button>
-          </div>
-        )}
-
-        {status === "approved" && (
-          <div className="flex flex-wrap items-center gap-2">
-            <Button onClick={reimburseManual} disabled={pending} variant="primary">
-              {pending ? <Loader2 className="size-4 animate-spin" /> : <Send className="size-4" />}
-              Mark Reimbursed
             </Button>
           </div>
         )}

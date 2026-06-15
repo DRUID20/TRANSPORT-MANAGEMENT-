@@ -30,7 +30,7 @@ export const billPaymentSchema = z.object({
   amount: z.coerce.number().positive(),
   currency: currencyEnum.default("KES"),
   fxRate: z.coerce.number().positive().default(1),
-  paymentMethod: z.enum(["bank", "mpesa", "cash", "cheque"]),
+  paymentMethod: z.enum(["bank", "mpesa", "mobile_money_ugx", "cash", "cheque"]),
   reference: z.string().optional(),
   notes: z.string().optional(),
 });

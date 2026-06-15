@@ -372,8 +372,10 @@ export async function recordCustomerPayment(input: {
   const arAcc = await getAccountByCode(arCode);
   let bankCode: string;
   if (input.paymentMethod === "mpesa") bankCode = "129100";
+  else if (input.paymentMethod === "mobile_money_ugx") bankCode = "129200";
   else if (input.paymentMethod === "cash") bankCode = "120100";
   else if (input.currency === "USD") bankCode = "122100";
+  else if (input.currency === "UGX") bankCode = "123100";
   else bankCode = "121100";
   const bankAcc = await getAccountByCode(bankCode);
   if (!arAcc || !bankAcc) return { error: "Required accounts (AR / Bank) not found" };

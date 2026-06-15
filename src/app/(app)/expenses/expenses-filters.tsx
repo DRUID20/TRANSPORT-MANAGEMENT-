@@ -8,7 +8,6 @@ const filters = [
   { key: "pending",    label: "Pending" },
   { key: "approved",   label: "Approved" },
   { key: "rejected",   label: "Rejected" },
-  { key: "reimbursed", label: "Reimbursed" },
 ] as const;
 
 export function ExpensesFilters({ active }: { active: string }) {

@@ -3161,8 +3161,10 @@ export function recordCustomerPayment(input: {
   // Bank account: pick by payment method + currency
   let bankCode: string;
   if (input.paymentMethod === "mpesa") bankCode = "129100"; // M-Pesa Paybill
+  else if (input.paymentMethod === "mobile_money_ugx") bankCode = "129200"; // UGX Mobile Money
   else if (input.paymentMethod === "cash") bankCode = "120100"; // Cash in Hand
   else if (input.currency === "USD") bankCode = "122100";
+  else if (input.currency === "UGX") bankCode = "123100";
   else bankCode = "121100";
   const bankAcc = getAccountByCode(bankCode);
 
@@ -3457,8 +3459,10 @@ export function paySupplierBill(input: {
   const apAcc = getAccountByCode(apCode);
   let bankCode: string;
   if (input.paymentMethod === "mpesa") bankCode = "129100";
+  else if (input.paymentMethod === "mobile_money_ugx") bankCode = "129200";
   else if (input.paymentMethod === "cash") bankCode = "120100";
   else if (input.currency === "USD") bankCode = "122100";
+  else if (input.currency === "UGX") bankCode = "123100";
   else bankCode = "121100";
   const bankAcc = getAccountByCode(bankCode);
 

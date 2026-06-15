@@ -272,16 +272,21 @@ export function ullageVariancePct(
 export const ULLAGE_ALERT_THRESHOLD_PCT = 0.5;
 
 /**
- * The freight we ACTUALLY invoice the customer.
+ * The freight we ACTUALLY invoice the customer — the FINAL invoice amount.
  *
- * Fuel freight is billed on what was delivered, not what was booked: the
- * customer pays for the litres that arrive in their tank (@20°C). The rate per
- * litre is fixed from the rate card (booked revenue ÷ booked litres); we just
- * re-multiply it by the delivered volume.
+ * Fuel freight is billed on the volume LOADED at the depot, corrected to 20°C
+ * (the BOL figure) — NOT the ordered/booked volume, and NOT the delivered
+ * volume. The customer is debited for what left the depot in their name; any
+ * shortage between loaded and delivered is the driver's liability and is
+ * recovered from the driver's pay separately.
  *
- *   billed litres = delivered L20  (else loaded L20, else booked — in that
- *                   order of preference, depending on how far the trip is)
+ *   billed litres = loaded L20   (falls back to the booked volume only while
+ *                   loading hasn't been captured yet)
  *   amount        = billed litres × rate/L
+ *
+ * The per-litre rate is fixed from the rate card (booked revenue ÷ booked
+ * litres); `revenueAmount` is never mutated, so this stays stable no matter
+ * how many times loading is (re)captured.
  *
  * Non-litre cargo (flat charters priced per_trip) bills the booked revenue
  * as-is — there's no per-litre rate to re-apply.
@@ -296,28 +301,23 @@ export function billableFreight(trip: {
   revenueCurrency: Currency | string;
   loadedLitres?: number;
   loadedLitres20C?: number;
-  dischargedLitres?: number;
-  dischargedLitres20C?: number;
 }): {
   amount: number;
   currency: string;
   billedLitres?: number;
   ratePerLitre?: number;
-  source: "delivered" | "loaded" | "booked";
+  source: "loaded" | "booked";
 } {
   const isLitres = trip.cargoUnit === "litres";
   if (!isLitres || trip.cargoQuantity <= 0) {
     return { amount: trip.revenueAmount, currency: trip.revenueCurrency, source: "booked" };
   }
   const ratePerLitre = Math.round((trip.revenueAmount / trip.cargoQuantity) * 10_000) / 10_000;
-  const delivered = trip.dischargedLitres20C ?? trip.dischargedLitres;
   const loaded = trip.loadedLitres20C ?? trip.loadedLitres;
   const billed =
-    delivered !== undefined
-      ? { litres: delivered, source: "delivered" as const }
-      : loaded !== undefined
-        ? { litres: loaded, source: "loaded" as const }
-        : { litres: trip.cargoQuantity, source: "booked" as const };
+    loaded !== undefined
+      ? { litres: loaded, source: "loaded" as const }
+      : { litres: trip.cargoQuantity, source: "booked" as const };
   return {
     amount: Math.round(ratePerLitre * billed.litres * 100) / 100,
     currency: trip.revenueCurrency,

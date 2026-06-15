@@ -256,8 +256,8 @@ export function ExpenseCreateForm({
       <FormFooter
         meta={
           <span>
-            Expenses start in pending status and need approval before being
-            reimbursed.
+            Expenses start in pending status and need manager approval. The
+            cashier issues cash on request — there's no separate reimbursement.
           </span>
         }
       >

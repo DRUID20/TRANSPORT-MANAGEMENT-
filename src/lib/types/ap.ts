@@ -54,7 +54,7 @@ export interface BillWithLines extends SupplierBill {
   payments: SupplierPayment[];
 }
 
-export type APPaymentMethod = "bank" | "mpesa" | "cash" | "cheque";
+export type APPaymentMethod = "bank" | "mpesa" | "mobile_money_ugx" | "cash" | "cheque";
 
 export interface SupplierPayment {
   id: string;

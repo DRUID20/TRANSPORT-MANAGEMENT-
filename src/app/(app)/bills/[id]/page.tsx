@@ -144,7 +144,7 @@ export default async function BillDetailPage({
                   <tr key={p.id}>
                     <td className="px-5 py-2 font-mono text-xs text-fg-primary">{p.number}</td>
                     <td className="px-5 py-2 font-mono tnum text-xs text-fg-secondary">{p.date}</td>
-                    <td className="px-5 py-2 text-xs text-fg-secondary capitalize">{p.paymentMethod}</td>
+                    <td className="px-5 py-2 text-xs text-fg-secondary">{p.paymentMethod === "mobile_money_ugx" ? "Mobile Money (UGX)" : p.paymentMethod === "mpesa" ? "M-Pesa" : p.paymentMethod.charAt(0).toUpperCase() + p.paymentMethod.slice(1)}</td>
                     <td className="px-5 py-2 text-xs text-fg-secondary">{p.reference ?? "—"}</td>
                     <td className="px-5 py-2 text-right font-mono tnum text-fg-primary">
                       {p.amount.toLocaleString()} {p.currency}

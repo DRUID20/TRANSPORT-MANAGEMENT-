@@ -37,7 +37,7 @@ export default async function ExpensesReportPage({
         breadcrumbs={[{ label: "Reports", href: "/reports" }, { label: "Expense Breakdown" }]}
         eyebrow="Finance · Expenses"
         title="Expense Breakdown"
-        description={`Approved + reimbursed expenses, ${fromDate} → ${toDate}. KES base.`}
+        description={`Approved expenses, ${fromDate} → ${toDate}. KES base.`}
         actions={
           <ReportExportMenu exportPath={`/api/reports/expenses/export?from=${fromDate}&to=${toDate}&dim=${dimension}`} />
         }

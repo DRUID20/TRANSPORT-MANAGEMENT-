@@ -37,7 +37,7 @@ export function InvoiceActions({
   const [showPay, setShowPay] = useState(false);
   const [amount, setAmount] = useState(String(balance));
   const [date, setDate] = useState(new Date().toISOString().slice(0, 10));
-  const [method, setMethod] = useState<"bank" | "mpesa" | "cash" | "cheque">("bank");
+  const [method, setMethod] = useState<"bank" | "mpesa" | "mobile_money_ugx" | "cash" | "cheque">("bank");
   const [reference, setReference] = useState("");
 
   function send() {
@@ -185,6 +185,7 @@ export function InvoiceActions({
                 >
                   <option value="bank">Bank transfer</option>
                   <option value="mpesa">M-Pesa</option>
+                  <option value="mobile_money_ugx">Mobile Money (UGX)</option>
                   <option value="cash">Cash</option>
                   <option value="cheque">Cheque</option>
                 </Select>

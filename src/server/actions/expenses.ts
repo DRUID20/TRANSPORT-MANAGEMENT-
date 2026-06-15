@@ -7,7 +7,6 @@ import {
   expensesForTrip as repoForTrip,
   getExpense,
   listExpenses as repoList,
-  markExpenseReimbursed as repoReimburse,
   reviewExpense as repoReview,
 } from "@/server/repos/expenses";
 import type { ExpenseStatus } from "@/lib/types/expenses";
@@ -77,14 +76,6 @@ export async function reviewExpense(input: ExpenseReviewInput): Promise<ActionRe
     reviewedBy: parsed.data.reviewedBy,
     notes: parsed.data.notes,
   });
-  if (!exp) return { ok: false, error: "Expense not found" };
-  revalidatePath("/expenses");
-  if (exp.tripId) revalidatePath(`/trips/${exp.tripId}`);
-  return { ok: true, id: exp.id };
-}
-
-export async function markReimbursed(id: string): Promise<ActionResult> {
-  const exp = await repoReimburse(id);
   if (!exp) return { ok: false, error: "Expense not found" };
   revalidatePath("/expenses");
   if (exp.tripId) revalidatePath(`/trips/${exp.tripId}`);

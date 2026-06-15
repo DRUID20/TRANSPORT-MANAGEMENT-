@@ -35,7 +35,7 @@ export default async function ExpensesPage({
 }) {
   const { status: rawStatus, page: rawPage } = await searchParams;
   const status = (
-    ["pending", "approved", "rejected", "reimbursed"].includes(rawStatus ?? "")
+    ["pending", "approved", "rejected"].includes(rawStatus ?? "")
       ? rawStatus
       : undefined
   ) as ExpenseStatus | undefined;
@@ -62,13 +62,12 @@ export default async function ExpensesPage({
     pending: all.filter((e) => e.status === "pending").length,
     approved: all.filter((e) => e.status === "approved").length,
     rejected: all.filter((e) => e.status === "rejected").length,
-    reimbursed: all.filter((e) => e.status === "reimbursed").length,
   };
   const pendingValue = all
     .filter((e) => e.status === "pending")
     .reduce((s, e) => s + e.amountKes, 0);
   const approvedValue = all
-    .filter((e) => e.status === "approved" || e.status === "reimbursed")
+    .filter((e) => e.status === "approved")
     .reduce((s, e) => s + e.amountKes, 0);
 
   return (

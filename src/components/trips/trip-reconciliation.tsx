@@ -20,14 +20,12 @@ export interface TripReconciliationProps {
   initialActualKm?: number;
   initialActualFuelLitres?: number;
   initialDriverAdvanceUsedKes?: number;
-  /** Cargo + captured volumes — used to price the freight on the DELIVERED
-   *  litres @20°C rather than the booked volume. */
+  /** Cargo + loaded volume — used to price the freight on the LOADED litres
+   *  @20°C (the BOL figure) rather than the booked volume. */
   cargoUnit: string;
   cargoQuantity: number;
   loadedLitres?: number;
   loadedLitres20C?: number;
-  dischargedLitres?: number;
-  dischargedLitres20C?: number;
 }
 
 export function TripReconciliation(props: TripReconciliationProps) {
@@ -46,8 +44,8 @@ export function TripReconciliation(props: TripReconciliationProps) {
   );
   const [closingNotes, setClosingNotes] = useState("");
 
-  // Bill on delivered litres @20°C (fallback loaded, then booked) × rate/L —
-  // NOT the booked revenue. This is what the customer actually owes.
+  // Bill on the LOADED litres @20°C (the BOL figure) × rate/L — NOT the booked
+  // revenue. This is the final invoice amount the customer is debited.
   const bill = billableFreight({
     cargoUnit: props.cargoUnit,
     cargoQuantity: props.cargoQuantity,
@@ -55,15 +53,11 @@ export function TripReconciliation(props: TripReconciliationProps) {
     revenueCurrency: props.revenueCurrency,
     loadedLitres: props.loadedLitres,
     loadedLitres20C: props.loadedLitres20C,
-    dischargedLitres: props.dischargedLitres,
-    dischargedLitres20C: props.dischargedLitres20C,
   });
   const billLabel =
-    bill.source === "delivered"
-      ? "Freight to invoice (delivered L20)"
-      : bill.source === "loaded"
-        ? "Freight to invoice (loaded L20)"
-        : "Freight to invoice (booked)";
+    bill.source === "loaded"
+      ? "Freight to invoice (loaded L20)"
+      : "Freight to invoice (booked)";
 
   const used = Number(advanceUsed || 0);
   const advanceBalance = props.driverAdvanceKes - used;
