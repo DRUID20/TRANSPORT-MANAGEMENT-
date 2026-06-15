@@ -144,9 +144,6 @@ export default async function DashboardPage() {
           <p className="font-mono text-[11px] uppercase tracking-[0.16em] text-fg-tertiary">
             {todayLine}
           </p>
-          <p className="font-mono text-[11px] uppercase tracking-[0.16em] text-fg-tertiary">
-            Nairobi · EAT
-          </p>
         </div>
 
         <div className="grid gap-3">

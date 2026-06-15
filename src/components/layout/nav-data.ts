@@ -42,6 +42,7 @@ import {
   FileBarChart,
   Calendar,
   Coins,
+  Boxes,
 } from "lucide-react";
 
 export type NavItem = {
@@ -82,6 +83,7 @@ export const navGroups: { title: string; items: NavItem[] }[] = [
       { href: "/fuel", label: "Fuel", icon: FuelIcon },
       { href: "/fx", label: "FX Rates", icon: Coins },
       { href: "/accounts", label: "Chart of Accounts", icon: BookOpen },
+      { href: "/assets", label: "Asset Register", icon: Boxes },
       { href: "/ledger", label: "General Ledger", icon: ListChecks },
       { href: "/ledger/trial-balance", label: "Trial Balance", icon: Scale },
       { href: "/invoices", label: "Invoices (AR)", icon: ScrollText },

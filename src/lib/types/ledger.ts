@@ -19,6 +19,8 @@ export type JournalReferenceType =
   | "payment"
   | "fx_revaluation"
   | "depreciation"
+  | "asset_acquisition"
+  | "asset_disposal"
   | "reversal";
 
 export interface JournalLine {

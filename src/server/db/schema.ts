@@ -1321,3 +1321,46 @@ export const managementPacks = pgTable(
   },
   (t) => ({ byOrgPeriod: index("management_packs_org_period_idx").on(t.organizationId, t.yearMonth) }),
 );
+
+// ---------- Asset Register (fixed assets + depreciation) ----------
+export const assets = pgTable(
+  "assets",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    organizationId: uuid("organization_id")
+      .notNull()
+      .references(() => organizations.id, { onDelete: "cascade" }),
+    number: varchar("number", { length: 24 }).notNull(),
+    name: text("name").notNull(),
+    /** AssetCategory — maps to the CoA cost/accum-dep/expense triplet. */
+    category: varchar("category", { length: 32 }).notNull(),
+    description: text("description"),
+    serialNumber: varchar("serial_number", { length: 120 }),
+    location: text("location"),
+    /** Optional link to the supplier the asset was bought from. */
+    supplierId: uuid("supplier_id").references(() => suppliers.id, { onDelete: "set null" }),
+    acquisitionDate: date("acquisition_date").notNull(),
+    cost: numeric("cost", { precision: 16, scale: 2 }).notNull(),
+    currency: varchar("currency", { length: 3 }).notNull().default("KES"),
+    /** straight_line | reducing_balance | none */
+    depreciationMethod: varchar("depreciation_method", { length: 20 }).notNull().default("straight_line"),
+    usefulLifeMonths: integer("useful_life_months"),
+    depreciationRatePct: numeric("depreciation_rate_pct", { precision: 6, scale: 3 }),
+    residualValue: numeric("residual_value", { precision: 16, scale: 2 }).notNull().default("0"),
+    accumulatedDepreciation: numeric("accumulated_depreciation", { precision: 16, scale: 2 }).notNull().default("0"),
+    depreciationStartDate: date("depreciation_start_date").notNull(),
+    /** End-of-month date of the last depreciation charge posted. */
+    lastDepreciatedOn: date("last_depreciated_on"),
+    /** active | fully_depreciated | disposed | written_off */
+    status: varchar("status", { length: 20 }).notNull().default("active"),
+    disposalDate: date("disposal_date"),
+    disposalProceeds: numeric("disposal_proceeds", { precision: 16, scale: 2 }),
+    disposalJournalEntryId: uuid("disposal_journal_entry_id"),
+    notes: text("notes"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => ({
+    byOrg: index("assets_org_idx").on(t.organizationId),
+    byCategory: index("assets_category_idx").on(t.organizationId, t.category),
+  }),
+);

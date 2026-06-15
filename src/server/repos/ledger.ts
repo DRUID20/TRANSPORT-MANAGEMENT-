@@ -94,6 +94,7 @@ type PostInput = {
 export async function listJournalEntries(filter?: {
   status?: JournalStatus;
   referenceType?: JournalReferenceType;
+  referenceId?: string;
   fromDate?: string;
   toDate?: string;
 }): Promise<JournalEntry[]> {
@@ -103,6 +104,7 @@ export async function listJournalEntries(filter?: {
   const where = [eq(entriesTable.organizationId, orgId)];
   if (filter?.status) where.push(eq(entriesTable.status, filter.status));
   if (filter?.referenceType) where.push(eq(entriesTable.referenceType, filter.referenceType));
+  if (filter?.referenceId) where.push(eq(entriesTable.referenceId, filter.referenceId));
   if (filter?.fromDate) where.push(gte(entriesTable.date, filter.fromDate));
   if (filter?.toDate) where.push(lte(entriesTable.date, filter.toDate));
   const rows = await db.select().from(entriesTable).where(and(...where)).orderBy(desc(entriesTable.date));
