@@ -41,7 +41,7 @@ export default async function TripDeliveryPage({
 
   return (
     <div className="flex flex-col gap-5">
-      <FuelCargoCard trip={trip} bolVolumeL={trip.cargoQuantity} />
+      <FuelCargoCard trip={trip} bolVolumeL={trip.cargoQuantity} capture="discharge" />
 
       <ShortageNotice trip={trip} />
 

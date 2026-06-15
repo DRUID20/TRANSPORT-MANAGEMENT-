@@ -57,7 +57,7 @@ export default async function TripInTransitPage({
         </div>
       </section>
 
-      <FuelCargoCard trip={trip} bolVolumeL={trip.cargoQuantity} showCaptureControls={false} />
+      <FuelCargoCard trip={trip} bolVolumeL={trip.cargoQuantity} capture="none" />
 
       {!readOnly && (
         <section className="surface-card surface-3d flex items-center justify-between gap-3 border-2 border-border-strong px-5 py-4">

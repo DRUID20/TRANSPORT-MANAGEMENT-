@@ -272,6 +272,62 @@ export function ullageVariancePct(
 export const ULLAGE_ALERT_THRESHOLD_PCT = 0.5;
 
 /**
+ * The freight we ACTUALLY invoice the customer.
+ *
+ * Fuel freight is billed on what was delivered, not what was booked: the
+ * customer pays for the litres that arrive in their tank (@20°C). The rate per
+ * litre is fixed from the rate card (booked revenue ÷ booked litres); we just
+ * re-multiply it by the delivered volume.
+ *
+ *   billed litres = delivered L20  (else loaded L20, else booked — in that
+ *                   order of preference, depending on how far the trip is)
+ *   amount        = billed litres × rate/L
+ *
+ * Non-litre cargo (flat charters priced per_trip) bills the booked revenue
+ * as-is — there's no per-litre rate to re-apply.
+ *
+ * Mirrors the rounding used by the invoice create form so the figure shown on
+ * the trip matches the figure on the generated invoice to the cent.
+ */
+export function billableFreight(trip: {
+  cargoUnit: string;
+  cargoQuantity: number;
+  revenueAmount: number;
+  revenueCurrency: Currency | string;
+  loadedLitres?: number;
+  loadedLitres20C?: number;
+  dischargedLitres?: number;
+  dischargedLitres20C?: number;
+}): {
+  amount: number;
+  currency: string;
+  billedLitres?: number;
+  ratePerLitre?: number;
+  source: "delivered" | "loaded" | "booked";
+} {
+  const isLitres = trip.cargoUnit === "litres";
+  if (!isLitres || trip.cargoQuantity <= 0) {
+    return { amount: trip.revenueAmount, currency: trip.revenueCurrency, source: "booked" };
+  }
+  const ratePerLitre = Math.round((trip.revenueAmount / trip.cargoQuantity) * 10_000) / 10_000;
+  const delivered = trip.dischargedLitres20C ?? trip.dischargedLitres;
+  const loaded = trip.loadedLitres20C ?? trip.loadedLitres;
+  const billed =
+    delivered !== undefined
+      ? { litres: delivered, source: "delivered" as const }
+      : loaded !== undefined
+        ? { litres: loaded, source: "loaded" as const }
+        : { litres: trip.cargoQuantity, source: "booked" as const };
+  return {
+    amount: Math.round(ratePerLitre * billed.litres * 100) / 100,
+    currency: trip.revenueCurrency,
+    billedLitres: billed.litres,
+    ratePerLitre,
+    source: billed.source,
+  };
+}
+
+/**
  * Compute revenue for a fuel haul given the agreed rate and the cargo volume.
  *
  *  - per_m3:    amount × (litres / 1000)

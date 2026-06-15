@@ -35,18 +35,23 @@ export type TripForFuelCard = {
 export function FuelCargoCard({
   trip,
   bolVolumeL,
-  showCaptureControls = true,
+  capture = "none",
 }: {
   trip: TripForFuelCard;
   bolVolumeL?: number;
-  /** Hide the inline capture buttons (used on the Delivery stage where we
-   *  surface the discharge form on its own; or read-only summaries). */
-  showCaptureControls?: boolean;
+  /** Which capture control to expose:
+   *   "loading"   → depot loading only (Loading stage)
+   *   "discharge" → customer discharge only (Delivery stage)
+   *   "none"      → read-only summary (In transit / Invoice / closed)
+   *  Each stage only edits its own measurement so discharge never shows up
+   *  on the loading step. */
+  capture?: "loading" | "discharge" | "none";
 }) {
   const hasLoading = trip.loadedLitres !== undefined;
   const hasDischarge = trip.dischargedLitres !== undefined;
-  const editable =
-    showCaptureControls && trip.status !== "closed" && trip.status !== "cancelled";
+  const terminal = trip.status === "closed" || trip.status === "cancelled";
+  const canLoad = capture === "loading" && !terminal;
+  const canDischarge = capture === "discharge" && !terminal;
 
   // BOL volume is already at 20 °C — observed = corrected.
   const loaded20C = trip.loadedLitres20C ?? trip.loadedLitres;
@@ -86,7 +91,7 @@ export function FuelCargoCard({
             value={trip.loadingSealNumbers ?? "—"}
             mono
           />
-          {trip.product && editable && (
+          {trip.product && canLoad && (
             <CaptureLoadingButton
               tripId={trip.id}
               product={trip.product}
@@ -110,7 +115,7 @@ export function FuelCargoCard({
             value={trip.dischargeSealNumbers ?? "—"}
             mono
           />
-          {trip.product && editable && (
+          {trip.product && canDischarge && (
             <CaptureDischargeButton
               tripId={trip.id}
               product={trip.product}

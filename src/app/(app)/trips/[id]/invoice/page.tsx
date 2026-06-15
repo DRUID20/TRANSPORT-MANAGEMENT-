@@ -52,6 +52,12 @@ export default async function TripInvoicePage({
         initialActualKm={trip.actualKm}
         initialActualFuelLitres={trip.actualFuelLitres}
         initialDriverAdvanceUsedKes={trip.driverAdvanceUsedKes}
+        cargoUnit={trip.cargoUnit}
+        cargoQuantity={trip.cargoQuantity}
+        loadedLitres={trip.loadedLitres}
+        loadedLitres20C={trip.loadedLitres20C}
+        dischargedLitres={trip.dischargedLitres}
+        dischargedLitres20C={trip.dischargedLitres20C}
       />
 
       {readOnly && (

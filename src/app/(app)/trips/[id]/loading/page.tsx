@@ -39,7 +39,7 @@ export default async function TripLoadingPage({
 
       <TripDocuments tripId={trip.id} documents={documents} />
 
-      <FuelCargoCard trip={trip} bolVolumeL={trip.cargoQuantity} />
+      <FuelCargoCard trip={trip} bolVolumeL={trip.cargoQuantity} capture="loading" />
 
       <CompleteLoading
         tripId={trip.id}

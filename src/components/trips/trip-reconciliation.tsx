@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { CheckCircle2, Loader2 } from "lucide-react";
 import { reconcileAndCloseTrip } from "@/server/actions/trips";
+import { billableFreight } from "@/lib/types/trips";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -19,6 +20,14 @@ export interface TripReconciliationProps {
   initialActualKm?: number;
   initialActualFuelLitres?: number;
   initialDriverAdvanceUsedKes?: number;
+  /** Cargo + captured volumes — used to price the freight on the DELIVERED
+   *  litres @20°C rather than the booked volume. */
+  cargoUnit: string;
+  cargoQuantity: number;
+  loadedLitres?: number;
+  loadedLitres20C?: number;
+  dischargedLitres?: number;
+  dischargedLitres20C?: number;
 }
 
 export function TripReconciliation(props: TripReconciliationProps) {
@@ -36,6 +45,25 @@ export function TripReconciliation(props: TripReconciliationProps) {
     props.initialDriverAdvanceUsedKes ? String(props.initialDriverAdvanceUsedKes) : "",
   );
   const [closingNotes, setClosingNotes] = useState("");
+
+  // Bill on delivered litres @20°C (fallback loaded, then booked) × rate/L —
+  // NOT the booked revenue. This is what the customer actually owes.
+  const bill = billableFreight({
+    cargoUnit: props.cargoUnit,
+    cargoQuantity: props.cargoQuantity,
+    revenueAmount: props.revenueAmount,
+    revenueCurrency: props.revenueCurrency,
+    loadedLitres: props.loadedLitres,
+    loadedLitres20C: props.loadedLitres20C,
+    dischargedLitres: props.dischargedLitres,
+    dischargedLitres20C: props.dischargedLitres20C,
+  });
+  const billLabel =
+    bill.source === "delivered"
+      ? "Freight to invoice (delivered L20)"
+      : bill.source === "loaded"
+        ? "Freight to invoice (loaded L20)"
+        : "Freight to invoice (booked)";
 
   const used = Number(advanceUsed || 0);
   const advanceBalance = props.driverAdvanceKes - used;
@@ -124,9 +152,17 @@ export function TripReconciliation(props: TripReconciliationProps) {
         {/* Computed roll-up */}
         <div className="grid gap-3 rounded-md border border-border bg-bg-base/50 p-4 sm:grid-cols-2 lg:grid-cols-4">
           <SummaryStat
-            label="Revenue"
-            value={`${props.revenueAmount.toLocaleString()} ${props.revenueCurrency}`}
+            label={billLabel}
+            value={`${bill.amount.toLocaleString()} ${bill.currency}`}
             tone="success"
+            hint={
+              bill.billedLitres !== undefined && bill.ratePerLitre !== undefined
+                ? `${bill.billedLitres.toLocaleString()} L × ${bill.ratePerLitre} ${bill.currency}/L` +
+                  (bill.source !== "booked"
+                    ? ` (booked ${props.cargoQuantity.toLocaleString()} L)`
+                    : "")
+                : undefined
+            }
           />
           <SummaryStat
             label="Border charges"
