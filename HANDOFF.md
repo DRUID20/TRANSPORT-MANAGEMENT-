@@ -3,67 +3,107 @@
 > Single source of truth for continuing this session. Concise on purpose.
 > Deeper history: `docs/RUNBOOK.md`, `docs/GO-LIVE-AUDIT.md`, `docs/SECURITY-rls.md`.
 
-## Where things stand (2026-06-14, late)
+## Where things stand (2026-06-15)
 Nile Valley Logistics — cross-border fuel-haulage TMS. **Production-deployed, near go-live.**
 
 - **Branch:** `claude/plan-truck-system-Mfwm8`. Draft **PR #1** open (`druid20/transport-management-`). Commit + push every unit.
 - **Prod:** https://transport-management-ruddy.vercel.app · auto-deploys on push (~2–2.5 min).
 - **Login (Playwright):** `omazmz@gmail.com` / `Omar2026`. Run scripts FROM the repo dir (so `playwright` resolves); context needs `ignoreHTTPSErrors:true`. Theme stored in `localStorage.theme` ("light"|"dark"); next-themes, default dark.
 - **Supabase project id:** `jpfvhfcjduimnjijdang` · **org id (nile-valley):** `73aa3af1-5bd5-42cc-b3a9-b60e67f01f1f`. Apply SQL via the Supabase MCP (`apply_migration`/`execute_sql`) — the sandbox can't resolve Supabase DNS for `db:*` scripts.
-- **Verify loop:** `npx tsc --noEmit` + `npx next lint` → `npm run build` → commit + push → wait ~2.5min → Playwright check on prod.
+- **Verify loop:** `npx tsc --noEmit` + `npx next lint` → `npx next build` → commit + push → wait ~2.5min → Playwright check on prod.
 
 ## Stack / conventions
 - Next 15 App Router, React 19, server actions, Tailwind w/ CSS-var tokens in `src/app/globals.css` + `tailwind.config.ts`.
 - Dual-mode repos: `actions/*` → `repos/*`; each repo `if (IS_DEMO_MODE) return store…()` else Postgres scoped by `requireOrgId()`.
 - Drizzle: numeric columns round-trip as strings (`Number()` read, `String()` write); jsonb arrays need `as unknown as` casts.
-- Fonts: Outfit (display `--font-display`), Inter (sans `--font-sans`), JetBrains Mono (`--font-mono`) — see `src/lib/fonts.ts`. (Base font-family bug already fixed to use `--font-sans`.)
+- Fonts (`src/lib/fonts.ts`): **Outfit for everything** — `--font-display` AND `--font-sans` both Outfit (Inter retired this session per UNOC/Mofi ref). JetBrains Mono for `--font-mono` (numbers/data).
 
-## DONE & verified (everything shipped this session)
-- Full dark UI redesign; **26/32 modules persist to Postgres** (tracker/driver-session/rbac/reports-catalogue stay in-memory by design — but reports + performance aggregators now READ via repos).
+## DONE & verified (this session + prior)
+- Full dark UI redesign; **26/32 modules persist to Postgres** (tracker/driver-session/rbac/reports-catalogue stay in-memory by design — reports + performance aggregators READ via repos).
 - Security: custom auth (bcrypt, lockout, CSPRNG OTP + premium email), RLS + grants revoked from anon/authenticated (false-positive `rls_enabled_no_policy` is expected — see docs/SECURITY-rls.md).
 - File uploads (Supabase Storage private `documents` bucket): trip docs (+ Bill of Lading + Road User Charge kinds), HR compliance, leave attachments, employee photos. Auth-proxied, org-isolated.
 - Branded Excel + PDF reports. New reports: Revenue by Customer, Driver Performance, Monthly Trend (chart), VAT Summary, **Truck Statement** (per-truck cumulative retained-earnings memo). Reports + tracker read real Postgres data.
-- **FX live** (`open.er-api.com`, covers KES/USD/UGX): `repos/fx.ts`, daily cron `/api/cron/fx` (now REQUIRES `CRON_SECRET`), `/fx` page + converter, invoice/bill/expense forms auto-fill the rate.
+- **FX live** (`open.er-api.com`, covers KES/USD/UGX): `repos/fx.ts`, daily cron `/api/cron/fx` (REQUIRES `CRON_SECRET`), `/fx` page + converter, invoice/bill/expense forms auto-fill the rate.
 - **Subcontractor accounting** (10% commission): `subcontractor_payments` ledger, supplier-direct → AP bill (502500), account statement on the detail page.
 - **Workshop → AP:** completing a job card raises draft supplier bill(s) for spares (mapped to 504xxx); in-house labour excluded from GL; optional trip link.
 - **Expenses:** choose KES/USD/UGX (auto-FX), delete (detail + list-row), truck-expenses require a trip, closed trips hidden from assignment.
-- **Trips workflow (the big recent one):**
+- **Trips workflow base:**
   - Destination is NOT set at booking — only customer + product + volume + origin. Destination is **bound on the trip** at the depot or transit border (Malaba/Busia) via `ConfirmDestinationCard`, with audit (`destination_confirmed_at/by`) + timeline event + Road User Charge doc kind.
   - **Rate is destination-driven → looked up on the trip** when the destination is confirmed (`lookupRate(origin→dest)`); rate removed from the booking form; `bookings.agreed_*` now nullable.
   - **One invoice per trip**, billed on **delivered L20**; fuel shortage → driver payroll loan (idempotent via `loans.shortage_trip_id`, valued in KES).
   - "No new trip on a truck with an unfinished trip" guard in `planTrip`.
-- **Audit + RBAC:** `audit_log` now written on finance mutations (`server/auth/audit.ts`); `requireCapability()` role gate (`server/auth/permissions.ts`) on AR/AP/ledger/loan mutations; read-only `/admin/audit-log` (admin-gated).
-- **Perf:** `borderChargesByTrip(ids[])` batched (killed 4 N+1s); `fleetProfitAndLoss` parallel; server-side pagination on /expenses /invoices /bills /trips /bookings (`components/ui/paginator.tsx`).
-- Theme contrast pass: per-mode font smoothing (subpixel light / grayscale dark), darker borders, fixed the `animate-content-in` lingering-transform blur (fill-mode `backwards`), bolder sidebar.
+- **Audit + RBAC:** `audit_log` written on finance mutations; `requireCapability()` role gate on AR/AP/ledger/loan mutations; read-only `/admin/audit-log`.
+- **Perf:** `borderChargesByTrip(ids[])` batched (killed 4 N+1s); `fleetProfitAndLoss` parallel; server-side pagination on /expenses /invoices /bills /trips /bookings.
 
-## NEXT — UNOC light-mode restyle (USER's current ask; 2 reference screenshots of the UNOC portal)
-User wants **LIGHT MODE specifically** to look like the UNOC (Uganda National Oil) portal. **"Not the layout, just the fonts and colours."** Plus collapsible nav, 3D-looking cards/forms, and real animation. Be honest about scope; don't claim more than done.
+## UI/UX work shipped this session
+1. **UNOC light-mode restyle** (commit `8030378`) — black sidebar + gold active pill, raised white cards, collapsible nav groups (grid-rows 0fr↔1fr trick), `DrivingTruck` component on tracker hero. Tokens: `--sidebar-bg/-fg/-active-bg/-active-fg/-border`, `--accent-gold`, `--shadow-card`. Dark mode keeps a dark sidebar with gold active too; depth via border (no light-mode drop-shadow).
+2. **Sidebar + table refinements** (commit `478416f`) — nav items **14.5px bold** (was 13px), group headers **12.5px extrabold**, 20px icons strokeWidth 2. Group collapse now **fades + slides down with a staggered item cascade** (`navItemIn` keyframe @25ms apart) instead of blinking. DataTable header: 12px bold, `border-b-2 border-border-strong`, `text-fg-secondary`. Darkened light-mode tokens for visible borders: `--border: 210 216 226`, `--border-strong: 178 187 201`, `--text-secondary: 44 53 67`, `--text-tertiary: 84 94 111`.
+3. **Trips overhaul** (commit `cff499a`) — see next section.
+4. **Outfit everywhere** — `src/lib/fonts.ts` swapped `--font-sans` from Inter to Outfit (weights 400/500/600/700). Inter retired.
+5. **Blank-page-on-scroll fixed** — `src/app/layout.tsx` body `min-h-screen` → `min-h-[100dvh]` (100vh on mobile includes URL-bar area, so the page grew past the viewport).
+6. **3D surfaces** added to globals.css:
+   - `.surface-3d` — inner-top highlight + inner-bottom shadow + brand-tinted halo + soft drop. Dark mode strips the bright highlight but keeps depth.
+   - `.page-3d-bg` — fixed radial glow backdrop (brand-blue top-left, accent-gold top-right, brand-cyan bottom). Applied to `/trips` and `/trips/[id]`.
+   - DataTable wrapper now `border-2 border-border surface-3d` for the "thick lifted" look the user asked for.
 
-### Design language extracted from the screenshots (build to THIS)
-1. **Sidebar = solid BLACK** (`#0B0B0C`-ish), white text/icons, in LIGHT mode (today it's `bg-bg-surface` light grey). Active item = **gold/amber pill** (`~#F2A93B`) with dark text, full-rounded. Group headers are collapsible with a chevron; expanded groups show sub-items connected by a thin tree line (e.g. Discharge Inst → Outturn Values / Original DIs). There's a rounded "OPERATIONS" section chip. Likely needs a dedicated `--sidebar-bg` / `--sidebar-active` token rather than reusing surface tokens, so dark mode is untouched.
-2. **Top bar = white**, clean; icon buttons sit in light circular chips; right side = avatar + name + company + chevron.
-3. **Content bg = very light grey** (`~#F4F5F7`). **Cards = white, rounded ~14px, soft drop shadow (the "3D"/raised look) + hairline border.** This is the key "make forms 3D like they have a background" ask → bump light-mode card shadow (today depth is border-only; add a real soft shadow in light mode) and give form sections the same raised white panel.
-4. **Buttons = black filled, rounded, icon + label** (Filter / Export / New Order); some black-outline. Primary CTA stays black in light mode (gold is the *accent/active*, not the button fill).
-5. **Tables = black rounded header row**, white body rows, subtle separators.
-6. **Status pills = outlined, colour-coded** (green APPROVED/✓, blue COMPLETED, amber for urgency/ageing). Expiry-style tags as small pills, colour by urgency.
-7. **Font = rounded geometric sans** (Poppins/Outfit feel; headings bold). Outfit is already loaded as `--font-display`; consider using it (or Poppins) for headings + a rounded sans for body in light mode. Keep mono for numbers.
-8. Accent palette: **black + gold/amber + green success + blue info**; lots of whitespace.
+## Trips workflow this session — BOL-first sequential gate
+**The big one.** User requirement: "loaded first first only then you can move on to the other parts… really concentrate on the trips page that's where everything almost happens."
 
-### Concrete tasks
-- **A. Light tokens (globals.css):** introduce sidebar tokens (black bg, gold active, white fg) used by the sidebar in light mode only; lift `--bg-base` to a soft grey; add a light-mode card shadow (`--shadow-card`) and apply to `.surface-card` + `<Card>` + `FormSection` so cards look raised/3D. Keep DARK mode as-is.
-- **B. Sidebar collapsible groups:** `src/components/layout/sidebar-body.tsx` + `nav-data.ts`. Make each nav GROUP a collapsible accordion (click header → expand/collapse, chevron rotates, smooth height animation), persist open/closed per group in localStorage. Active group auto-opens. The user said "make them appear and disappear at a click" → this is the deliverable. (Today groups are always-expanded.)
-- **C. 3D forms:** the `FormSection` component (`src/components/ui/form-section.tsx`) + `Card` → white raised panel with the new shadow in light mode.
-- **D. Real animation:** a tasteful moving-truck animation where it fits — e.g. the app loading state, the tracker page hero, and/or empty states. Keep it CSS/lightweight, respect `prefers-reduced-motion`. Don't fake GPS movement; it's decorative/feedback only. Be upfront it's decorative.
-- **E. Restyle status pills** to the outlined colour-coded look if not already.
+- **`src/app/(app)/trips/[id]/page.tsx`** — `hasBOL = documents.some(d => d.kind === 'bill_of_lading')`. Render order:
+  1. PageHeader + StatusPipeline + NextActionPanel + Facts + Related-rail (always visible)
+  2. `<BOLGate />` (amber banner) shown when `!hasBOL`
+  3. `<TripDocuments />` (always reachable — must be uploadable to unlock the rest)
+  4. `<LockedStep locked={!hasBOL} stepNumber={2} title="Confirm destination">` → `<ConfirmDestinationCard />`
+  5. `<LockedStep stepNumber={3} title="Capture loading & discharge">` → `<FuelCargoCard />`
+  6. `<LockedStep stepNumber={4} title="Borders & expenses">` → `<TripBorders /> + <TripExpensesCard />`
+  7. `<LockedStep stepNumber={5} title="Invoice & reconcile">` → `<TripInvoiceCard /> + <TripReconciliation />`
+- `LockedStep` renders `opacity-40 blur-[1px] pointer-events-none` children with a centered "STEP N — upload the BOL to unlock" overlay (lock icon + bold step number + title). Verified on prod with `scripts/shot-trips-2.mjs`.
+- **Loading/discharge simplified per user spec ("BOL already has volume at 20 no need for temp or density"):**
+  - `src/components/trips/fuel-capture.tsx` rewritten. `CaptureLoadingButton` now takes `bolVolumeL` prop, pre-fills the litres input from `Trip.cargoQuantity` (the BOL volume). Only asks for (loaded litres, seal numbers). `CaptureDischargeButton` likewise — only (discharged litres, seals).
+  - `src/lib/validators/trips.ts`: `loadingTempC`, `density15C`, `dischargeTempC` made **optional** (back-compat with legacy entries).
+  - `src/server/actions/trips.ts`: when temp/density absent, observed = corrected (`loaded20C = parsed.data.loadedLitres`). When present (legacy data), still runs `correctVolumeTo20C`.
+  - `FuelCargoCard` in `[id]/page.tsx`: dropped Temp + Density + separate `@ 20 °C` rows. Now shows only "Loaded (@ 20 °C)" + Seals + Variance.
+  - Removed `correctVolumeTo20C` import and `Thermometer` icon import from the page (they were unused after the simplification).
+  - `NextActionPanel` copy updated: "BOL volume (already @ 20 °C) and seal numbers — that's it."
 
-### Gotchas for the restyle
-- Only touch LIGHT-mode token values + add sidebar/shadow tokens; the dark "control tower" theme must stay. Test BOTH themes after.
-- The sidebar currently uses `bg-bg-surface` / `text-fg-*`. Switching it to black in light mode means it should NOT follow the surface token — give it its own classes/tokens that resolve to black in light AND stay dark-appropriate in dark mode (in dark mode a near-black sidebar is already fine, so a single dark sidebar token works for both).
-- `animate-content-in` must keep fill-mode `backwards` (lingering transform = blurry text). Don't reintroduce `both`.
-- Mobile drawer shares `SidebarBody` — collapsible groups must work there too.
+## Files touched this session
+- `src/app/globals.css` — surface-3d, page-3d-bg, navItemIn collapse cascade, darker border tokens
+- `src/app/layout.tsx` — `min-h-[100dvh]`
+- `src/lib/fonts.ts` — Outfit for `--font-sans` (Inter retired)
+- `src/lib/validators/trips.ts` — temp/density optional
+- `src/server/actions/trips.ts` — skip @20°C math when temp absent
+- `src/components/layout/sidebar-body.tsx` — bigger/bolder nav, staggered collapse
+- `src/components/ui/data-table.tsx` — border-2 + surface-3d, bolder header
+- `src/components/trips/fuel-capture.tsx` — full rewrite, drops temp/density, accepts `bolVolumeL`
+- `src/app/(app)/trips/[id]/page.tsx` — BOLGate + LockedStep wrapper + page-3d-bg + simplified FuelCargoCard
+- `src/app/(app)/trips/page.tsx` — page-3d-bg
+- `scripts/shot-unoc.mjs`, `scripts/shot-trips.mjs`, `scripts/shot-trips-2.mjs` — Playwright verification
+
+## Recent commits (top of branch)
+- `02218a8` test: add trips list + detail screenshot scripts
+- `cff499a` feat(trips): BOL-first sequential flow, Outfit font, 3D cards, fix blank-scroll
+- `478416f` feat(ui): bolder/bigger sidebar nav, smooth slide-down group collapse, stronger table borders + crisper fonts
+- `321c6ae` test: add UNOC light/dark screenshot script
+- `8030378` feat(ui): UNOC light-mode restyle — black/gold sidebar, raised cards, collapsible nav, truck animation
+
+## Gotchas / honest caveats
+- `animate-content-in` must stay fill-mode `backwards` (lingering transform = blurry text). Don't reintroduce `both`.
+- Outfit is now the body font too. If a future change wants Inter back for body, edit `src/lib/fonts.ts` and globals.css comment.
+- Documents card is **intentionally not locked** by `LockedStep` — it has to be reachable for the BOL to be uploadable to unlock the rest. User mentioned wanting "STEP 1 — Documents" header for visible 1→5 numbering (not done yet).
+- Legacy trips with temp+density data still display their old corrected @20°C value correctly. DB columns kept for back-compat — only the new-entry path is simplified.
+- BOL gate currently uses **only** document presence (`kind === 'bill_of_lading'`). User might want it tightened to require BOL + trip status (e.g. `loading`).
+- Build is clean; last `npx tsc --noEmit` (post-cff499a) passed silently; last `npx next build` succeeded.
+
+## Open follow-ups (user flagged or implied, NOT done)
+1. **Rename Documents header to "STEP 1 — Documents"** so the locked steps read 1→5 with no jump.
+2. **Apply `.page-3d-bg` + `.surface-3d` to other operational pages** (dashboard, bookings, trucks, invoices) for visual consistency.
+3. **Tighten BOL gate** to require both document + status = `loading` (or stricter).
+4. **UNOC table exact-match** — filled black header background (currently 2px underline). Optional aesthetic match.
+5. **`/trips` quick-filter chips** (Planned / In transit / At border / Delivered) — clickable counters.
+6. **Block trip leaving `loading` until destination+rate set** — offered earlier, not built.
 
 ## Ops still on the USER (not code)
 Set `CRON_SECRET` in Vercel (FX cron now 503s without it) · verify `RESEND_FROM` domain · Supabase PITR backups · Sentry (Vercel integration; `global-error.tsx` has the TODO) · UptimeRobot.
 
 ## Known deferred (not blockers)
-Backdated FX for historical expenses · spares inventory module · real server-rendered invoice PDF + email-send · soft-delete/recover · driver wallet · customer credit-limit block · SQL-level (not render-level) pagination · full RBAC coverage beyond finance mutations · block trip leaving `loading` until destination+rate set (offered, not yet built).
+Backdated FX for historical expenses · spares inventory module · real server-rendered invoice PDF + email-send · soft-delete/recover · driver wallet · customer credit-limit block · SQL-level (not render-level) pagination · full RBAC coverage beyond finance mutations.
