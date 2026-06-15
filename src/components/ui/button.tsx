@@ -19,7 +19,7 @@ import { cn } from "@/lib/utils";
 const buttonVariants = cva(
   [
     "inline-flex select-none items-center justify-center gap-1.5 whitespace-nowrap",
-    "rounded-lg text-[13px] font-medium leading-none tracking-[-0.005em]",
+    "rounded-lg text-[14px] font-semibold leading-none tracking-[-0.005em]",
     "transition-[transform,box-shadow,background-color,border-color,color] duration-150 ease-out",
     "motion-reduce:transition-none motion-reduce:transform-none",
     // Always-visible focus ring (§5/§14) — bg-independent, no offset band.
@@ -59,10 +59,10 @@ const buttonVariants = cva(
         ].join(" "),
       },
       size: {
-        sm: "h-8 px-2.5 text-[12px]",
-        md: "h-9 px-3.5",
-        lg: "h-10 px-5 text-[14px]",
-        icon: "size-9",
+        sm: "h-9 px-3 text-[13px]",
+        md: "h-10 px-4",
+        lg: "h-11 px-6 text-[15px]",
+        icon: "size-10",
       },
     },
     defaultVariants: {

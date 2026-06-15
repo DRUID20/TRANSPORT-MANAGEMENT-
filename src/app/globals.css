@@ -22,8 +22,8 @@
     --border: 210 216 226;         /* #D2D8E2 — visible hairline (was too faint) */
     --border-strong: 178 187 201;  /* #B2BBC9 — firm input + divider definition */
     --text-primary: 17 18 22;      /* #111216 near-black headings (UNOC) */
-    --text-secondary: 44 53 67;    /* #2C3543 body — darker for less eye strain */
-    --text-tertiary: 84 94 111;    /* #545E6F muted labels — bumped for legibility */
+    --text-secondary: 38 47 61;    /* #262F3D body — darker for less eye strain */
+    --text-tertiary: 71 81 98;     /* #475162 muted labels — legible even at 10–11px */
     --text-disabled: 160 168 180;
 
     /* Brand — premium dispatch-grade blue, slightly cooler than before */
@@ -116,6 +116,14 @@
   .dark body {
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+  }
+
+  /* Headings — bold + tight, larger by default (UNOC: bold larger fonts).
+     Pages that set their own size/weight via utilities still win. */
+  h1, h2, h3, h4, h5, h6 {
+    font-weight: 700;
+    letter-spacing: -0.01em;
+    color: rgb(var(--text-primary));
   }
 
   /* Tabular figures for money / KPIs */

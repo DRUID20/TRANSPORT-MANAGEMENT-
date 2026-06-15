@@ -27,9 +27,9 @@ export function DataTable({
   density?: "comfortable" | "compact";
 }) {
   return (
-    // border-2 + surface-3d gives the "thick, lifted" table the user asked
-    // for — header underline is doubled separately in DataTableHead.
-    <div className={cn("surface-card surface-3d overflow-hidden border-2 border-border", className)}>
+    // border-2 outer + b-2 header underline + surface-3d for the thick,
+    // lifted look the user asked for (UNOC: "table borders bold").
+    <div className={cn("surface-card surface-3d overflow-hidden border-2 border-border-strong", className)}>
       <div className="overflow-x-auto">
         <table
           className={cn(
@@ -61,9 +61,9 @@ export function DataTableHead({
   return (
     <thead
       className={cn(
-        // Bolder, higher-contrast header with a firm 2px underline so columns
-        // read clearly and don't strain the eyes (UNOC).
-        "border-b-2 border-border-strong bg-bg-surface text-left text-[12px] font-bold uppercase tracking-[0.06em] text-fg-secondary",
+        // Bold, high-contrast header with a 3px underline so columns
+        // read clearly. UNOC: "headings bold larger fonts".
+        "border-b-[3px] border-border-strong bg-bg-surface text-left text-[13px] font-extrabold uppercase tracking-[0.06em] text-fg-secondary",
         sticky && "sticky top-0 z-10",
         className,
       )}
@@ -132,7 +132,7 @@ export function DataTableBody({
   className?: string;
 }) {
   // Bottom borders only (no vertical rules, no zebra) — §8.
-  return <tbody className={cn("divide-y divide-border", className)}>{children}</tbody>;
+  return <tbody className={cn("divide-y-2 divide-border", className)}>{children}</tbody>;
 }
 
 /**
