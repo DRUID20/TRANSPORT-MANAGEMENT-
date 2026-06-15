@@ -18,6 +18,13 @@ import {
 import { Paginator } from "@/components/ui/paginator";
 import { PageHeader } from "@/components/layout/page-header";
 import { TripStatusPill } from "@/components/trips/trip-status-pill";
+import {
+  STAGES,
+  STAGE_LABEL,
+  currentStage,
+  stageHint,
+  wizardReadOnly,
+} from "@/lib/trips/wizard-stages";
 import { cn } from "@/lib/utils";
 
 const PAGE_SIZE = 50;
@@ -104,6 +111,7 @@ export default async function TripsPage({
               <DataTableHeaderCell>Route</DataTableHeaderCell>
               <DataTableHeaderCell>Truck</DataTableHeaderCell>
               <DataTableHeaderCell>Driver</DataTableHeaderCell>
+              <DataTableHeaderCell>Stage</DataTableHeaderCell>
               <DataTableHeaderCell>Status</DataTableHeaderCell>
               <DataTableHeaderCell align="right">Revenue</DataTableHeaderCell>
             </tr>
@@ -114,6 +122,16 @@ export default async function TripsPage({
               const driver = driverById.get(t.driverId);
               const booking = bookingById.get(t.bookingId);
               const customer = booking ? customerById.get(booking.customerId) : undefined;
+              const dischargeCaptured = t.dischargedLitres !== undefined;
+              const stage = currentStage(t.status, { dischargeCaptured });
+              const stageIndex = STAGES.indexOf(stage);
+              const hint = wizardReadOnly(t.status)
+                ? undefined
+                : stageHint(t.status, {
+                    destination: t.destination,
+                    loadedLitres: t.loadedLitres,
+                    dischargedLitres: t.dischargedLitres,
+                  });
               return (
                 <DataTableRow key={t.id} linkHref={`/trips/${t.id}`}>
                   <DataTableCell>
@@ -148,6 +166,25 @@ export default async function TripsPage({
                   </DataTableCell>
                   <DataTableCell className="text-xs text-fg-secondary">
                     {driver?.fullName ?? "—"}
+                  </DataTableCell>
+                  <DataTableCell>
+                    {wizardReadOnly(t.status) ? (
+                      <span className="text-xs text-fg-tertiary">—</span>
+                    ) : (
+                      <div className="flex flex-col gap-0.5">
+                        <span className="inline-flex items-center gap-1.5 text-[13px] font-bold text-fg-primary">
+                          <span className="font-mono text-[10px] font-bold text-brand-blue">
+                            {stageIndex + 1}/5
+                          </span>
+                          {STAGE_LABEL[stage]}
+                        </span>
+                        {hint && (
+                          <span className="text-[11px] font-medium text-fg-tertiary">
+                            Next: {hint}
+                          </span>
+                        )}
+                      </div>
+                    )}
                   </DataTableCell>
                   <DataTableCell>
                     <TripStatusPill status={t.status} />

@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import { TripInvoiceCard } from "@/components/trips/trip-invoice-card";
 import { TripReconciliation } from "@/components/trips/trip-reconciliation";
+import { ReopenTripButton } from "@/components/trips/reopen-trip-button";
 import { StageGateBanner } from "@/components/trips/wizard-shared";
 import { getTripById } from "@/server/actions/trips";
 import { wizardReadOnly } from "@/lib/trips/wizard-stages";
@@ -64,6 +65,7 @@ export default async function TripInvoicePage({
             the shortage deduction) or, if the invoice was already sent, ask you to
             issue a credit note first.
           </p>
+          <ReopenTripButton tripId={trip.id} />
         </section>
       )}
     </div>

@@ -20,6 +20,13 @@ import { getTruck } from "@/server/repos/trucks";
 import { getTrailer } from "@/server/repos/trailers";
 import { getDriver } from "@/server/repos/drivers";
 import { lookupRate as repoLookupRate } from "@/server/repos/rates";
+import { listTripDocuments } from "@/server/repos/documents";
+import { listBorderCrossings as repoListBorderCrossings } from "@/server/repos/borders";
+import { invoicesForTrip, cancelInvoice } from "@/server/repos/ar";
+import { listLoans, cancelLoan } from "@/server/repos/payroll";
+import { getEmployeeByDriverId } from "@/server/repos/hr";
+import { requireCapability, PermissionError } from "@/server/auth/permissions";
+import { logAudit } from "@/server/auth/audit";
 import {
   correctVolumeTo20C,
   isTerminal,
@@ -95,8 +102,8 @@ export async function transitionTrip(input: {
 }): Promise<TransitionResult> {
   const result = await repoTransition(input);
   if ("error" in result) return { ok: false, error: result.error };
-  revalidatePath("/trips");
-  revalidatePath(`/trips/${input.tripId}`);
+  revalidatePath("/trips", "layout");
+  revalidatePath(`/trips/${input.tripId}`, "layout");
   revalidatePath("/dashboard");
   revalidatePath(`/trucks/${result.trip.truckId}`);
   revalidatePath(`/drivers/${result.trip.driverId}`);
@@ -189,6 +196,13 @@ export async function captureTripLoading(
       error: "Trip is closed — loading observations can no longer be edited.",
     };
   }
+  if (await tripHasLiveInvoice(tripId)) {
+    return {
+      ok: false,
+      error:
+        "An invoice already exists for this trip — volumes are locked. Have an admin reopen the trip to amend the load.",
+    };
+  }
   if (!trip.product) {
     return {
       ok: false,
@@ -215,7 +229,7 @@ export async function captureTripLoading(
     transitBondNumber: parsed.data.transitBondNumber ?? trip.transitBondNumber,
     ullagePct: ullage,
   });
-  revalidatePath(`/trips/${tripId}`);
+  revalidatePath(`/trips/${tripId}`, "layout");
   return { ok: true, id: tripId };
 }
 
@@ -238,6 +252,13 @@ export async function captureTripDischarge(
     return {
       ok: false,
       error: "Trip is closed — discharge observations can no longer be edited.",
+    };
+  }
+  if (await tripHasLiveInvoice(tripId)) {
+    return {
+      ok: false,
+      error:
+        "An invoice already exists for this trip — volumes are locked. Have an admin reopen the trip to amend the delivery.",
     };
   }
   if (!trip.product) {
@@ -265,6 +286,180 @@ export async function captureTripDischarge(
     dischargeSealNumbers: parsed.data.dischargeSealNumbers,
     ullagePct: ullage,
   });
-  revalidatePath(`/trips/${tripId}`);
+  revalidatePath(`/trips/${tripId}`, "layout");
   return { ok: true, id: tripId };
+}
+
+/** True if the trip has any non-cancelled invoice. Used to lock volumes:
+ *  once we've billed the delivered L20, the load/discharge figures are
+ *  frozen — amending them would silently desync the invoice + the shortage
+ *  loan. An admin reopen is the only way back. */
+async function tripHasLiveInvoice(tripId: string): Promise<boolean> {
+  const invoices = await invoicesForTrip(tripId);
+  return invoices.some((i) => i.status !== "cancelled");
+}
+
+// ============================================================
+// Wizard stage advancement
+// ============================================================
+
+/**
+ * Advance a trip to the next wizard stage, enforcing the gate for that step
+ * SERVER-SIDE (the UI also gates, but never trust the button). Each target
+ * status validates its preconditions before delegating to `transitionTrip`,
+ * which owns the actual status-machine validation + timeline event.
+ *
+ *   to in_transit  → requires BOL approved + loaded volume + seals
+ *                    (auto-walks planned→loading→in_transit)
+ *   to at_border   → no extra gate (passive "reached the border" milestone)
+ *   to delivered   → requires destination bound + a border crossing recorded
+ */
+export async function advanceTripStage(input: {
+  tripId: string;
+  to: "in_transit" | "at_border" | "delivered";
+  actorName?: string;
+  location?: string;
+}): Promise<TransitionResult> {
+  const trip = await getTrip(input.tripId);
+  if (!trip) return { ok: false, error: "Trip not found." };
+  if (isTerminal(trip.status)) {
+    return { ok: false, error: `Trip is ${trip.status} and cannot be advanced.` };
+  }
+  const actorName = input.actorName?.trim() || "Dispatcher";
+
+  if (input.to === "in_transit") {
+    const documents = await listTripDocuments(input.tripId);
+    const bol = documents.find((d) => d.kind === "bill_of_lading");
+    if (!bol) return { ok: false, error: "Upload the Bill of Lading before dispatching." };
+    if (bol.status !== "approved") {
+      return { ok: false, error: "The Bill of Lading must be approved before the truck moves." };
+    }
+    if (trip.loadedLitres === undefined || !trip.loadingSealNumbers) {
+      return { ok: false, error: "Capture the loaded volume + seal numbers before dispatching." };
+    }
+    // planned can't jump straight to in_transit — walk it through loading.
+    if (trip.status === "planned") {
+      const toLoading = await transitionTrip({ tripId: input.tripId, toStatus: "loading", actorName, note: "Loading started" });
+      if (!toLoading.ok) return toLoading;
+    }
+    return transitionTrip({
+      tripId: input.tripId,
+      toStatus: "in_transit",
+      actorName,
+      note: "Loading complete — departed depot",
+      location: input.location,
+    });
+  }
+
+  if (input.to === "at_border") {
+    return transitionTrip({
+      tripId: input.tripId,
+      toStatus: "at_border",
+      actorName,
+      note: "Reached the border post",
+      location: input.location,
+    });
+  }
+
+  // to === "delivered" — clear the border
+  if (!trip.destination) {
+    return { ok: false, error: "Assign the destination before clearing the border." };
+  }
+  const crossings = await repoListBorderCrossings(input.tripId);
+  if (crossings.length === 0) {
+    return {
+      ok: false,
+      error: "Record at least one border crossing (Malaba or Busia) before delivery.",
+    };
+  }
+  return transitionTrip({
+    tripId: input.tripId,
+    toStatus: "delivered",
+    actorName,
+    note: "Cleared the border — en route to consignee",
+    location: input.location,
+  });
+}
+
+/**
+ * Admin escape hatch: reopen a closed/invoiced trip so volumes, expenses or
+ * border charges can be corrected. Capability-gated (`finance.post`) and
+ * audited.
+ *
+ *   - If a SENT (GL-posted) invoice exists → refuse. The finance trail is
+ *     live; the operator must issue a credit note first (deferred feature).
+ *   - If only a DRAFT invoice exists → cancel it (reverses nothing on the GL
+ *     since draft never posted) AND reverse the auto-raised shortage loan for
+ *     this trip, so re-invoicing re-derives the deduction cleanly.
+ *   - Reset status to 'delivered' and clear readyToInvoice so the wizard
+ *     drops back to the Delivery/Invoice stage, unlocked for edits.
+ */
+export async function reopenTrip(input: {
+  tripId: string;
+  actorName?: string;
+}): Promise<ActionResult> {
+  try {
+    await requireCapability("finance.post");
+  } catch (e) {
+    return { ok: false, error: e instanceof PermissionError ? e.message : "Forbidden" };
+  }
+
+  const trip = await getTrip(input.tripId);
+  if (!trip) return { ok: false, error: "Trip not found." };
+  if (trip.status === "cancelled") {
+    return { ok: false, error: "Cancelled trips can't be reopened." };
+  }
+
+  const invoices = await invoicesForTrip(input.tripId);
+  const sent = invoices.find((i) => i.status !== "cancelled" && i.status !== "draft");
+  if (sent) {
+    return {
+      ok: false,
+      error: `Invoice ${sent.number} is already ${sent.status}. Issue a credit note before reopening this trip.`,
+    };
+  }
+
+  // Cancel any draft invoice so re-invoicing starts clean.
+  const draft = invoices.find((i) => i.status === "draft");
+  if (draft) {
+    const r = await cancelInvoice(draft.id);
+    if ("error" in r) return { ok: false, error: r.error };
+  }
+
+  // Reverse the auto-raised shortage loan (idempotent key: shortageTripId).
+  if (trip.driverId) {
+    const employee = await getEmployeeByDriverId(trip.driverId);
+    if (employee) {
+      const loans = await listLoans({ employeeId: employee.id });
+      const shortageLoan = loans.find(
+        (l) => l.shortageTripId === trip.id && l.status === "active",
+      );
+      if (shortageLoan) await cancelLoan(shortageLoan.id);
+    }
+  }
+
+  // Drop back to 'delivered', unlocked. readyToInvoice cleared so the wizard
+  // re-derives the Delivery/Invoice stage and the volume-lock lifts. (closedAt
+  // is left as the prior close timestamp; it's overwritten on the next close.)
+  await repoUpdateTrip(input.tripId, {
+    status: "delivered",
+    readyToInvoice: false,
+  });
+
+  await logAudit({
+    entityType: "trip",
+    entityId: input.tripId,
+    action: "reopen",
+    diff: {
+      status: { from: trip.status, to: "delivered" },
+      ...(draft ? { invoice: { from: draft.number, to: "cancelled" } } : {}),
+    },
+  });
+
+  revalidatePath("/trips", "layout");
+  revalidatePath(`/trips/${input.tripId}`, "layout");
+  revalidatePath("/invoices");
+  revalidatePath("/hr/loans");
+  revalidatePath("/dashboard");
+  return { ok: true, id: input.tripId };
 }

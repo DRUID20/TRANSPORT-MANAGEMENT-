@@ -1,7 +1,5 @@
-import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowRight } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { AdvanceStageButton } from "@/components/trips/advance-stage-button";
 import { ConfirmDestinationCard } from "@/components/trips/confirm-destination-card";
 import { TripBorders } from "@/components/trips/trip-borders";
 import { TripExpensesCard } from "@/components/trips/trip-expenses-card";
@@ -102,12 +100,12 @@ function CompleteBorder({
             Destination set + border crossing recorded. Advance to Delivery.
           </p>
         </div>
-        <Button asChild size="lg" variant="primary">
-          <Link href={`/trips/${tripId}/delivery?advance=1`}>
-            Move to Delivery
-            <ArrowRight className="size-4" />
-          </Link>
-        </Button>
+        <AdvanceStageButton
+          tripId={tripId}
+          to="delivered"
+          nextSlug="delivery"
+          label="Move to Delivery"
+        />
       </section>
     );
   }

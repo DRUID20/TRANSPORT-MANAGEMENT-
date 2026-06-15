@@ -23,13 +23,13 @@ import type { TripStatus } from "@/lib/types/trips";
 export function WizardStageBar({
   tripId,
   status,
-  readyToInvoice,
+  dischargeCaptured,
   current,
   delayed = false,
 }: {
   tripId: string;
   status: TripStatus;
-  readyToInvoice?: boolean;
+  dischargeCaptured?: boolean;
   current: StageSlug;
   /** When true (status === 'delayed'), show an amber DELAYED badge on the
    *  current stage without changing the stage layout. */
@@ -42,7 +42,7 @@ export function WizardStageBar({
     >
       <ol className="grid grid-cols-5 gap-1">
         {STAGES.map((stage, i) => {
-          const reached = stageReached(stage, status, { readyToInvoice });
+          const reached = stageReached(stage, status, { dischargeCaptured });
           const isCurrent = stage === current;
           const isDone = reached && !isCurrent;
           const isFuture = !reached;

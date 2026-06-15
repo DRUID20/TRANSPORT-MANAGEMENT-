@@ -25,16 +25,20 @@ export const STAGE_LABEL: Record<StageSlug, string> = {
  *   loading                          → loading   (still capturing)
  *   in_transit                       → in-transit (waiting for border)
  *   at_border                        → border    (border charges + RUC)
- *   delivered + !readyToInvoice      → delivery  (record delivered volume)
- *   delivered + readyToInvoice       → invoice   (preview + post)
+ *   delivered + !dischargeCaptured   → delivery  (record delivered volume)
+ *   delivered + dischargeCaptured    → invoice   (preview + post)
  *   closed                           → invoice   (read-only summary)
  *   cancelled                        → loading   (frozen, show the start)
  *   delayed                          → derived from previousNonDelayed
  *                                      (delayed isn't a stage; it's a badge)
+ *
+ * NOTE: the delivery→invoice gate keys off `dischargeCaptured` (real data:
+ * has the discharged volume been recorded?) NOT `readyToInvoice` — that flag
+ * only flips at close, so it can't drive the stage while the trip is live.
  */
 export function currentStage(
   status: TripStatus,
-  flags: { readyToInvoice?: boolean } = {},
+  flags: { dischargeCaptured?: boolean } = {},
 ): StageSlug {
   switch (status) {
     case "planned":
@@ -45,7 +49,7 @@ export function currentStage(
     case "at_border":
       return "border";
     case "delivered":
-      return flags.readyToInvoice ? "invoice" : "delivery";
+      return flags.dischargeCaptured ? "invoice" : "delivery";
     case "closed":
       return "invoice";
     case "cancelled":
@@ -65,7 +69,7 @@ export function currentStage(
 export function stageReached(
   stage: StageSlug,
   status: TripStatus,
-  flags: { readyToInvoice?: boolean } = {},
+  flags: { dischargeCaptured?: boolean } = {},
 ): boolean {
   const order = STAGES.indexOf(currentStage(status, flags));
   return STAGES.indexOf(stage) <= order;
@@ -77,4 +81,40 @@ export function stageReached(
  */
 export function wizardReadOnly(status: TripStatus): boolean {
   return status === "closed" || status === "cancelled";
+}
+
+/**
+ * Coarse "what's next" hint for the trips LIST page. Intentionally
+ * doc-lookup-free (the list renders dozens of rows — we don't want an N+1
+ * documents query per row), so it can't know BOL-approval state. The full,
+ * precise blocker lives in the wizard layout's computeBlocker.
+ */
+export function stageHint(
+  status: TripStatus,
+  flags: {
+    destination?: string;
+    loadedLitres?: number;
+    dischargedLitres?: number;
+  } = {},
+): string | undefined {
+  switch (status) {
+    case "planned":
+    case "loading":
+      return flags.loadedLitres === undefined
+        ? "Approve BOL + capture load"
+        : "Mark loading complete";
+    case "in_transit":
+      return "Confirm arrival at border";
+    case "at_border":
+      return !flags.destination ? "Assign destination + RUC" : "Record RUC + clear border";
+    case "delivered":
+      return flags.dischargedLitres === undefined
+        ? "Capture delivered volume"
+        : "Preview invoice + close";
+    case "delayed":
+      return "Delayed — resume the trip";
+    case "closed":
+    case "cancelled":
+      return undefined;
+  }
 }

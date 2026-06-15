@@ -32,7 +32,8 @@ export default async function TripWizardLayout({
   if (!trip) notFound();
   const documents = await listTripDocuments(id);
 
-  const stage = currentStage(trip.status, { readyToInvoice: trip.readyToInvoice });
+  const dischargeCaptured = trip.dischargedLitres !== undefined;
+  const stage = currentStage(trip.status, { dischargeCaptured });
   const readOnly = wizardReadOnly(trip.status);
   const blocker = computeBlocker(trip, documents);
 
@@ -71,7 +72,7 @@ export default async function TripWizardLayout({
       <WizardStageBar
         tripId={trip.id}
         status={trip.status}
-        readyToInvoice={trip.readyToInvoice}
+        dischargeCaptured={dischargeCaptured}
         current={stage}
         delayed={trip.status === "delayed"}
       />

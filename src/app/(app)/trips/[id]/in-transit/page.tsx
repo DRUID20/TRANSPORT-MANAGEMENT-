@@ -1,7 +1,6 @@
-import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowRight, Truck } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { Truck } from "lucide-react";
+import { AdvanceStageButton } from "@/components/trips/advance-stage-button";
 import { FuelCargoCard, StageGateBanner } from "@/components/trips/wizard-shared";
 import { getTripById } from "@/server/actions/trips";
 import { wizardReadOnly } from "@/lib/trips/wizard-stages";
@@ -68,12 +67,12 @@ export default async function TripInTransitPage({
               Advance to the Border stage to record charges + confirm the destination.
             </p>
           </div>
-          <Button asChild size="lg" variant="primary">
-            <Link href={`/trips/${trip.id}/border?advance=1`}>
-              At the border
-              <ArrowRight className="size-4" />
-            </Link>
-          </Button>
+          <AdvanceStageButton
+            tripId={trip.id}
+            to="at_border"
+            nextSlug="border"
+            label="At the border"
+          />
         </section>
       )}
     </div>

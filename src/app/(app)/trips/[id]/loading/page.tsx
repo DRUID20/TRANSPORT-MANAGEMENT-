@@ -1,8 +1,6 @@
-import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowRight } from "lucide-react";
 import { TripDocuments } from "@/components/trips/trip-documents";
-import { Button } from "@/components/ui/button";
+import { AdvanceStageButton } from "@/components/trips/advance-stage-button";
 import {
   BOLApprovalGate,
   FuelCargoCard,
@@ -78,12 +76,12 @@ function CompleteLoading({
             BOL approved, volume and seals captured. The truck can move to In transit.
           </p>
         </div>
-        <Button asChild size="lg" variant="primary">
-          <Link href={`/trips/${tripId}/in-transit?advance=1`}>
-            Mark loading complete
-            <ArrowRight className="size-4" />
-          </Link>
-        </Button>
+        <AdvanceStageButton
+          tripId={tripId}
+          to="in_transit"
+          nextSlug="in-transit"
+          label="Mark loading complete"
+        />
       </section>
     );
   }

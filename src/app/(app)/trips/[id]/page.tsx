@@ -15,6 +15,8 @@ export default async function TripIndexPage({
   const { id } = await params;
   const trip = await getTripById(id);
   if (!trip) notFound();
-  const stage = currentStage(trip.status, { readyToInvoice: trip.readyToInvoice });
+  const stage = currentStage(trip.status, {
+    dischargeCaptured: trip.dischargedLitres !== undefined,
+  });
   redirect(`/trips/${id}/${stage}`);
 }
