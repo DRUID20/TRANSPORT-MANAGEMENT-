@@ -18,6 +18,7 @@ import { PageHeader } from "@/components/layout/page-header";
 import { Paginator } from "@/components/ui/paginator";
 import { ExpenseStatusPill } from "@/components/expenses/expense-status-pill";
 import { DeleteExpenseButton } from "@/components/expenses/delete-expense-button";
+import { hasCapability } from "@/server/auth/permissions";
 import { ExpensesFilters } from "./expenses-filters";
 
 const PAGE_SIZE = 50;
@@ -41,12 +42,13 @@ export default async function ExpensesPage({
   ) as ExpenseStatus | undefined;
   const page = Math.max(1, Number(rawPage) || 1);
 
-  const [all, filtered, trips, trucks, drivers] = await Promise.all([
+  const [all, filtered, trips, trucks, drivers, isAdmin] = await Promise.all([
     listExpenses(),
     listExpenses(status ? { status } : undefined),
     listTrips(),
     listTrucks(),
     listDrivers(),
+    hasCapability("admin"),
   ]);
   const tripById = new Map(trips.map((t) => [t.id, t]));
   const truckById = new Map(trucks.map((t) => [t.id, t]));
@@ -207,7 +209,9 @@ export default async function ExpensesPage({
                     {e.amountKes.toLocaleString()}
                   </DataTableCell>
                   <DataTableCell align="right">
-                    {e.status !== "reimbursed" && <DeleteExpenseButton expenseId={e.id} variant="row" />}
+                    {isAdmin && e.status !== "approved" && (
+                      <DeleteExpenseButton expenseId={e.id} variant="row" />
+                    )}
                   </DataTableCell>
                 </DataTableRow>
               );

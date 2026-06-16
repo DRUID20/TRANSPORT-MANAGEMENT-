@@ -14,6 +14,7 @@ import {
   listBookings as storeList,
   bookingsForCustomer as storeForCustomer,
   updateBookingStatus as storeUpdateStatus,
+  deleteBooking as storeDelete,
 } from "@/server/store/mock-store";
 import type {
   Booking,
@@ -130,4 +131,15 @@ export async function updateBookingStatus(
     .where(and(eq(table.id, id), eq(table.organizationId, orgId)))
     .returning();
   return rows[0] ? toBooking(rows[0]) : undefined;
+}
+
+export async function deleteBooking(id: string): Promise<boolean> {
+  if (IS_DEMO_MODE) return storeDelete(id);
+  const db = getDb();
+  const orgId = await requireOrgId();
+  const rows = await db
+    .delete(table)
+    .where(and(eq(table.id, id), eq(table.organizationId, orgId)))
+    .returning({ id: table.id });
+  return rows.length > 0;
 }

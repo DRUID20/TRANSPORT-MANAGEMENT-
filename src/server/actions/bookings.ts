@@ -3,11 +3,14 @@
 import { revalidatePath } from "next/cache";
 import {
   createBooking as repoCreate,
+  deleteBooking as repoDelete,
   getBooking,
   listBookings as repoList,
   updateBookingStatus as repoUpdateStatus,
 } from "@/server/repos/bookings";
 import { getCustomer } from "@/server/repos/customers";
+import { requireCapability, PermissionError } from "@/server/auth/permissions";
+import { logAudit } from "@/server/auth/audit";
 import type { BookingStatus } from "@/lib/types/trips";
 import { FUEL_PRODUCT_LABELS } from "@/lib/types/trips";
 import { bookingCreateSchema, type BookingCreateInput } from "@/lib/validators/trips";
@@ -55,4 +58,27 @@ export async function setBookingStatus(id: string, status: BookingStatus) {
   await repoUpdateStatus(id, status);
   revalidatePath("/bookings");
   revalidatePath(`/bookings/${id}`);
+}
+
+/**
+ * Delete a booking — admin only, and only while it hasn't been planned onto
+ * a trip. Once a trip exists the booking is part of the operational record
+ * and must be cancelled, not deleted.
+ */
+export async function deleteBooking(id: string): Promise<ActionResult> {
+  try {
+    await requireCapability("admin");
+  } catch (e) {
+    return { ok: false, error: e instanceof PermissionError ? e.message : "Forbidden" };
+  }
+  const booking = await getBooking(id);
+  if (!booking) return { ok: false, error: "Booking not found." };
+  if (booking.status === "planned" || booking.tripId) {
+    return { ok: false, error: "This booking is already planned onto a trip — cancel the trip instead." };
+  }
+  const ok = await repoDelete(id);
+  if (!ok) return { ok: false, error: "Delete failed." };
+  await logAudit({ entityType: "booking", entityId: id, action: "delete", diff: { number: { from: booking.number, to: null } } });
+  revalidatePath("/bookings");
+  return { ok: true, id };
 }

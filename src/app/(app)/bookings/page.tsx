@@ -15,6 +15,8 @@ import {
 import { Paginator } from "@/components/ui/paginator";
 import { PageHeader } from "@/components/layout/page-header";
 import { BookingStatusPill } from "@/components/trips/booking-status-pill";
+import { DeleteBookingButton } from "@/components/bookings/delete-booking-button";
+import { hasCapability } from "@/server/auth/permissions";
 import { cn } from "@/lib/utils";
 
 const basisShort = {
@@ -32,7 +34,11 @@ export default async function BookingsPage({
 }) {
   const { page: rawPage } = await searchParams;
   const page = Math.max(1, Number(rawPage) || 1);
-  const [bookings, customers] = await Promise.all([listBookings(), listCustomers()]);
+  const [bookings, customers, isAdmin] = await Promise.all([
+    listBookings(),
+    listCustomers(),
+    hasCapability("admin"),
+  ]);
   const bookingsCount = bookings.length;
   const paged = bookings.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
   const hrefForPage = (p: number) => `/bookings?page=${p}`;
@@ -91,6 +97,7 @@ export default async function BookingsPage({
               <DataTableHeaderCell>Requested</DataTableHeaderCell>
               <DataTableHeaderCell>Status</DataTableHeaderCell>
               <DataTableHeaderCell align="right">Rate</DataTableHeaderCell>
+              {isAdmin && <DataTableHeaderCell align="right"> </DataTableHeaderCell>}
             </tr>
           </DataTableHead>
           <DataTableBody>
@@ -142,9 +149,18 @@ export default async function BookingsPage({
                   </DataTableCell>
                   <DataTableCell mono align="right" className="text-fg-secondary">
                     {b.agreedAmount != null && b.agreedBasis
-                      ? `${b.agreedAmount} ${b.agreedCurrency}/${basisShort[b.agreedBasis]}`
+                      ? `${b.agreedAmount.toLocaleString()} ${b.agreedCurrency}/${basisShort[b.agreedBasis]}`
                       : "—"}
                   </DataTableCell>
+                  {isAdmin && (
+                    <DataTableCell align="right">
+                      {b.status !== "planned" && !b.tripId ? (
+                        <DeleteBookingButton bookingId={b.id} variant="row" />
+                      ) : (
+                        <span className="text-fg-tertiary" title="Planned bookings can't be deleted">—</span>
+                      )}
+                    </DataTableCell>
+                  )}
                 </DataTableRow>
               );
             })}

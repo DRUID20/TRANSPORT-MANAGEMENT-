@@ -6,6 +6,7 @@ import { Banknote, Fuel, Loader2, RotateCcw, Save } from "lucide-react";
 import { createFuelLog } from "@/server/actions/fuel";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { NumberInput } from "@/components/ui/number-input";
 import { Select } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { FormField, FormSection } from "@/components/ui/form-section";
@@ -15,18 +16,32 @@ type T = { id: string; label: string; truckId: string; driverId: string };
 type Truck = { id: string; registration: string };
 type Driver = { id: string; fullName: string };
 
+type Currency = "KES" | "USD" | "UGX";
+const FX_FALLBACK: Record<Currency, number> = { KES: 1, USD: 129.41, UGX: 0.0347 };
+/** Default fuelling currency for each country of purchase. */
+const COUNTRY_CURRENCY: Record<string, Currency> = {
+  KE: "KES",
+  UG: "UGX",
+  TZ: "USD",
+  RW: "USD",
+  SS: "USD",
+  CD: "USD",
+};
+
 export function FuelLogCreateForm({
   trips,
   trucks,
   drivers,
   preselectTripId,
   preselectTruckId,
+  ratesToKes,
 }: {
   trips: T[];
   trucks: Truck[];
   drivers: Driver[];
   preselectTripId?: string;
   preselectTruckId?: string;
+  ratesToKes?: Partial<Record<string, number>>;
 }) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
@@ -36,13 +51,18 @@ export function FuelLogCreateForm({
   const [truckId, setTruckId] = useState(preselectTruckId ?? "");
   const [driverId, setDriverId] = useState("");
   const [litres, setLitres] = useState("");
-  const [costKes, setCostKes] = useState("");
+  const [odometerKm, setOdometerKm] = useState("");
+  const [country, setCountry] = useState("KE");
+  const [currency, setCurrency] = useState<Currency>("KES");
+  const [cost, setCost] = useState(""); // amount in the selected currency
   const [formKey, setFormKey] = useState(0);
 
+  const rateToKes = (c: Currency) => ratesToKes?.[c] ?? FX_FALLBACK[c];
   const litresNum = Number(litres);
-  const costNum = Number(costKes);
-  const ppl =
-    litresNum > 0 && costNum > 0 ? (costNum / litresNum).toFixed(2) : "—";
+  const costNum = Number(cost);
+  // Convert the entered amount to KES — costKes is what we persist.
+  const costKes = currency === "KES" ? costNum : Math.round(costNum * rateToKes(currency) * 100) / 100;
+  const ppl = litresNum > 0 && costKes > 0 ? (costKes / litresNum).toFixed(2) : "—";
 
   function onTripChange(value: string) {
     setTripId(value);
@@ -51,6 +71,12 @@ export function FuelLogCreateForm({
       setTruckId(t.truckId);
       setDriverId(t.driverId);
     }
+  }
+
+  function onCountryChange(value: string) {
+    setCountry(value);
+    const suggested = COUNTRY_CURRENCY[value];
+    if (suggested) setCurrency(suggested);
   }
 
   async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
@@ -64,10 +90,10 @@ export function FuelLogCreateForm({
       driverId: driverId || undefined,
       datetime: String(fd.get("datetime") ?? new Date().toISOString()),
       station: String(fd.get("station") ?? ""),
-      countryCode: String(fd.get("countryCode") ?? "KE"),
+      countryCode: country,
       litres: litresNum,
-      costKes: costNum,
-      odometerKm: Number(fd.get("odometerKm") ?? 0),
+      costKes, // already converted to KES from the entered currency
+      odometerKm: Number(odometerKm),
       stationManagerName: String(fd.get("stationManagerName") ?? "").trim(),
       notes: String(fd.get("notes") ?? "") || undefined,
       submittedBy: String(fd.get("submittedBy") ?? "Dispatcher"),
@@ -85,7 +111,10 @@ export function FuelLogCreateForm({
     setTruckId(preselectTruckId ?? "");
     setDriverId("");
     setLitres("");
-    setCostKes("");
+    setOdometerKm("");
+    setCountry("KE");
+    setCurrency("KES");
+    setCost("");
     setError(null);
     setFormKey((k) => k + 1);
   }
@@ -165,8 +194,8 @@ export function FuelLogCreateForm({
         <FormField label="Station" required>
           <Input name="station" required placeholder="Total Mariakani" />
         </FormField>
-        <FormField label="Country" required>
-          <Select name="countryCode" defaultValue="KE">
+        <FormField label="Country" required helper="Sets the default fuelling currency.">
+          <Select value={country} onChange={(e) => onCountryChange(e.currentTarget.value)}>
             <option value="KE">🇰🇪 Kenya</option>
             <option value="UG">🇺🇬 Uganda</option>
             <option value="TZ">🇹🇿 Tanzania</option>
@@ -181,11 +210,11 @@ export function FuelLogCreateForm({
           hint="KM"
           helper="Verified by the station manager — drives trip km and km/L."
         >
-          <Input
-            name="odometerKm"
-            type="number"
+          <NumberInput
+            value={odometerKm}
+            onValueChange={setOdometerKm}
+            decimal={false}
             required
-            min={1}
             className="font-mono tnum"
             placeholder="412,500"
           />
@@ -203,38 +232,54 @@ export function FuelLogCreateForm({
           />
         </FormField>
         <FormField label="Litres" required>
-          <Input
-            type="number"
-            required
-            min={0}
-            step="0.01"
+          <NumberInput
             value={litres}
-            onChange={(e) => setLitres(e.currentTarget.value)}
+            onValueChange={setLitres}
+            required
             className="font-mono tnum"
             placeholder="165"
             leadingIcon={<Fuel />}
           />
         </FormField>
-        <FormField label="Cost" required hint="KES">
-          <Input
-            type="number"
+        <FormField label="Currency" required helper="Currency the fuel was paid in.">
+          <Select value={currency} onChange={(e) => setCurrency(e.currentTarget.value as Currency)}>
+            <option value="KES">KES — Kenyan Shilling</option>
+            <option value="UGX">UGX — Ugandan Shilling</option>
+            <option value="USD">USD — US Dollar</option>
+          </Select>
+        </FormField>
+        <FormField label="Cost" required hint={currency}>
+          <NumberInput
+            value={cost}
+            onValueChange={setCost}
             required
-            min={0}
-            step="0.01"
-            value={costKes}
-            onChange={(e) => setCostKes(e.currentTarget.value)}
             className="font-mono tnum"
-            placeholder="24,500"
+            placeholder={currency === "UGX" ? "1,200,000" : "24,500"}
             leadingIcon={<Banknote />}
           />
         </FormField>
-        <div className="sm:col-span-2 flex items-center justify-between rounded-lg border border-dashed border-border bg-bg-surface/60 px-4 py-3">
-          <div className="text-[10px] font-semibold uppercase tracking-[0.14em] text-fg-tertiary">
-            Computed price per litre
+        <div className="sm:col-span-2 flex flex-wrap items-center justify-between gap-3 rounded-lg border border-dashed border-border bg-bg-surface/60 px-4 py-3">
+          <div className="flex flex-col">
+            <div className="text-[10px] font-semibold uppercase tracking-[0.14em] text-fg-tertiary">
+              {currency === "KES" ? "Cost (KES)" : "Converted to KES"}
+            </div>
+            <div className="font-mono tnum text-base font-semibold text-fg-primary">
+              KSh {costKes > 0 ? costKes.toLocaleString() : "—"}
+              {currency !== "KES" && costNum > 0 && (
+                <span className="ml-1.5 text-xs font-medium text-fg-tertiary">
+                  ({costNum.toLocaleString()} {currency} × {rateToKes(currency)})
+                </span>
+              )}
+            </div>
           </div>
-          <div className="font-mono tnum text-lg font-semibold text-status-warning">
-            KSh {ppl}
-            <span className="ml-1 text-xs text-fg-tertiary">/L</span>
+          <div className="flex flex-col items-end">
+            <div className="text-[10px] font-semibold uppercase tracking-[0.14em] text-fg-tertiary">
+              Price per litre
+            </div>
+            <div className="font-mono tnum text-lg font-semibold text-status-warning">
+              KSh {ppl}
+              <span className="ml-1 text-xs text-fg-tertiary">/L</span>
+            </div>
           </div>
         </div>
       </FormSection>

@@ -1429,6 +1429,10 @@ export function updateBookingStatus(id: string, status: BookingStatus, tripId?: 
   return updated;
 }
 
+export function deleteBooking(id: string): boolean {
+  return bookings.delete(id);
+}
+
 // ============================================================
 // Trips
 // ============================================================

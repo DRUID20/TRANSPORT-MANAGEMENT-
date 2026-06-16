@@ -10,6 +10,8 @@ import {
   reviewExpense as repoReview,
 } from "@/server/repos/expenses";
 import type { ExpenseStatus } from "@/lib/types/expenses";
+import { requireCapability, PermissionError } from "@/server/auth/permissions";
+import { logAudit } from "@/server/auth/audit";
 import {
   expenseCreateSchema,
   expenseReviewSchema,
@@ -83,9 +85,18 @@ export async function reviewExpense(input: ExpenseReviewInput): Promise<ActionRe
 }
 
 export async function removeExpense(id: string): Promise<ActionResult> {
+  try {
+    await requireCapability("admin");
+  } catch (e) {
+    return { ok: false, error: e instanceof PermissionError ? e.message : "Forbidden" };
+  }
   const exp = await getExpense(id);
   if (!exp) return { ok: false, error: "Expense not found" };
+  if (exp.status === "approved") {
+    return { ok: false, error: "Approved expenses can't be deleted — they're a committed cost." };
+  }
   await repoDelete(id);
+  await logAudit({ entityType: "expense", entityId: id, action: "delete", diff: { status: { from: exp.status, to: "deleted" } } });
   revalidatePath("/expenses");
   if (exp.tripId) revalidatePath(`/trips/${exp.tripId}`);
   return { ok: true, id };

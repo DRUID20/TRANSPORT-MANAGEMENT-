@@ -2,6 +2,7 @@ import Link from "next/link";
 import { listTrips } from "@/server/actions/trips";
 import { listTrucks } from "@/server/actions/trucks";
 import { listDrivers } from "@/server/actions/drivers";
+import { getRatesToKesMap } from "@/server/actions/fx";
 import { PageHeader } from "@/components/layout/page-header";
 import { FuelLogCreateForm } from "./fuel-log-create-form";
 
@@ -19,6 +20,7 @@ export default async function NewFuelLogPage({
   }));
   const trucks = (await listTrucks()).map((t) => ({ id: t.id, registration: t.registration }));
   const drivers = (await listDrivers()).map((d) => ({ id: d.id, fullName: d.fullName }));
+  const ratesToKes = await getRatesToKesMap();
 
   return (
     <div className="mx-auto flex w-full max-w-2xl flex-col gap-6">
@@ -34,6 +36,7 @@ export default async function NewFuelLogPage({
         drivers={drivers}
         preselectTripId={trip}
         preselectTruckId={truck}
+        ratesToKes={ratesToKes}
       />
       <div className="text-center">
         <Link href="/fuel" className="text-sm text-fg-tertiary hover:text-fg-secondary">

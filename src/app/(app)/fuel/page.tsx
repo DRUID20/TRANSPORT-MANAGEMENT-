@@ -15,6 +15,8 @@ import {
   DataTableRow,
 } from "@/components/ui/data-table";
 import { PageHeader } from "@/components/layout/page-header";
+import { DeleteFuelLogButton } from "@/components/fuel/delete-fuel-log-button";
+import { hasCapability } from "@/server/auth/permissions";
 import { cn } from "@/lib/utils";
 
 const countryFlag: Record<string, string> = {
@@ -45,7 +47,7 @@ export default async function FuelPage({
   searchParams: Promise<{ trip?: string; truck?: string }>;
 }) {
   const { trip: tripFilter, truck: truckFilter } = await searchParams;
-  const [logs, trucks, trips, drivers, snap] = await Promise.all([
+  const [logs, trucks, trips, drivers, snap, isAdmin] = await Promise.all([
     listFuelLogs({
       tripId: tripFilter || undefined,
       truckId: truckFilter || undefined,
@@ -54,6 +56,7 @@ export default async function FuelPage({
     listTrips(),
     listDrivers(),
     fleetFuelSnapshot(),
+    hasCapability("admin"),
   ]);
   const truckById = new Map(trucks.map((t) => [t.id, t]));
   const tripById = new Map(trips.map((t) => [t.id, t]));
@@ -150,6 +153,7 @@ export default async function FuelPage({
               <DataTableHeaderCell align="right">Odometer</DataTableHeaderCell>
               <DataTableHeaderCell align="right">Cost (KES)</DataTableHeaderCell>
               <DataTableHeaderCell align="right">KSh/L</DataTableHeaderCell>
+              {isAdmin && <DataTableHeaderCell align="right"> </DataTableHeaderCell>}
             </tr>
           </DataTableHead>
           <DataTableBody>
@@ -220,6 +224,11 @@ export default async function FuelPage({
                   <DataTableCell mono align="right" className="text-status-warning">
                     {l.pricePerLitreKes.toFixed(2)}
                   </DataTableCell>
+                  {isAdmin && (
+                    <DataTableCell align="right">
+                      <DeleteFuelLogButton fuelLogId={l.id} variant="row" />
+                    </DataTableCell>
+                  )}
                 </DataTableRow>
               );
             })}

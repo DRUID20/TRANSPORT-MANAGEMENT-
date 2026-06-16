@@ -13,6 +13,8 @@ import {
   tripFuelTotals as repoTripTotals,
   truckFuelEfficiency as repoTruckEfficiency,
 } from "@/server/repos/fuel";
+import { requireCapability, PermissionError } from "@/server/auth/permissions";
+import { logAudit } from "@/server/auth/audit";
 import { fuelLogCreateSchema, type FuelLogCreateInput } from "@/lib/validators/fuel";
 
 export async function listFuelLogs(filter?: { tripId?: string; truckId?: string }) {
@@ -78,9 +80,15 @@ export async function createFuelLog(input: FuelLogCreateInput): Promise<ActionRe
 }
 
 export async function removeFuelLog(id: string): Promise<ActionResult> {
+  try {
+    await requireCapability("admin");
+  } catch (e) {
+    return { ok: false, error: e instanceof PermissionError ? e.message : "Forbidden" };
+  }
   const log = await getFuelLog(id);
   if (!log) return { ok: false, error: "Fuel log not found" };
   await repoDelete(id);
+  await logAudit({ entityType: "fuel_log", entityId: id, action: "delete", diff: { number: { from: log.number, to: null } } });
   revalidatePath("/fuel");
   if (log.tripId) revalidatePath(`/trips/${log.tripId}`);
   revalidatePath(`/trucks/${log.truckId}`);
