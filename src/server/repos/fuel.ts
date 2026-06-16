@@ -11,6 +11,7 @@ import { requireOrgId } from "@/server/auth/current-org";
 import { getDb } from "@/server/db/client";
 import { fuelLogs as table } from "@/server/db/schema";
 import { nextDocumentNumber } from "@/server/repos/counters";
+import { getTrip } from "@/server/repos/trips";
 import {
   createFuelLog as storeCreate,
   deleteFuelLog as storeDelete,
@@ -44,6 +45,7 @@ function toLog(r: Row): FuelLog {
     costKes: Number(r.costKes),
     pricePerLitreKes: Number(r.pricePerLitreKes),
     odometerKm: r.odometerKm,
+    stationManagerName: r.stationManagerName,
     expenseId: r.expenseId ?? undefined,
     notes: r.notes ?? undefined,
     submittedBy: r.submittedBy,
@@ -109,6 +111,7 @@ export async function createFuelLog(input: NewFuelLog): Promise<FuelLog> {
       costKes: String(input.costKes),
       pricePerLitreKes: String(ppl),
       odometerKm: input.odometerKm,
+      stationManagerName: input.stationManagerName,
       paidBy: input.paidBy ?? "cash",
       expenseId: input.expenseId ?? null,
       notes: input.notes ?? null,
@@ -199,4 +202,91 @@ export async function fleetFuelSnapshot(): Promise<{
     .sort((a, b) => b.litres - a.litres);
 
   return { totalLitres, totalCostKes, fleetKmPerLitre, byCountry };
+}
+
+/**
+ * Derive a trip's km / litres / km/L from the truck's fuel-log timeline,
+ * with **no manual km input on the trip**. Station-manager-verified fuel
+ * logs are the single source of truth.
+ *
+ *   Trip window = [actualDepartureAt, actualDeliveryAt]   (whichever exist)
+ *   startOdoKm  = last fuel log on/before the start
+ *   endOdoKm    = last fuel log on/before the end
+ *   kmCovered   = endOdoKm − startOdoKm
+ *   litresDuring = sum(litres) for fuel logs whose datetime is INSIDE the
+ *                  trip window — supports refuelling twice mid-trip without
+ *                  any extra plumbing.
+ *
+ * Returns the contributing log ids so the UI can link "view fuel logs that
+ * fed this calculation". Each component is `undefined` rather than zero when
+ * we can't compute it (no anchoring fuel log; trip not departed yet).
+ */
+export interface TripFuelDerivation {
+  startOdoKm?: number;
+  endOdoKm?: number;
+  kmCovered?: number;
+  litresDuring: number;
+  kmPerLitre?: number;
+  contributingLogIds: string[];
+  /** Human-readable note about why a field is missing, if any. */
+  note?: string;
+}
+
+export async function tripFuelDerivation(tripId: string): Promise<TripFuelDerivation> {
+  const trip = await getTrip(tripId);
+  if (!trip) return { litresDuring: 0, contributingLogIds: [], note: "Trip not found." };
+  if (!trip.actualDepartureAt) {
+    return { litresDuring: 0, contributingLogIds: [], note: "Trip hasn't departed yet." };
+  }
+  const startMs = new Date(trip.actualDepartureAt).getTime();
+  const endMs = trip.actualDeliveryAt ? new Date(trip.actualDeliveryAt).getTime() : Date.now();
+
+  // Pull the truck's whole fuel-log history; cheap (indexed by truck+datetime)
+  // and we need both sides of the trip window to anchor odometers anyway.
+  const logs = await fuelLogsForTruck(trip.truckId);
+  if (logs.length === 0) {
+    return { litresDuring: 0, contributingLogIds: [], note: "No fuel logs for this truck yet." };
+  }
+  // Sort by datetime, then by odometer to break same-minute ties deterministically.
+  const sorted = [...logs].sort((a, b) => {
+    const t = new Date(a.datetime).getTime() - new Date(b.datetime).getTime();
+    return t !== 0 ? t : a.odometerKm - b.odometerKm;
+  });
+
+  const lastOnOrBefore = (boundMs: number) => {
+    let pick: typeof sorted[number] | undefined;
+    for (const l of sorted) {
+      if (new Date(l.datetime).getTime() <= boundMs) pick = l;
+      else break;
+    }
+    return pick;
+  };
+
+  const startAnchor = lastOnOrBefore(startMs);
+  const endAnchor = lastOnOrBefore(endMs);
+
+  const during = sorted.filter((l) => {
+    const t = new Date(l.datetime).getTime();
+    return t > startMs && t <= endMs;
+  });
+  const litresDuring = Math.round(during.reduce((s, l) => s + l.litres, 0) * 100) / 100;
+  const contributingLogIds = during.map((l) => l.id);
+
+  const startOdoKm = startAnchor?.odometerKm;
+  const endOdoKm = endAnchor?.odometerKm;
+  const kmCovered =
+    startOdoKm !== undefined && endOdoKm !== undefined && endOdoKm >= startOdoKm
+      ? endOdoKm - startOdoKm
+      : undefined;
+  const kmPerLitre =
+    kmCovered !== undefined && litresDuring > 0
+      ? Math.round((kmCovered / litresDuring) * 100) / 100
+      : undefined;
+
+  let note: string | undefined;
+  if (!startAnchor) note = "No fuel log on or before the trip's departure — start odometer unknown.";
+  else if (!trip.actualDeliveryAt) note = "Trip not yet delivered — figures based on time-of-now.";
+  else if (during.length === 0) note = "No fuel logs during this trip's window.";
+
+  return { startOdoKm, endOdoKm, kmCovered, litresDuring, kmPerLitre, contributingLogIds, note };
 }

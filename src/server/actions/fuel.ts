@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import {
   createFuelLog as repoCreate,
+  tripFuelDerivation as repoTripFuelDerivation,
   deleteFuelLog as repoDelete,
   fleetFuelSnapshot as repoFleetSnapshot,
   fuelLogsForTrip as repoForTrip,
@@ -16,6 +17,11 @@ import { fuelLogCreateSchema, type FuelLogCreateInput } from "@/lib/validators/f
 
 export async function listFuelLogs(filter?: { tripId?: string; truckId?: string }) {
   return repoList(filter);
+}
+
+/** Trip km / litres / km/L derived from the fuel-log timeline. */
+export async function getTripFuelDerivation(tripId: string) {
+  return repoTripFuelDerivation(tripId);
 }
 
 export async function getFuelLogById(id: string) {
@@ -59,6 +65,7 @@ export async function createFuelLog(input: FuelLogCreateInput): Promise<ActionRe
     litres: parsed.data.litres,
     costKes: parsed.data.costKes,
     odometerKm: parsed.data.odometerKm,
+    stationManagerName: parsed.data.stationManagerName,
     expenseId: parsed.data.expenseId,
     notes: parsed.data.notes,
     submittedBy: parsed.data.submittedBy,

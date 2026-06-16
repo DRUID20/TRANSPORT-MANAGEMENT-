@@ -2299,6 +2299,7 @@ function seedFuelLogs() {
       litres: 165,
       costKes: 24_500,
       odometerKm: 412_500,
+      stationManagerName: "Total Mariakani — D. Mwendwa",
       submittedBy: "Joseph Mwangi",
     },
     {
@@ -2311,6 +2312,7 @@ function seedFuelLogs() {
       litres: 220,
       costKes: 33_000,
       odometerKm: 412_980,
+      stationManagerName: "Shell Eldoret — P. Kibet",
       submittedBy: "Joseph Mwangi",
     },
     {
@@ -2323,6 +2325,7 @@ function seedFuelLogs() {
       litres: 120,
       costKes: 19_200,
       odometerKm: 413_360,
+      stationManagerName: "Total Malaba — J. Okot",
       submittedBy: "Joseph Mwangi",
     },
     ...(t2
@@ -2337,6 +2340,7 @@ function seedFuelLogs() {
             litres: 210,
             costKes: 32_000,
             odometerKm: 281_220,
+            stationManagerName: "Shell Naivasha — A. Mutiso",
             submittedBy: "Ali Hassan",
           },
         ]

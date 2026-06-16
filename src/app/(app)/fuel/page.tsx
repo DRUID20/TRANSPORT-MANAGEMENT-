@@ -39,9 +39,17 @@ const countryName: Record<string, string> = {
   ET: "Ethiopia",
 };
 
-export default async function FuelPage() {
+export default async function FuelPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ trip?: string; truck?: string }>;
+}) {
+  const { trip: tripFilter, truck: truckFilter } = await searchParams;
   const [logs, trucks, trips, drivers, snap] = await Promise.all([
-    listFuelLogs(),
+    listFuelLogs({
+      tripId: tripFilter || undefined,
+      truckId: truckFilter || undefined,
+    }),
     listTrucks(),
     listTrips(),
     listDrivers(),

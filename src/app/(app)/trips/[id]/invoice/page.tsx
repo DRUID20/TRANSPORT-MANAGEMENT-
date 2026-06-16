@@ -4,6 +4,7 @@ import { TripReconciliation } from "@/components/trips/trip-reconciliation";
 import { ReopenTripButton } from "@/components/trips/reopen-trip-button";
 import { StageGateBanner } from "@/components/trips/wizard-shared";
 import { getTripById } from "@/server/actions/trips";
+import { getTripFuelDerivation } from "@/server/actions/fuel";
 import { wizardReadOnly } from "@/lib/trips/wizard-stages";
 
 /**
@@ -23,6 +24,7 @@ export default async function TripInvoicePage({
   const trip = await getTripById(id);
   if (!trip) notFound();
   const readOnly = wizardReadOnly(trip.status);
+  const fuelDerivation = await getTripFuelDerivation(id);
 
   if (
     trip.status === "planned" ||
@@ -56,6 +58,15 @@ export default async function TripInvoicePage({
         cargoQuantity={trip.cargoQuantity}
         loadedLitres={trip.loadedLitres}
         loadedLitres20C={trip.loadedLitres20C}
+        derivation={{
+          startOdoKm: fuelDerivation.startOdoKm,
+          endOdoKm: fuelDerivation.endOdoKm,
+          kmCovered: fuelDerivation.kmCovered,
+          litresDuring: fuelDerivation.litresDuring,
+          kmPerLitre: fuelDerivation.kmPerLitre,
+          contributingLogCount: fuelDerivation.contributingLogIds.length,
+          note: fuelDerivation.note,
+        }}
       />
 
       {readOnly && (

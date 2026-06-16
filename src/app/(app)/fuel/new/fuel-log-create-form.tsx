@@ -68,6 +68,7 @@ export function FuelLogCreateForm({
       litres: litresNum,
       costKes: costNum,
       odometerKm: Number(fd.get("odometerKm") ?? 0),
+      stationManagerName: String(fd.get("stationManagerName") ?? "").trim(),
       notes: String(fd.get("notes") ?? "") || undefined,
       submittedBy: String(fd.get("submittedBy") ?? "Dispatcher"),
     });
@@ -174,14 +175,31 @@ export function FuelLogCreateForm({
             <option value="CD">🇨🇩 DR Congo</option>
           </Select>
         </FormField>
-        <FormField label="Odometer reading" required hint="KM">
+        <FormField
+          label="Odometer reading"
+          required
+          hint="KM"
+          helper="Verified by the station manager — drives trip km and km/L."
+        >
           <Input
             name="odometerKm"
             type="number"
             required
-            min={0}
+            min={1}
             className="font-mono tnum"
             placeholder="412,500"
+          />
+        </FormField>
+        <FormField
+          label="Station manager (verifying)"
+          required
+          helper="Person at the pump who confirmed the reading. Required for audit."
+        >
+          <Input
+            name="stationManagerName"
+            required
+            minLength={2}
+            placeholder="e.g. D. Mwendwa (shift manager)"
           />
         </FormField>
         <FormField label="Litres" required>

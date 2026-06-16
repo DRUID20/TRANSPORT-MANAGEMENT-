@@ -27,6 +27,10 @@ export interface FuelLog {
   pricePerLitreKes: number;
   /** Truck odometer reading at fuelling (km). */
   odometerKm: number;
+  /** Station manager who verified the reading. Required — the truck's
+   *  odometer timeline is derived purely from fuel logs, so an unverified
+   *  entry would silently corrupt downstream km/L and trip km figures. */
+  stationManagerName: string;
   /** Optional link to the matching expense record (when created from
    *  a receipt scan). */
   expenseId?: string;

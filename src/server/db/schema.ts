@@ -678,6 +678,10 @@ export const fuelLogs = pgTable(
     costKes: numeric("cost_kes", { precision: 14, scale: 2 }).notNull(),
     pricePerLitreKes: numeric("price_per_litre_kes", { precision: 10, scale: 4 }).notNull(),
     odometerKm: integer("odometer_km").notNull(),
+    /** The station manager who verified the reading + sale. Hard
+     *  audit trail — the odometer timeline drives trip km / fuel litres,
+     *  so an unverified entry corrupts every downstream metric. */
+    stationManagerName: text("station_manager_name").notNull().default(""),
     paidBy: varchar("paid_by", { length: 16 }).notNull(),
     expenseId: uuid("expense_id").references(() => expenses.id, { onDelete: "set null" }),
     submittedBy: text("submitted_by").notNull(),
