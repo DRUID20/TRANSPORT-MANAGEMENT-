@@ -6,6 +6,7 @@ import type { SidebarUserInfo } from "@/components/layout/sidebar-user";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { Toaster } from "@/components/ui/toast";
 import { getCurrentEmployee, getCurrentUser } from "@/server/auth/current-user";
+import { getMyProfilePhotoKey } from "@/server/actions/profile";
 
 function computeInitials(name: string): string {
   const parts = name.split(/\s+/).filter(Boolean);
@@ -18,11 +19,15 @@ export async function AppShell({ children }: { children: React.ReactNode }) {
   const sessionUser = await getCurrentUser();
   const fallback = getCurrentEmployee();
   const fullName = sessionUser?.fullName ?? fallback?.fullName ?? "Nile Valley";
+  const photoKey = sessionUser?.userId ? await getMyProfilePhotoKey() : null;
   const user: SidebarUserInfo = {
     fullName,
     email: sessionUser?.email ?? fallback?.email ?? "—",
     roleKey: sessionUser?.roleKey ?? "viewer",
     initials: computeInitials(fullName),
+    avatarUrl: photoKey
+      ? `/api/files/${photoKey.split("/").map(encodeURIComponent).join("/")}`
+      : undefined,
   };
 
   return (

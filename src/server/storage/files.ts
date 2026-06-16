@@ -76,7 +76,7 @@ export interface UploadedFile {
  */
 export async function uploadFile(args: {
   orgId: string;
-  namespace: "trip" | "employee" | "leave" | "compliance" | "other";
+  namespace: "trip" | "employee" | "leave" | "compliance" | "profile" | "other";
   file: File;
 }): Promise<UploadedFile> {
   const { orgId, namespace, file } = args;

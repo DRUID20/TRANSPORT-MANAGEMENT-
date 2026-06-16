@@ -11,6 +11,8 @@ export type SidebarUserInfo = {
   email: string;
   roleKey: string;
   initials: string;
+  /** Auth-proxied URL for the profile photo. Falls back to initials if absent. */
+  avatarUrl?: string;
 };
 
 const ROLE_LABELS: Record<string, string> = {
@@ -65,8 +67,13 @@ export function SidebarUser({
           collapsed && "justify-center p-1.5",
         )}
       >
-        <span className="grid size-8 shrink-0 place-items-center rounded-full bg-gold/20 font-mono text-[11px] font-semibold text-gold ring-1 ring-gold/30">
-          {user.initials}
+        <span className="grid size-8 shrink-0 place-items-center overflow-hidden rounded-full bg-gold/20 font-mono text-[11px] font-semibold text-gold ring-1 ring-gold/30">
+          {user.avatarUrl ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={user.avatarUrl} alt="" className="size-full object-cover" />
+          ) : (
+            user.initials
+          )}
         </span>
         {!collapsed && (
           <>

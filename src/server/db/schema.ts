@@ -45,6 +45,8 @@ export const users = pgTable("users", {
   fullName: text("full_name").notNull(),
   /** bcryptjs hash. Null only for OAuth-style users — not used today. */
   passwordHash: text("password_hash"),
+  /** Storage key (in the documents bucket) of the user's avatar. */
+  profilePhotoKey: text("profile_photo_key"),
   /** Quick-lookup role key; userRoles is the authoritative many-to-many. */
   roleKey: varchar("role_key", { length: 32 }).notNull().default("viewer"),
   isActive: boolean("is_active").notNull().default(true),

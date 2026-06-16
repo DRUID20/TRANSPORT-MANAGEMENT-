@@ -18,7 +18,7 @@ import { uploadFile } from "@/server/storage/files";
 // Supabase upload needs Buffer/streams — pin to Node runtime.
 export const runtime = "nodejs";
 
-const NAMESPACES = new Set(["trip", "employee", "leave", "compliance", "other"]);
+const NAMESPACES = new Set(["trip", "employee", "leave", "compliance", "profile", "other"]);
 
 export async function POST(req: Request) {
   let orgId: string;
@@ -47,7 +47,7 @@ export async function POST(req: Request) {
   try {
     const result = await uploadFile({
       orgId,
-      namespace: ns as "trip" | "employee" | "leave" | "compliance" | "other",
+      namespace: ns as "trip" | "employee" | "leave" | "compliance" | "profile" | "other",
       file,
     });
     return NextResponse.json({ ok: true, ...result });
