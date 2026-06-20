@@ -7,6 +7,7 @@ import {
   listSuppliers as repoList,
   updateSupplier as repoUpdate,
 } from "@/server/repos/suppliers";
+import { logAudit, toDiff } from "@/server/auth/audit";
 import { supplierCreateSchema, type SupplierCreateInput } from "@/lib/validators/fleet";
 
 export async function listSuppliers() {
@@ -41,6 +42,7 @@ export async function createSupplier(input: SupplierCreateInput): Promise<Create
       defaultExpenseCategory: data.defaultExpenseCategory || undefined,
       notes: data.notes || undefined,
     });
+    await logAudit({ entityType: "supplier", entityId: created.id, action: "create", diff: { name: { from: null, to: created.name } } });
     revalidatePath("/suppliers");
     return { ok: true, id: created.id };
   } catch (err) {
@@ -50,6 +52,7 @@ export async function createSupplier(input: SupplierCreateInput): Promise<Create
 
 export async function updateSupplierAction(id: string, patch: Partial<SupplierCreateInput>) {
   await repoUpdate(id, patch);
+  await logAudit({ entityType: "supplier", entityId: id, action: "update", diff: toDiff(patch) });
   revalidatePath("/suppliers");
   revalidatePath(`/suppliers/${id}`);
 }

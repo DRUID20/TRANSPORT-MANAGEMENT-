@@ -8,6 +8,7 @@ import {
   updateTrailer as repoUpdate,
 } from "@/server/repos/trailers";
 import { listTrucks } from "@/server/repos/trucks";
+import { logAudit, toDiff } from "@/server/auth/audit";
 import { trailerCreateSchema, type TrailerCreateInput } from "@/lib/validators/fleet";
 
 function normalizePlate(input: string): string {
@@ -50,6 +51,7 @@ export async function createTrailer(input: TrailerCreateInput): Promise<CreateTr
       ntsaInspectionExpiry: data.ntsaInspectionExpiry || undefined,
       notes: data.notes || undefined,
     });
+    await logAudit({ entityType: "trailer", entityId: created.id, action: "create", diff: { registration: { from: null, to: created.registration } } });
     revalidatePath("/trailers");
     return { ok: true, id: created.id };
   } catch (err) {
@@ -59,6 +61,7 @@ export async function createTrailer(input: TrailerCreateInput): Promise<CreateTr
 
 export async function updateTrailerAction(id: string, patch: Partial<TrailerCreateInput>) {
   await repoUpdate(id, patch);
+  await logAudit({ entityType: "trailer", entityId: id, action: "update", diff: toDiff(patch) });
   revalidatePath("/trailers");
   revalidatePath(`/trailers/${id}`);
 }

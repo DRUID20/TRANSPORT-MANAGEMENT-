@@ -72,6 +72,12 @@ export async function createFuelLog(input: FuelLogCreateInput): Promise<ActionRe
     notes: parsed.data.notes,
     submittedBy: parsed.data.submittedBy,
   });
+  await logAudit({
+    entityType: "fuel_log",
+    entityId: log.id,
+    action: "create",
+    diff: { litres: { from: null, to: log.litres }, costKes: { from: null, to: log.costKes } },
+  });
   revalidatePath("/fuel");
   if (parsed.data.tripId) revalidatePath(`/trips/${parsed.data.tripId}`);
   revalidatePath(`/trucks/${parsed.data.truckId}`);

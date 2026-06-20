@@ -13,6 +13,7 @@ import {
   rejectLeaveRequest as repoReject,
 } from "@/server/repos/leave";
 import { getEmployee } from "@/server/repos/hr";
+import { logAudit } from "@/server/auth/audit";
 import type { LeaveStatus, LeaveType } from "@/lib/types/leave";
 import {
   attendanceCreateSchema,
@@ -62,6 +63,7 @@ export async function createLeaveRequest(input: LeaveRequestCreateInput): Promis
   }
   const r = await repoCreate(parsed.data);
   if ("error" in r) return { ok: false, error: r.error };
+  await logAudit({ entityType: "leave_request", entityId: r.id, action: "create" });
   revalidatePath("/hr/leave");
   revalidatePath(`/hr/employees/${parsed.data.employeeId}`);
   return { ok: true, id: r.id };
@@ -70,6 +72,7 @@ export async function createLeaveRequest(input: LeaveRequestCreateInput): Promis
 export async function approveLeaveRequest(id: string): Promise<ActionResult> {
   const r = await repoApprove(id, HR_MANAGER_ID);
   if ("error" in r) return { ok: false, error: r.error };
+  await logAudit({ entityType: "leave_request", entityId: id, action: "approve" });
   revalidatePath("/hr/leave");
   revalidatePath(`/hr/leave/${id}`);
   revalidatePath(`/hr/employees/${r.employeeId}`);
@@ -80,6 +83,7 @@ export async function rejectLeaveRequest(id: string, reason: string): Promise<Ac
   if (!reason.trim()) return { ok: false, error: "Rejection reason required" };
   const r = await repoReject(id, reason, HR_MANAGER_ID);
   if ("error" in r) return { ok: false, error: r.error };
+  await logAudit({ entityType: "leave_request", entityId: id, action: "reject", diff: { reason: { from: null, to: reason } } });
   revalidatePath("/hr/leave");
   revalidatePath(`/hr/leave/${id}`);
   return { ok: true, id: r.id };
@@ -88,6 +92,7 @@ export async function rejectLeaveRequest(id: string, reason: string): Promise<Ac
 export async function cancelLeaveRequest(id: string): Promise<ActionResult> {
   const r = await repoCancel(id);
   if ("error" in r) return { ok: false, error: r.error };
+  await logAudit({ entityType: "leave_request", entityId: id, action: "cancel" });
   revalidatePath("/hr/leave");
   revalidatePath(`/hr/leave/${id}`);
   return { ok: true, id: r.id };
@@ -99,6 +104,7 @@ export async function logAttendance(input: AttendanceCreateInput): Promise<Actio
     return { ok: false, error: parsed.error.errors.map((e) => e.message).join("; ") };
   }
   const r = await repoLogAttendance(parsed.data);
+  await logAudit({ entityType: "attendance", entityId: r.id, action: "create" });
   revalidatePath("/hr/attendance");
   return { ok: true, id: r.id };
 }

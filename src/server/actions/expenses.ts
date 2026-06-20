@@ -61,6 +61,12 @@ export async function createExpense(input: ExpenseCreateInput): Promise<ActionRe
     submittedBy: parsed.data.submittedBy,
     submittedAt: new Date().toISOString(),
   });
+  await logAudit({
+    entityType: "expense",
+    entityId: e.id,
+    action: "create",
+    diff: { amountKes: { from: null, to: e.amountKes }, category: { from: null, to: e.category } },
+  });
   revalidatePath("/expenses");
   if (parsed.data.tripId) revalidatePath(`/trips/${parsed.data.tripId}`);
   return { ok: true, id: e.id };
@@ -79,6 +85,12 @@ export async function reviewExpense(input: ExpenseReviewInput): Promise<ActionRe
     notes: parsed.data.notes,
   });
   if (!exp) return { ok: false, error: "Expense not found" };
+  await logAudit({
+    entityType: "expense",
+    entityId: exp.id,
+    action: parsed.data.approve ? "approve" : "reject",
+    diff: parsed.data.reason ? { reason: { from: null, to: parsed.data.reason } } : undefined,
+  });
   revalidatePath("/expenses");
   if (exp.tripId) revalidatePath(`/trips/${exp.tripId}`);
   return { ok: true, id: exp.id };

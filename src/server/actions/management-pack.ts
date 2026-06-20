@@ -16,6 +16,7 @@ import {
   type PackNarrativeInput,
 } from "@/lib/validators/management-pack";
 import { CURRENT_USER_EMPLOYEE_ID } from "@/server/auth/current-user";
+import { logAudit } from "@/server/auth/audit";
 
 export async function listManagementPacks() {
   return repoList();
@@ -33,6 +34,7 @@ export async function createManagementPack(input: PackCreateInput): Promise<Acti
   }
   const r = await repoCreate(parsed.data.yearMonth);
   if ("error" in r) return { ok: false, error: r.error };
+  await logAudit({ entityType: "management_pack", entityId: r.id, action: "create", diff: { period: { from: null, to: parsed.data.yearMonth } } });
   revalidatePath("/management-pack");
   return { ok: true, id: r.id };
 }
@@ -51,6 +53,7 @@ export async function saveNarrative(input: PackNarrativeInput): Promise<ActionRe
 export async function advancePack(id: string, to: ManagementPackStatus): Promise<ActionResult> {
   const r = await repoAdvance(id, to, CURRENT_USER_EMPLOYEE_ID);
   if ("error" in r) return { ok: false, error: r.error };
+  await logAudit({ entityType: "management_pack", entityId: id, action: "status_change", diff: { status: { from: null, to } } });
   revalidatePath("/management-pack");
   revalidatePath(`/management-pack/${id}`);
   return { ok: true, id: r.id };

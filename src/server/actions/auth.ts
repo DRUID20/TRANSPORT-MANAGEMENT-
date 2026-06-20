@@ -8,6 +8,7 @@ import { and, desc, eq, gt, isNull } from "drizzle-orm";
 import { getDb } from "@/server/db/client";
 import { users, passwordResetOtps } from "@/server/db/schema";
 import { getSession } from "@/server/auth/session";
+import { logAudit } from "@/server/auth/audit";
 import { isValidRoleKey } from "@/lib/auth/roles";
 
 export type ActionResult =
@@ -56,6 +57,17 @@ export async function signIn(formData: FormData): Promise<ActionResult> {
         })
         .where(eq(users.id, user.id));
     }
+    // Audit the failed attempt (allowAnonymous: even unknown emails are logged
+    // so brute-force attempts are visible).
+    await logAudit({
+      entityType: "auth",
+      entityId: user?.id ?? null,
+      action: "login_failed",
+      actorUserId: user?.id ?? null,
+      organizationId: user?.organizationId ?? null,
+      allowAnonymous: true,
+      diff: { email: { from: null, to: email } },
+    });
     return { ok: false, error: "Invalid email or password." };
   }
 
@@ -89,6 +101,16 @@ export async function signIn(formData: FormData): Promise<ActionResult> {
   session.organizationId = user.organizationId;
   await session.save();
 
+  // Audit the successful login with the explicit actor (the request-scoped
+  // getCurrentUser cache may still hold the pre-login null).
+  await logAudit({
+    entityType: "auth",
+    entityId: user.id,
+    action: "login",
+    actorUserId: user.id,
+    organizationId: user.organizationId,
+  });
+
   // Safe redirect target — must be a path on this app
   const safeReturnTo = returnTo.startsWith("/") && !returnTo.startsWith("//") ? returnTo : "/dashboard";
   redirect(safeReturnTo);
@@ -97,6 +119,11 @@ export async function signIn(formData: FormData): Promise<ActionResult> {
 /** Sign out — destroys the session cookie and redirects to /login. */
 export async function signOut() {
   const session = await getSession();
+  const actorUserId = session.userId ?? null;
+  const organizationId = session.organizationId ?? null;
+  if (actorUserId) {
+    await logAudit({ entityType: "auth", entityId: actorUserId, action: "logout", actorUserId, organizationId });
+  }
   session.destroy();
   redirect("/login");
 }

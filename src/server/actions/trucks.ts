@@ -11,6 +11,7 @@ import {
   updateTruck as repoUpdate,
 } from "@/server/repos/trucks";
 import { listSubcontractors } from "@/server/repos/subcontractors";
+import { logAudit, toDiff } from "@/server/auth/audit";
 import { truckCreateSchema, type TruckCreateInput } from "@/lib/validators/fleet";
 
 function normalizePlate(input: string): string {
@@ -62,6 +63,7 @@ export async function createTruck(input: TruckCreateInput): Promise<CreateTruckR
       transitPermitExpiry: data.transitPermitExpiry || undefined,
       notes: data.notes || undefined,
     });
+    await logAudit({ entityType: "truck", entityId: created.id, action: "create", diff: { registration: { from: null, to: created.registration } } });
     revalidatePath("/trucks");
     return { ok: true, id: created.id };
   } catch (err) {
@@ -71,12 +73,14 @@ export async function createTruck(input: TruckCreateInput): Promise<CreateTruckR
 
 export async function updateTruckAction(id: string, patch: Partial<TruckCreateInput>) {
   await repoUpdate(id, patch);
+  await logAudit({ entityType: "truck", entityId: id, action: "update", diff: toDiff(patch) });
   revalidatePath("/trucks");
   revalidatePath(`/trucks/${id}`);
 }
 
 export async function deleteTruckAction(id: string) {
   await repoDelete(id);
+  await logAudit({ entityType: "truck", entityId: id, action: "delete" });
   revalidatePath("/trucks");
   redirect("/trucks");
 }

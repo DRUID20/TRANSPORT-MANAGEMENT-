@@ -8,6 +8,7 @@ import {
   listCustomers as repoList,
   updateCustomer as repoUpdate,
 } from "@/server/repos/customers";
+import { logAudit, toDiff } from "@/server/auth/audit";
 import { customerCreateSchema, type CustomerCreateInput } from "@/lib/validators/trips";
 
 export async function listCustomers() {
@@ -41,6 +42,7 @@ export async function createCustomer(input: CustomerCreateInput): Promise<Action
       paymentTermsDays: parsed.data.paymentTermsDays,
       notes: parsed.data.notes || undefined,
     });
+    await logAudit({ entityType: "customer", entityId: created.id, action: "create", diff: { name: { from: null, to: created.name } } });
     revalidatePath("/customers");
     return { ok: true, id: created.id };
   } catch (err) {
@@ -51,6 +53,7 @@ export async function createCustomer(input: CustomerCreateInput): Promise<Action
 
 export async function updateCustomerAction(id: string, patch: Partial<CustomerCreateInput>) {
   await repoUpdate(id, patch);
+  await logAudit({ entityType: "customer", entityId: id, action: "update", diff: toDiff(patch) });
   revalidatePath("/customers");
   revalidatePath(`/customers/${id}`);
 }

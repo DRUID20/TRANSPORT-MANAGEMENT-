@@ -6,6 +6,7 @@ import {
   listRates as repoList,
   lookupRate as repoLookup,
 } from "@/server/repos/rates";
+import { logAudit } from "@/server/auth/audit";
 import { rateCreateSchema, type RateCreateInput } from "@/lib/validators/trips";
 
 export async function listRates() {
@@ -38,6 +39,12 @@ export async function createRate(input: RateCreateInput): Promise<ActionResult> 
       amount: parsed.data.amount,
       currency: parsed.data.currency,
       notes: parsed.data.notes || undefined,
+    });
+    await logAudit({
+      entityType: "rate",
+      entityId: created.id,
+      action: "create",
+      diff: { route: { from: null, to: `${created.origin} → ${created.destination}` }, amount: { from: null, to: created.amount } },
     });
     revalidatePath("/rates");
     return { ok: true, id: created.id };

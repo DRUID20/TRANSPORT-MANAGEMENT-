@@ -15,6 +15,7 @@ import {
   setJobCardStatus as repoSetStatus,
   updateJobCardAnalysis as repoUpdateAnalysis,
 } from "@/server/repos/workshop";
+import { logAudit } from "@/server/auth/audit";
 import type { JobCardStatus } from "@/lib/types/workshop";
 import {
   jobCardCloseSchema,
@@ -49,6 +50,7 @@ export async function createJobCard(input: JobCardCreateInput): Promise<ActionRe
     return { ok: false, error: parsed.error.errors.map((e) => e.message).join("; ") };
   }
   const created = await repoCreate(parsed.data);
+  await logAudit({ entityType: "job_card", entityId: created.id, action: "create", diff: { truckId: { from: null, to: parsed.data.truckId } } });
   revalidatePath("/workshop");
   revalidatePath("/trucks");
   revalidatePath(`/trucks/${parsed.data.truckId}`);
@@ -57,12 +59,14 @@ export async function createJobCard(input: JobCardCreateInput): Promise<ActionRe
 
 export async function setStatus(jobCardId: string, status: JobCardStatus) {
   await repoSetStatus(jobCardId, status);
+  await logAudit({ entityType: "job_card", entityId: jobCardId, action: "status_change", diff: { status: { from: null, to: status } } });
   revalidatePath("/workshop");
   revalidatePath(`/workshop/${jobCardId}`);
 }
 
 export async function updateAnalysis(jobCardId: string, analysis: string) {
   await repoUpdateAnalysis(jobCardId, analysis);
+  await logAudit({ entityType: "job_card", entityId: jobCardId, action: "update", diff: { analysis: { from: null, to: analysis } } });
   revalidatePath(`/workshop/${jobCardId}`);
 }
 
@@ -114,6 +118,7 @@ export async function closeJobCard(
   }
   const jc = await repoClose({ jobCardId, ...parsed.data });
   if (!jc) return { ok: false, error: "Job card not found" };
+  await logAudit({ entityType: "job_card", entityId: jc.id, action: "close" });
   revalidatePath("/workshop");
   revalidatePath(`/workshop/${jobCardId}`);
   revalidatePath(`/trucks/${jc.truckId}`);
@@ -134,6 +139,12 @@ export async function completeAndBillJobCard(
   }
   const r = await repoCompleteAndBill({ jobCardId, ...parsed.data });
   if ("error" in r) return { ok: false, error: r.error };
+  await logAudit({
+    entityType: "job_card",
+    entityId: r.jobCard.id,
+    action: "complete_and_bill",
+    diff: { bills: { from: null, to: r.billNumbers.join(", ") } },
+  });
   revalidatePath("/workshop");
   revalidatePath(`/workshop/${jobCardId}`);
   revalidatePath(`/trucks/${r.jobCard.truckId}`);

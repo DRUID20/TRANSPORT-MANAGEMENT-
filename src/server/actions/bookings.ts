@@ -50,12 +50,20 @@ export async function createBooking(input: BookingCreateInput): Promise<ActionRe
     agreedCurrency: parsed.data.agreedCurrency,
     notes: parsed.data.notes || undefined,
   });
+  await logAudit({ entityType: "booking", entityId: created.id, action: "create", diff: { number: { from: null, to: created.number } } });
   revalidatePath("/bookings");
   return { ok: true, id: created.id };
 }
 
 export async function setBookingStatus(id: string, status: BookingStatus) {
+  const prev = await getBooking(id);
   await repoUpdateStatus(id, status);
+  await logAudit({
+    entityType: "booking",
+    entityId: id,
+    action: "status_change",
+    diff: { status: { from: prev?.status ?? null, to: status } },
+  });
   revalidatePath("/bookings");
   revalidatePath(`/bookings/${id}`);
 }

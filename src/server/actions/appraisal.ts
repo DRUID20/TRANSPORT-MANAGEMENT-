@@ -12,6 +12,7 @@ import {
   setAppraisalCycleStatus as repoSetCycleStatus,
   updateAppraisalReview as repoUpdate,
 } from "@/server/repos/appraisal";
+import { logAudit } from "@/server/auth/audit";
 import type { AppraisalCycleStatus, AppraisalReviewStatus } from "@/lib/types/appraisal";
 import {
   cycleCreateSchema,
@@ -45,6 +46,7 @@ export async function createAppraisalCycle(input: CycleCreateInput): Promise<Act
   }
   const r = await repoCreateCycle(parsed.data);
   if ("error" in r) return { ok: false, error: r.error };
+  await logAudit({ entityType: "appraisal_cycle", entityId: r.id, action: "create" });
   revalidatePath("/hr/appraisals");
   return { ok: true, id: r.id };
 }
@@ -55,6 +57,7 @@ export async function setAppraisalCycleStatus(
 ): Promise<ActionResult> {
   const r = await repoSetCycleStatus(id, status);
   if (!r) return { ok: false, error: "Not found" };
+  await logAudit({ entityType: "appraisal_cycle", entityId: id, action: "status_change", diff: { status: { from: null, to: status } } });
   revalidatePath("/hr/appraisals");
   revalidatePath(`/hr/appraisals/${id}`);
   return { ok: true, id: r.id };
@@ -75,6 +78,7 @@ export async function updateReview(input: ReviewUpdateInput): Promise<ActionResu
     })),
   });
   if ("error" in r) return { ok: false, error: r.error };
+  await logAudit({ entityType: "appraisal_review", entityId: r.id, action: "update" });
   revalidatePath(`/hr/appraisals/${parsed.data.cycleId}`);
   revalidatePath(`/hr/appraisals/${parsed.data.cycleId}/${parsed.data.employeeId}`);
   return { ok: true, id: r.id };
@@ -87,6 +91,7 @@ export async function advanceReview(
 ): Promise<ActionResult> {
   const r = await repoAdvance(cycleId, employeeId, to);
   if ("error" in r) return { ok: false, error: r.error };
+  await logAudit({ entityType: "appraisal_review", entityId: r.id, action: "status_change", diff: { status: { from: null, to } } });
   revalidatePath(`/hr/appraisals/${cycleId}`);
   revalidatePath(`/hr/appraisals/${cycleId}/${employeeId}`);
   return { ok: true, id: r.id };

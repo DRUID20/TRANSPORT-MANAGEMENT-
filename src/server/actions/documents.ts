@@ -8,6 +8,7 @@ import {
   listTripDocuments as repoList,
   reviewTripDocument as repoReview,
 } from "@/server/repos/documents";
+import { logAudit } from "@/server/auth/audit";
 import {
   documentReviewSchema,
   documentUploadSchema,
@@ -42,6 +43,7 @@ export async function uploadDocument(input: DocumentUploadInput): Promise<Action
     notes: parsed.data.notes,
   });
   if (!doc) return { ok: false, error: "Trip not found" };
+  await logAudit({ entityType: "trip_document", entityId: doc.id, action: "upload", diff: { kind: { from: null, to: parsed.data.kind }, name: { from: null, to: parsed.data.name } } });
   revalidatePath(`/trips/${parsed.data.tripId}`);
   return { ok: true, id: doc.id };
 }
@@ -58,6 +60,7 @@ export async function reviewDocument(input: DocumentReviewInput): Promise<Action
     reviewedBy: parsed.data.reviewedBy,
   });
   if (!doc) return { ok: false, error: "Document not found" };
+  await logAudit({ entityType: "trip_document", entityId: doc.id, action: parsed.data.approve ? "approve" : "reject" });
   revalidatePath(`/trips/${doc.tripId}`);
   return { ok: true, id: doc.id };
 }
@@ -66,6 +69,7 @@ export async function removeDocument(id: string): Promise<ActionResult> {
   const doc = await getTripDocument(id);
   if (!doc) return { ok: false, error: "Document not found" };
   await repoDelete(id);
+  await logAudit({ entityType: "trip_document", entityId: id, action: "delete" });
   // Best-effort delete the underlying bytes too — never block the action on this.
   if (doc.storageKey) {
     try {

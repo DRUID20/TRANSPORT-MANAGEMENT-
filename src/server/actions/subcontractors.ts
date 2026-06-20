@@ -11,6 +11,7 @@ import {
   updateSubcontractor as repoUpdate,
 } from "@/server/repos/subcontractors";
 import { trucksForSubcontractor } from "@/server/repos/trucks";
+import { logAudit, toDiff } from "@/server/auth/audit";
 import {
   subcontractorCreateSchema,
   type SubcontractorCreateInput,
@@ -51,6 +52,7 @@ export async function createSubcontractor(
       bankAccount: parsed.data.bankAccount || undefined,
       notes: parsed.data.notes || undefined,
     });
+    await logAudit({ entityType: "subcontractor", entityId: created.id, action: "create", diff: { name: { from: null, to: created.name } } });
     revalidatePath("/subcontractors");
     return { ok: true, id: created.id };
   } catch (err) {
@@ -63,6 +65,7 @@ export async function updateSubcontractorAction(
   patch: Partial<SubcontractorCreateInput> & { commissionRate?: number },
 ) {
   await repoUpdate(id, patch);
+  await logAudit({ entityType: "subcontractor", entityId: id, action: "update", diff: toDiff(patch) });
   revalidatePath("/subcontractors");
   revalidatePath(`/subcontractors/${id}`);
 }
@@ -92,6 +95,12 @@ export async function recordSubcontractorPayment(input: {
   if (!input.subcontractorId) return { ok: false, error: "Subcontractor is required." };
   const r = await repoRecordPayment(input);
   if ("error" in r) return { ok: false, error: r.error };
+  await logAudit({
+    entityType: "subcontractor_payment",
+    entityId: r.id,
+    action: "create",
+    diff: { amountKes: { from: null, to: input.amountKes }, method: { from: null, to: input.method } },
+  });
   revalidatePath(`/subcontractors/${input.subcontractorId}`);
   if (input.method === "supplier_direct") revalidatePath("/bills");
   return { ok: true, id: r.id };

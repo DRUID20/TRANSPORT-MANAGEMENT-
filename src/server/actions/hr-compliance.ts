@@ -7,6 +7,7 @@ import {
   getComplianceRecord,
   listComplianceRecords as repoList,
 } from "@/server/repos/hr-compliance";
+import { logAudit } from "@/server/auth/audit";
 import type { ComplianceKind } from "@/lib/types/hr-compliance";
 import {
   complianceCreateSchema,
@@ -32,6 +33,7 @@ export async function createComplianceRecord(input: ComplianceCreateInput): Prom
     return { ok: false, error: parsed.error.errors.map((e) => e.message).join("; ") };
   }
   const r = await repoCreate(parsed.data);
+  await logAudit({ entityType: "hr_compliance", entityId: r.id, action: "create", diff: { kind: { from: null, to: parsed.data.kind } } });
   revalidatePath("/hr/compliance");
   revalidatePath(`/hr/employees/${parsed.data.employeeId}`);
   return { ok: true, id: r.id };
@@ -44,6 +46,7 @@ export async function deleteComplianceRecord(
   const record = await getComplianceRecord(id);
   const ok = await repoDelete(id);
   if (!ok) return { ok: false, error: "Not found" };
+  await logAudit({ entityType: "hr_compliance", entityId: id, action: "delete" });
   // Best-effort: also remove the underlying file from Storage.
   if (record?.attachmentUrl) {
     try {

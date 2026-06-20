@@ -9,6 +9,7 @@ import {
   listAllActiveBorderCrossings as repoListActive,
   listBorderCrossings as repoList,
 } from "@/server/repos/borders";
+import { logAudit } from "@/server/auth/audit";
 import {
   borderClearSchema,
   borderCreateSchema,
@@ -37,6 +38,7 @@ export async function recordBorderArrival(input: BorderCreateInput): Promise<Act
   }
   const created = await repoCreate(parsed.data);
   if (!created) return { ok: false, error: "Trip not found" };
+  await logAudit({ entityType: "border_crossing", entityId: created.id, action: "create", diff: { tripId: { from: null, to: parsed.data.tripId } } });
   revalidatePath(`/trips/${parsed.data.tripId}`);
   revalidatePath("/dashboard");
   return { ok: true, id: created.id };
@@ -49,6 +51,7 @@ export async function clearBorder(input: BorderClearInput): Promise<ActionResult
   }
   const updated = await repoClear(parsed.data);
   if (!updated) return { ok: false, error: "Border crossing not found" };
+  await logAudit({ entityType: "border_crossing", entityId: updated.id, action: "clear" });
   revalidatePath(`/trips/${updated.tripId}`);
   revalidatePath("/dashboard");
   return { ok: true, id: updated.id };
@@ -58,6 +61,7 @@ export async function removeBorderCrossing(id: string): Promise<ActionResult> {
   const existing = await getBorderCrossing(id);
   if (!existing) return { ok: false, error: "Border crossing not found" };
   await repoDelete(id);
+  await logAudit({ entityType: "border_crossing", entityId: id, action: "delete" });
   revalidatePath(`/trips/${existing.tripId}`);
   revalidatePath("/dashboard");
   return { ok: true, id };

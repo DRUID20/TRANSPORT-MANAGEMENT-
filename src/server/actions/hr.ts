@@ -19,6 +19,7 @@ import {
   updateEmployee as repoUpdateEmployee,
 } from "@/server/repos/hr";
 import { getDriver, listDrivers } from "@/server/repos/drivers";
+import { logAudit } from "@/server/auth/audit";
 import type { EmployeeStatus, ContractStatus } from "@/lib/types/hr";
 import {
   contractCreateSchema,
@@ -100,6 +101,7 @@ export async function createEmployee(input: EmployeeCreateInput): Promise<Action
     ...parsed.data,
     email: parsed.data.email || undefined,
   });
+  await logAudit({ entityType: "employee", entityId: e.id, action: "create", diff: { name: { from: null, to: e.fullName } } });
   revalidatePath("/hr");
   revalidatePath("/hr/employees");
   return { ok: true, id: e.id };
@@ -108,6 +110,7 @@ export async function createEmployee(input: EmployeeCreateInput): Promise<Action
 export async function updateEmployeeStatus(id: string, status: EmployeeStatus): Promise<ActionResult> {
   const updated = await repoUpdateEmployee(id, { status });
   if (!updated) return { ok: false, error: "Not found" };
+  await logAudit({ entityType: "employee", entityId: id, action: "status_change", diff: { status: { from: null, to: status } } });
   revalidatePath("/hr/employees");
   revalidatePath(`/hr/employees/${id}`);
   return { ok: true, id };
@@ -119,6 +122,7 @@ export async function createDepartment(input: DepartmentCreateInput): Promise<Ac
     return { ok: false, error: parsed.error.errors.map((e) => e.message).join("; ") };
   }
   const d = await repoCreateDept(parsed.data);
+  await logAudit({ entityType: "department", entityId: d.id, action: "create" });
   revalidatePath("/hr/departments");
   return { ok: true, id: d.id };
 }
@@ -136,6 +140,7 @@ export async function createContract(input: ContractCreateInput): Promise<Action
     return { ok: false, error: parsed.error.errors.map((e) => e.message).join("; ") };
   }
   const c = await repoCreateContract({ ...parsed.data, status: "active" });
+  await logAudit({ entityType: "contract", entityId: c.id, action: "create", diff: { employeeId: { from: null, to: parsed.data.employeeId } } });
   revalidatePath(`/hr/employees/${parsed.data.employeeId}`);
   return { ok: true, id: c.id };
 }
@@ -143,6 +148,7 @@ export async function createContract(input: ContractCreateInput): Promise<Action
 export async function terminateContract(id: string, employeeId: string): Promise<ActionResult> {
   const c = await repoTerminateContract(id);
   if (!c) return { ok: false, error: "Not found" };
+  await logAudit({ entityType: "contract", entityId: id, action: "terminate" });
   revalidatePath(`/hr/employees/${employeeId}`);
   return { ok: true, id };
 }

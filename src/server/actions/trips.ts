@@ -83,6 +83,7 @@ export async function reconcileAndCloseTrip(
   }
   const result = await repoReconcile(parsed.data);
   if ("error" in result) return { ok: false, error: result.error };
+  await logAudit({ entityType: "trip", entityId: result.trip.id, action: "reconcile_close", diff: { status: { from: "delivered", to: "closed" } } });
   revalidatePath("/trips");
   revalidatePath(`/trips/${input.tripId}`);
   revalidatePath("/dashboard");
@@ -102,6 +103,12 @@ export async function transitionTrip(input: {
 }): Promise<TransitionResult> {
   const result = await repoTransition(input);
   if ("error" in result) return { ok: false, error: result.error };
+  await logAudit({
+    entityType: "trip",
+    entityId: input.tripId,
+    action: "status_change",
+    diff: { status: { from: null, to: result.trip.status } },
+  });
   revalidatePath("/trips", "layout");
   revalidatePath(`/trips/${input.tripId}`, "layout");
   revalidatePath("/dashboard");
@@ -128,6 +135,7 @@ export async function planTrip(input: TripPlanInput): Promise<ActionResult> {
   if (!trip) {
     return { ok: false, error: "Booking not found or already planned/cancelled." };
   }
+  await logAudit({ entityType: "trip", entityId: trip.id, action: "create", diff: { number: { from: null, to: trip.number } } });
   revalidatePath("/bookings");
   revalidatePath(`/bookings/${input.bookingId}`);
   revalidatePath("/trips");
@@ -156,6 +164,12 @@ export async function confirmTripDestination(input: {
   if (!input.actorName.trim()) return { ok: false, error: "Your name is required" };
   const r = await repoConfirmDestination(input);
   if ("error" in r) return { ok: false, error: r.error };
+  await logAudit({
+    entityType: "trip",
+    entityId: input.tripId,
+    action: "confirm_destination",
+    diff: { destination: { from: null, to: input.destination } },
+  });
   revalidatePath("/trips");
   revalidatePath(`/trips/${input.tripId}`);
   revalidatePath("/invoices");
@@ -229,6 +243,12 @@ export async function captureTripLoading(
     transitBondNumber: parsed.data.transitBondNumber ?? trip.transitBondNumber,
     ullagePct: ullage,
   });
+  await logAudit({
+    entityType: "trip",
+    entityId: tripId,
+    action: "capture_loading",
+    diff: { loadedLitres: { from: trip.loadedLitres ?? null, to: parsed.data.loadedLitres } },
+  });
   revalidatePath(`/trips/${tripId}`, "layout");
   return { ok: true, id: tripId };
 }
@@ -285,6 +305,12 @@ export async function captureTripDischarge(
     dischargedLitres20C: discharged20C,
     dischargeSealNumbers: parsed.data.dischargeSealNumbers,
     ullagePct: ullage,
+  });
+  await logAudit({
+    entityType: "trip",
+    entityId: tripId,
+    action: "capture_discharge",
+    diff: { dischargedLitres: { from: trip.dischargedLitres ?? null, to: parsed.data.dischargedLitres } },
   });
   revalidatePath(`/trips/${tripId}`, "layout");
   return { ok: true, id: tripId };

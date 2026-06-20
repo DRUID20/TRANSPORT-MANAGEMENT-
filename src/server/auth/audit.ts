@@ -17,22 +17,53 @@ export interface AuditDiff {
   [field: string]: { from: unknown; to: unknown };
 }
 
+/**
+ * Turn a partial-update patch into an audit diff. We record the "to" values
+ * (the change being applied); "from" is null because light update paths don't
+ * re-load the prior row for every field. Undefined keys are skipped.
+ */
+export function toDiff(patch: Record<string, unknown>): AuditDiff {
+  const d: AuditDiff = {};
+  for (const [k, v] of Object.entries(patch)) {
+    if (v !== undefined) d[k] = { from: null, to: v as unknown };
+  }
+  return d;
+}
+
 export interface AuditInput {
   entityType: string;
   entityId?: string | null;
   action: string; // 'create' | 'update' | 'delete' | 'send' | 'cancel' | 'pay' | 'post' | 'reverse' | ...
   diff?: AuditDiff;
+  /** Explicit actor — used by auth events (login / failed login / logout)
+   *  where the session isn't yet established or is being destroyed. When
+   *  omitted, the actor is taken from the current session. */
+  actorUserId?: string | null;
+  organizationId?: string | null;
+  /** Write the row even when there's no resolvable actor (e.g. a failed
+   *  login attempt for an unknown email). Defaults to false. */
+  allowAnonymous?: boolean;
 }
 
 export async function logAudit(input: AuditInput): Promise<void> {
   if (IS_DEMO_MODE) return;
   try {
-    const user = await getCurrentUser();
-    if (!user) return; // shouldn't happen in normal flow; cron/system writes can be added later
+    let actorUserId = input.actorUserId ?? null;
+    let organizationId = input.organizationId ?? null;
+    if (actorUserId === null || organizationId === null) {
+      const user = await getCurrentUser();
+      if (user) {
+        actorUserId = actorUserId ?? user.userId ?? null;
+        organizationId = organizationId ?? user.organizationId ?? null;
+      }
+    }
+    // No actor and not explicitly anonymous → skip (cron/system writes opt in
+    // via allowAnonymous).
+    if (!actorUserId && !input.allowAnonymous) return;
     const db = getDb();
     await db.insert(auditLog).values({
-      organizationId: user.organizationId ?? null,
-      actorUserId: user.userId ?? null,
+      organizationId,
+      actorUserId,
       action: input.action,
       entityType: input.entityType,
       entityId: input.entityId ?? null,

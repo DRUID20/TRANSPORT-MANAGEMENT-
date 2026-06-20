@@ -7,6 +7,7 @@ import {
   listDrivers as repoList,
   updateDriver as repoUpdate,
 } from "@/server/repos/drivers";
+import { logAudit, toDiff } from "@/server/auth/audit";
 import { driverCreateSchema, type DriverCreateInput } from "@/lib/validators/fleet";
 
 export async function listDrivers() {
@@ -43,6 +44,7 @@ export async function createDriver(input: DriverCreateInput): Promise<CreateDriv
       hireDate: data.hireDate || undefined,
       notes: data.notes || undefined,
     });
+    await logAudit({ entityType: "driver", entityId: created.id, action: "create", diff: { fullName: { from: null, to: created.fullName } } });
     revalidatePath("/drivers");
     return { ok: true, id: created.id };
   } catch (err) {
@@ -52,6 +54,7 @@ export async function createDriver(input: DriverCreateInput): Promise<CreateDriv
 
 export async function updateDriverAction(id: string, patch: Partial<DriverCreateInput>) {
   await repoUpdate(id, patch);
+  await logAudit({ entityType: "driver", entityId: id, action: "update", diff: toDiff(patch) });
   revalidatePath("/drivers");
   revalidatePath(`/drivers/${id}`);
 }
