@@ -75,11 +75,16 @@ export function TrailerCreateForm({
         description="Plate, type, and capacity. Tanker trailers are most common for the fuel-only workflow."
         columns={2}
       >
-        <FormField label="Registration plate" required>
+        <FormField
+          label="Trailer ID"
+          required
+          helper="Plate (KE or foreign), chassis number, VIN, or your internal tag — any format works."
+        >
           <Input
             name="registration"
             required
-            placeholder="ZB 1180T"
+            maxLength={32}
+            placeholder="e.g. ZB 1180T · CHASSIS-1HSXY1 · TRL-014"
             className="font-mono uppercase tracking-wider"
           />
         </FormField>

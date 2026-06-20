@@ -361,7 +361,9 @@ export const trailers = pgTable(
     organizationId: uuid("organization_id")
       .notNull()
       .references(() => organizations.id, { onDelete: "cascade" }),
-    registration: varchar("registration", { length: 16 }).notNull(),
+    // Free-text trailer ID: KE plate, foreign plate, chassis/VIN, or internal
+    // yard tag — whatever the fleet actually uses. 32 chars covers a VIN.
+    registration: varchar("registration", { length: 32 }).notNull(),
     ownerType: varchar("owner_type", { length: 16 }).notNull().default("company_owned"),
     subcontractorId: uuid("subcontractor_id").references(() => subcontractors.id, {
       onDelete: "set null",

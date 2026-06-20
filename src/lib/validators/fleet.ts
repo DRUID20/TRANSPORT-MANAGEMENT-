@@ -58,14 +58,19 @@ export type SubcontractorCreateInput = z.infer<typeof subcontractorCreateSchema>
 
 // Reuse plate pattern from above
 const platePatternForTrailer = /^[A-Z]{1,3}\s?\d{1,4}\s?[A-Z]?$/i;
+void platePatternForTrailer; // kept for reference; trailer IDs are free-text below
 
 export const trailerCreateSchema = z
   .object({
+    // Trailers can be registered with anything fleets actually use in
+    // practice — KE plates ("ZB 1180T"), foreign plates, chassis numbers,
+    // VINs or internal yard tags ("TRL-014"). We trim + uppercase on the
+    // server, then enforce only "non-empty and not absurdly long".
     registration: z
       .string()
-      .min(4)
-      .max(16)
-      .regex(platePatternForTrailer, "Use the format ZA 0123T or similar"),
+      .trim()
+      .min(1, "Trailer ID is required")
+      .max(32, "Keep the trailer ID under 32 characters"),
     ownerType: z.enum(["company_owned", "subcontractor"]),
     subcontractorId: z.string().optional(),
     type: z.enum([
