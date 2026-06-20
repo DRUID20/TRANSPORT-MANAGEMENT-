@@ -19,9 +19,9 @@ import { DispatchTicker } from "./dispatch-ticker";
 export default async function LoginPage({
   searchParams,
 }: {
-  searchParams: Promise<{ returnTo?: string; error?: string; reset?: string }>;
+  searchParams: Promise<{ returnTo?: string; error?: string; reset?: string; reason?: string }>;
 }) {
-  const { returnTo, error, reset } = await searchParams;
+  const { returnTo, error, reset, reason } = await searchParams;
   const me = await getCurrentUser();
   if (me?.userId) {
     redirect(returnTo && returnTo.startsWith("/") ? returnTo : "/dashboard");
@@ -119,6 +119,12 @@ export default async function LoginPage({
           {reset === "1" && (
             <div className="mb-4 rounded-lg border border-status-success/30 bg-status-success/10 px-3 py-2 text-xs text-status-success">
               Password updated. Sign in with your new password.
+            </div>
+          )}
+
+          {reason === "idle" && (
+            <div className="mb-4 rounded-lg border border-status-warning/30 bg-status-warning/10 px-3 py-2 text-xs text-status-warning">
+              You were signed out after 5 minutes of inactivity. Please sign in again.
             </div>
           )}
 

@@ -14,6 +14,10 @@ export interface SessionData {
   fullName?: string;
   roleKey?: string;
   organizationId?: string;
+  /** Epoch ms of the last activity — drives the idle-timeout sliding window
+   *  (refreshed by middleware on each real request; checked against
+   *  IDLE_TIMEOUT_MS). */
+  lastActivityAt?: number;
 }
 
 const SESSION_COOKIE = "tx_session";

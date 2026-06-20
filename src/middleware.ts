@@ -1,7 +1,8 @@
 import { NextResponse, type NextRequest } from "next/server";
-import { unsealData } from "iron-session";
+import { sealData, unsealData } from "iron-session";
 import type { SessionData } from "@/server/auth/session";
 import { resolveSessionPassword } from "@/server/auth/session-secret";
+import { IDLE_TIMEOUT_MS } from "@/lib/auth/idle";
 
 /**
  * Gate every page route behind a valid session. Unauthenticated requests
@@ -26,6 +27,28 @@ const PUBLIC_PATHS = [
 ];
 
 const SESSION_COOKIE = "tx_session";
+const SESSION_MAX_AGE = 60 * 60 * 24 * 7; // 7 days — matches session.ts
+
+function cookieOptions() {
+  return {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "lax" as const,
+    path: "/",
+    maxAge: SESSION_MAX_AGE,
+  };
+}
+
+function redirectToLogin(req: NextRequest, params?: Record<string, string>) {
+  const url = new URL("/login", req.url);
+  const { pathname } = req.nextUrl;
+  if (pathname !== "/") url.searchParams.set("returnTo", pathname);
+  for (const [k, v] of Object.entries(params ?? {})) url.searchParams.set(k, v);
+  const res = NextResponse.redirect(url);
+  // Clear the (now invalid) session cookie so the browser stops sending it.
+  res.cookies.delete(SESSION_COOKIE);
+  return res;
+}
 
 export async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
@@ -56,12 +79,37 @@ export async function middleware(req: NextRequest) {
   }
 
   if (!session?.userId) {
-    const url = new URL("/login", req.url);
-    if (pathname !== "/") url.searchParams.set("returnTo", pathname);
-    return NextResponse.redirect(url);
+    return redirectToLogin(req);
   }
 
-  return NextResponse.next();
+  // ── Idle timeout (server-enforced sliding window) ──────────────────────
+  // If the last recorded activity is older than the idle window, force a
+  // sign-out. Otherwise stamp "now" and re-seal the cookie so the window
+  // slides forward. A truly idle tab makes no requests, so its stamp goes
+  // stale and the next request bounces it to /login?reason=idle. The client
+  // idle watcher logs the user out proactively at the same threshold.
+  const now = Date.now();
+  const last = session.lastActivityAt ?? now; // legacy cookies: treat as fresh once
+  if (now - last > IDLE_TIMEOUT_MS) {
+    return redirectToLogin(req, { reason: "idle" });
+  }
+
+  const res = NextResponse.next();
+  // Slide the window only on real GET navigations/data reads:
+  //  - skip prefetches (background, not real activity)
+  //  - skip non-GET (server actions set their own session cookie, e.g.
+  //    signOut/signIn — a second Set-Cookie here would clobber them)
+  const isPrefetch =
+    req.headers.get("next-router-prefetch") === "1" ||
+    req.headers.get("purpose") === "prefetch";
+  if (req.method === "GET" && !isPrefetch) {
+    const sealed = await sealData(
+      { ...session, lastActivityAt: now },
+      { password: secret, ttl: SESSION_MAX_AGE },
+    );
+    res.cookies.set(SESSION_COOKIE, sealed, cookieOptions());
+  }
+  return res;
 }
 
 export const config = {

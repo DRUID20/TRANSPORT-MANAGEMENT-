@@ -99,6 +99,7 @@ export async function signIn(formData: FormData): Promise<ActionResult> {
   session.fullName = user.fullName;
   session.roleKey = isValidRoleKey(user.roleKey) ? user.roleKey : "viewer";
   session.organizationId = user.organizationId;
+  session.lastActivityAt = Date.now();
   await session.save();
 
   // Audit the successful login with the explicit actor (the request-scoped
@@ -126,6 +127,25 @@ export async function signOut() {
   }
   session.destroy();
   redirect("/login");
+}
+
+/** Idle auto sign-out — same as signOut but tags the audit + lands on the
+ *  login screen with an "inactivity" notice. Called by the client idle watcher. */
+export async function signOutIdle() {
+  const session = await getSession();
+  const actorUserId = session.userId ?? null;
+  const organizationId = session.organizationId ?? null;
+  if (actorUserId) {
+    await logAudit({
+      entityType: "auth",
+      entityId: actorUserId,
+      action: "logout_idle",
+      actorUserId,
+      organizationId,
+    });
+  }
+  session.destroy();
+  redirect("/login?reason=idle");
 }
 
 /**

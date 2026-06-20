@@ -5,6 +5,7 @@ import { RouteTransition } from "@/components/layout/route-transition";
 import type { SidebarUserInfo } from "@/components/layout/sidebar-user";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { Toaster } from "@/components/ui/toast";
+import { IdleLogout } from "@/components/auth/idle-logout";
 import { getCurrentEmployee, getCurrentUser } from "@/server/auth/current-user";
 import { getMyProfilePhotoKey } from "@/server/actions/profile";
 
@@ -49,6 +50,7 @@ export async function AppShell({ children }: { children: React.ReactNode }) {
         </div>
       </div>
       <Toaster />
+      <IdleLogout />
     </TooltipProvider>
   );
 }
