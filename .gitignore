@@ -56,3 +56,6 @@ yarn-error.log*
 
 # Skill CLI scratch (the npx tool's symlink dir — we commit real files under .claude/skills/)
 .agents/
+
+# Generated docs (regenerated from USER_MANUAL.md via pandoc — never committed)
+USER_MANUAL.pdf
