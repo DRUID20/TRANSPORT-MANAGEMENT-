@@ -4,14 +4,19 @@ import { Card, CardContent } from "@/components/ui/card";
 import { AssistantChat } from "./assistant-chat";
 
 const SUGGESTIONS = [
+  // How-to (operational help)
+  "How do I create a booking?",
+  "How do I log a fuel entry?",
+  "How do I send an invoice?",
+  "How do I close a trip?",
+  "How do I add a new user?",
+  "How do I run monthly depreciation?",
+  // Data queries
   "How much do customers owe us?",
   "Show overdue invoices",
   "What's our profit this month?",
   "Top 3 trucks by profit",
-  "Which trucks use the most fuel?",
   "What licences are expiring?",
-  "Any leave requests pending?",
-  "How many drivers do we have?",
 ];
 
 export default function AssistantPage() {
@@ -20,7 +25,7 @@ export default function AssistantPage() {
       <PageHeader
         eyebrow="AI"
         title="Assistant"
-        description="Ask natural-language questions about finance, operations, fleet, fuel, HR and compliance."
+        description="Ask anything — how to do something in the system (step-by-step), or a data question (finance, operations, fleet, fuel, HR, compliance)."
         actions={
           <span className="inline-flex items-center gap-1.5 rounded-full bg-brand-blue/10 px-3 py-1.5 text-[11px] font-medium text-brand-blue ring-1 ring-brand-blue/30">
             <Sparkles className="size-3" />

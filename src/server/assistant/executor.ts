@@ -23,6 +23,7 @@ import {
   complianceStatus,
   daysUntilExpiry,
 } from "@/lib/types/hr-compliance";
+import { HOWTO_KB, type HowToEntry } from "@/server/assistant/kb";
 
 const KES = (n: number) => `KSh ${Math.round(n).toLocaleString()}`;
 
@@ -311,19 +312,135 @@ export function executeIntent(intent: Intent): Answer {
         hrefLabel: "Open Trucks",
       };
     }
+    case "howto": {
+      return answerHowto(intent.question);
+    }
     case "help": {
       return {
         recognised: true,
         text:
-          "I can answer questions about finance, operations, fleet, fuel, HR, compliance and leave.\n\nTry asking:\n• How much do customers owe us?\n• Show overdue invoices\n• What's our profit this month?\n• Top 3 trucks by profit\n• Which trucks use the most fuel?\n• What licences are expiring?\n• Any leave requests pending?\n• How many drivers do we have?",
+          "I can answer two kinds of questions:\n\n" +
+          "📊 DATA — finance, operations, fleet, fuel, HR, compliance, leave\n" +
+          "  • How much do customers owe us?\n" +
+          "  • Show overdue invoices\n" +
+          "  • What's our profit this month?\n" +
+          "  • Top 3 trucks by profit\n" +
+          "  • Which trucks use the most fuel?\n" +
+          "  • What licences are expiring?\n\n" +
+          "📖 HOW-TO — step-by-step for any operation\n" +
+          "  • How do I create a booking?\n" +
+          "  • How do I capture a fuel log?\n" +
+          "  • How do I send an invoice?\n" +
+          "  • How do I close a trip?\n" +
+          "  • How do I run monthly depreciation?\n" +
+          "  • How do I create a new user?",
       };
     }
     case "unknown":
-    default:
+    default: {
+      // Last-ditch attempt at the KB before giving up. Lets the assistant
+      // answer phrasings we haven't anticipated (e.g. just "fuel log" with
+      // no question words).
+      const fallback = answerHowto(intent.question);
+      if (fallback.recognised) return fallback;
       return {
         recognised: false,
         text:
-          "I didn't catch that. Try rephrasing — or ask `help` for a list of supported questions.",
+          "I didn't catch that. Try rephrasing — or type `help` for a list of supported questions.",
       };
+    }
   }
+}
+
+// ─────────────────────────────────────────────────────────────────────
+// How-to retrieval — keyword overlap + heading similarity.
+//
+// No LLM call. We tokenise the question, drop stop-words, then score each
+// KB entry by:
+//   +3  per keyword overlap
+//   +2  per token also present in the entry's canonical question
+//   +1  per token also present in the answer prose
+// The top score wins. If the top is materially ahead of #2 → return one
+// answer; otherwise list the top 3 as "Did you mean…".
+// ─────────────────────────────────────────────────────────────────────
+
+const STOP_WORDS = new Set([
+  "the", "a", "an", "i", "we", "you", "to", "of", "do", "does", "is", "are",
+  "in", "on", "at", "for", "by", "with", "and", "or", "how", "where", "what",
+  "when", "why", "should", "can", "would", "could", "my", "our", "your",
+  "any", "this", "that", "these", "those", "it", "be", "system", "please",
+  "thanks", "tell", "show", "me", "us", "step", "steps", "way", "ways",
+]);
+
+function tokenize(s: string): string[] {
+  return s
+    .toLowerCase()
+    .replace(/[^a-z0-9\s]/g, " ")
+    .split(/\s+/)
+    .filter((t) => t.length > 1 && !STOP_WORDS.has(t));
+}
+
+function scoreEntry(entry: HowToEntry, qTokens: string[]): number {
+  const kw = new Set(entry.keywords.flatMap((k) => tokenize(k)));
+  const qHead = new Set(tokenize(entry.question));
+  const ans = new Set(tokenize(entry.answer));
+  let score = 0;
+  for (const t of qTokens) {
+    if (kw.has(t)) score += 3;
+    else if (qHead.has(t)) score += 2;
+    else if (ans.has(t)) score += 1;
+  }
+  return score;
+}
+
+export function answerHowto(question: string): Answer {
+  const qTokens = tokenize(question);
+  if (qTokens.length === 0) {
+    return {
+      recognised: false,
+      text:
+        "Tell me what you're trying to do — e.g. 'How do I create a booking?' or 'How do I send an invoice?'",
+    };
+  }
+  const scored = HOWTO_KB
+    .map((e) => ({ entry: e, score: scoreEntry(e, qTokens) }))
+    .filter((x) => x.score > 0)
+    .sort((a, b) => b.score - a.score);
+
+  if (scored.length === 0) {
+    return {
+      recognised: false,
+      text:
+        "I don't have a how-to for that yet. Try the user manual (USER_MANUAL.md at the repo root), " +
+        "or rephrase — e.g. 'How do I add a truck?' or 'How do I record a customer payment?'",
+    };
+  }
+  const top = scored[0]!;
+  const second = scored[1];
+  // High-confidence single answer: top is clearly ahead AND scored a decent total.
+  const clearWinner =
+    top.score >= 6 && (!second || top.score - second.score >= 3);
+
+  if (clearWinner) {
+    return {
+      recognised: true,
+      text: `[${top.entry.module}] ${top.entry.question}\n\n${top.entry.answer}`,
+      href: top.entry.href,
+      hrefLabel: top.entry.hrefLabel,
+    };
+  }
+  // Lower confidence: surface the best match plus alternatives so the user
+  // can re-ask precisely.
+  const alternatives = scored
+    .slice(0, 3)
+    .map((s, i) => `${i + 1}. [${s.entry.module}] ${s.entry.question}`)
+    .join("\n");
+  return {
+    recognised: true,
+    text:
+      `Best match — [${top.entry.module}] ${top.entry.question}\n\n${top.entry.answer}\n\n` +
+      `If that's not what you meant, ask one of these directly:\n${alternatives}`,
+    href: top.entry.href,
+    hrefLabel: top.entry.hrefLabel,
+  };
 }

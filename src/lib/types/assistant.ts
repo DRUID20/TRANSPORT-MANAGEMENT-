@@ -21,6 +21,7 @@ export type IntentKind =
   | "headcount"
   | "revenue_period"
   | "fleet_size"
+  | "howto"
   | "help"
   | "unknown";
 

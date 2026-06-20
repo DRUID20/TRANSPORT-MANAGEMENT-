@@ -73,6 +73,20 @@ interface Rule {
 }
 
 const RULES: Rule[] = [
+  // How-to (must run before the data rules — "how do I see who owes us" is
+  // a how-to, not an AR query). The keyword routing is intentionally broad;
+  // the executor's scoring picks the best KB entry from there.
+  {
+    kind: "howto",
+    match:
+      /\b(how (do|can|should) (i|we|you)|how to|how would i|where (do|can) i|what'?s the way to|what is the way to|guide me|teach me|show me how|walk me through|tell me how|explain how|where is|where can i find|i don'?t know how|i dont know how|i need to know how|steps to|instructions to|process (to|for))\b/,
+  },
+  // Bare "how to X" or "where is X" at the start of the question.
+  // Kept narrow — don't grab "what do we owe" (that's an AP query, not how-to).
+  {
+    kind: "howto",
+    match: /^\s*(how to|how can|where is|where can)\b/,
+  },
   // AR
   { kind: "overdue_invoices", match: /overdue|past due|late paying|late pay|behind/ },
   { kind: "ar_outstanding", match: /customer.*owe|owed by customer|how much .*owed|receivables|outstanding invoice|outstanding AR|ar balance|debtor/ },
@@ -117,5 +131,8 @@ export function parseIntent(question: string): Intent {
       };
     }
   }
-  return { kind: "unknown", question };
+  // Fallback: try the how-to KB. The executor's scoring will only return a
+  // recognised answer if it actually matches something; otherwise it falls
+  // through to the generic "I didn't understand" reply.
+  return { kind: "howto", question };
 }

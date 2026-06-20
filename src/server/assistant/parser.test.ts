@@ -59,7 +59,10 @@ describe("parseIntent", () => {
     expect(ytd.range?.label).toBe("this year");
   });
 
-  it("returns unknown for nonsense", () => {
-    expect(parseIntent("banana pancakes").kind).toBe("unknown");
+  it("falls back to howto for unmatched phrasing (KB executor decides if it recognises)", () => {
+    // Nonsense still routes through howto — the executor returns
+    // recognised:false when the KB has no match, so the end user still
+    // sees a graceful "rephrase" prompt.
+    expect(parseIntent("banana pancakes").kind).toBe("howto");
   });
 });
