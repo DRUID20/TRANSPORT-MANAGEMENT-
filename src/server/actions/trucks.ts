@@ -12,6 +12,7 @@ import {
 } from "@/server/repos/trucks";
 import { listSubcontractors } from "@/server/repos/subcontractors";
 import { logAudit, toDiff } from "@/server/auth/audit";
+import { guard, requireCapability } from "@/server/auth/permissions";
 import { truckCreateSchema, type TruckCreateInput } from "@/lib/validators/fleet";
 
 function normalizePlate(input: string): string {
@@ -36,6 +37,8 @@ export type CreateTruckResult =
   | { ok: false; error: string };
 
 export async function createTruck(input: TruckCreateInput): Promise<CreateTruckResult> {
+  const denied = await guard("fleet.write");
+  if (denied) return denied;
   const parsed = truckCreateSchema.safeParse(input);
   if (!parsed.success) {
     return { ok: false, error: parsed.error.errors.map((e) => e.message).join("; ") };
@@ -72,6 +75,7 @@ export async function createTruck(input: TruckCreateInput): Promise<CreateTruckR
 }
 
 export async function updateTruckAction(id: string, patch: Partial<TruckCreateInput>) {
+  await requireCapability("fleet.write");
   await repoUpdate(id, patch);
   await logAudit({ entityType: "truck", entityId: id, action: "update", diff: toDiff(patch) });
   revalidatePath("/trucks");
@@ -79,6 +83,7 @@ export async function updateTruckAction(id: string, patch: Partial<TruckCreateIn
 }
 
 export async function deleteTruckAction(id: string) {
+  await requireCapability("admin");
   await repoDelete(id);
   await logAudit({ entityType: "truck", entityId: id, action: "delete" });
   revalidatePath("/trucks");

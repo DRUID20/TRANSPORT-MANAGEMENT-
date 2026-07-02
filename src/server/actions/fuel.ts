@@ -13,7 +13,7 @@ import {
   tripFuelTotals as repoTripTotals,
   truckFuelEfficiency as repoTruckEfficiency,
 } from "@/server/repos/fuel";
-import { requireCapability, PermissionError } from "@/server/auth/permissions";
+import { requireCapability, PermissionError, guard } from "@/server/auth/permissions";
 import { logAudit } from "@/server/auth/audit";
 import { fuelLogCreateSchema, type FuelLogCreateInput } from "@/lib/validators/fuel";
 
@@ -53,6 +53,8 @@ export async function fleetFuelSnapshot() {
 export type ActionResult = { ok: true; id: string } | { ok: false; error: string };
 
 export async function createFuelLog(input: FuelLogCreateInput): Promise<ActionResult> {
+  const denied = await guard("fleet.write");
+  if (denied) return denied;
   const parsed = fuelLogCreateSchema.safeParse(input);
   if (!parsed.success) {
     return { ok: false, error: parsed.error.errors.map((e) => e.message).join("; ") };

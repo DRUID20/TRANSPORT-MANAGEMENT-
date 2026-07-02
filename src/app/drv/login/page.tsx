@@ -1,24 +1,20 @@
 import Link from "next/link";
-import { ArrowRight, Phone } from "lucide-react";
-import { listDrivers } from "@/server/actions/drivers";
-import { setDriverSession } from "@/server/actions/driver-session";
+import { ShieldCheck } from "lucide-react";
+import { authenticateDriver } from "@/server/actions/driver-session";
 import { Logo } from "@/components/layout/logo";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 
-export default async function DriverLoginPage() {
-  const drivers = (await listDrivers()).filter(
-    (d) => d.status !== "terminated",
-  );
-
-  async function signIn(formData: FormData) {
-    "use server";
-    const driverId = String(formData.get("driverId"));
-    await setDriverSession(driverId);
-  }
+export default async function DriverLoginPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ error?: string }>;
+}) {
+  const { error } = await searchParams;
 
   return (
     <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-black px-4 py-10">
-      {/* Brand-blue radial glow */}
       <div
         aria-hidden="true"
         className="pointer-events-none absolute inset-0"
@@ -41,43 +37,50 @@ export default async function DriverLoginPage() {
             Sign in
           </h1>
           <p className="mb-5 text-center text-xs text-fg-secondary">
-            Pick your name to sign in.
+            Enter your phone number and National ID to sign in.
           </p>
 
-          <ul className="flex max-h-[60vh] flex-col gap-1.5 overflow-y-auto">
-            {drivers.map((d) => (
-              <li key={d.id}>
-                <form action={signIn}>
-                  <input type="hidden" name="driverId" value={d.id} />
-                  <button
-                    type="submit"
-                    className="flex w-full items-center gap-3 rounded-md border border-border bg-bg-base p-3 text-left transition-all hover:border-border-strong hover:bg-bg-elevated"
-                  >
-                    <div className="flex size-10 items-center justify-center rounded-full bg-gradient-to-br from-brand-blue to-brand-navy font-mono text-xs font-semibold text-white">
-                      {d.fullName.split(" ").slice(0, 2).map((n) => n[0]).join("")}
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <div className="text-sm font-medium text-fg-primary">{d.fullName}</div>
-                      <div className="flex items-center gap-1.5 font-mono text-[11px] tnum text-fg-tertiary">
-                        <Phone className="size-2.5" />
-                        {d.phone}
-                      </div>
-                    </div>
-                    <ArrowRight className="size-4 text-fg-tertiary transition-transform group-hover:translate-x-0.5" />
-                  </button>
-                </form>
-              </li>
-            ))}
-          </ul>
+          {error && (
+            <div className="mb-4 rounded-lg border border-status-danger/30 bg-status-danger/10 px-3 py-2 text-xs text-status-danger">
+              {error === "missing"
+                ? "Enter both your phone number and National ID."
+                : "No active driver matches those details. Check with your dispatcher."}
+            </div>
+          )}
+
+          <form action={authenticateDriver} className="flex flex-col gap-3">
+            <div className="flex flex-col gap-1.5">
+              <Label className="text-fg-secondary">Phone number</Label>
+              <Input
+                name="phone"
+                type="tel"
+                required
+                autoComplete="tel"
+                placeholder="+254 7…"
+                className="font-mono"
+              />
+            </div>
+            <div className="flex flex-col gap-1.5">
+              <Label className="text-fg-secondary">National ID</Label>
+              <Input
+                name="nationalId"
+                required
+                inputMode="numeric"
+                placeholder="Your ID number"
+                className="font-mono"
+              />
+            </div>
+            <Button type="submit" className="mt-1 w-full justify-center">
+              <ShieldCheck className="size-4" />
+              Sign in
+            </Button>
+          </form>
 
           <div className="mt-5 text-center text-[10px] text-fg-tertiary">
-            By signing in you agree to Nile Valley Logistics' driver-app rules.
+            By signing in you agree to Nile Valley Logistics&apos; driver-app rules.
           </div>
         </div>
 
-        <div className="mt-3 text-center text-[10px] uppercase tracking-[0.18em] text-fg-tertiary">
-          tx-system · driver app · phase 2F
-        </div>
         <div className="mt-3 text-center">
           <Button asChild variant="ghost" size="sm">
             <Link href="/dashboard">← Office app</Link>

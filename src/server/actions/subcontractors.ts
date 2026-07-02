@@ -12,6 +12,7 @@ import {
 } from "@/server/repos/subcontractors";
 import { trucksForSubcontractor } from "@/server/repos/trucks";
 import { logAudit, toDiff } from "@/server/auth/audit";
+import { guard, requireCapability } from "@/server/auth/permissions";
 import {
   subcontractorCreateSchema,
   type SubcontractorCreateInput,
@@ -36,6 +37,8 @@ export type CreateSubcontractorResult =
 export async function createSubcontractor(
   input: SubcontractorCreateInput,
 ): Promise<CreateSubcontractorResult> {
+  const denied = await guard("fleet.write");
+  if (denied) return denied;
   const parsed = subcontractorCreateSchema.safeParse(input);
   if (!parsed.success) {
     return { ok: false, error: parsed.error.errors.map((e) => e.message).join("; ") };
@@ -64,6 +67,7 @@ export async function updateSubcontractorAction(
   id: string,
   patch: Partial<SubcontractorCreateInput> & { commissionRate?: number },
 ) {
+  await requireCapability("fleet.write");
   await repoUpdate(id, patch);
   await logAudit({ entityType: "subcontractor", entityId: id, action: "update", diff: toDiff(patch) });
   revalidatePath("/subcontractors");
@@ -92,6 +96,8 @@ export async function recordSubcontractorPayment(input: {
   reference?: string;
   notes?: string;
 }): Promise<RecordPaymentResult> {
+  const denied = await guard("finance.post");
+  if (denied) return denied;
   if (!input.subcontractorId) return { ok: false, error: "Subcontractor is required." };
   const r = await repoRecordPayment(input);
   if ("error" in r) return { ok: false, error: r.error };

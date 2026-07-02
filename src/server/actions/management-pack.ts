@@ -17,6 +17,7 @@ import {
 } from "@/lib/validators/management-pack";
 import { CURRENT_USER_EMPLOYEE_ID } from "@/server/auth/current-user";
 import { logAudit } from "@/server/auth/audit";
+import { guard } from "@/server/auth/permissions";
 
 export async function listManagementPacks() {
   return repoList();
@@ -28,6 +29,8 @@ export async function getManagementPackById(id: string) {
 export type ActionResult = { ok: true; id: string } | { ok: false; error: string };
 
 export async function createManagementPack(input: PackCreateInput): Promise<ActionResult> {
+  const denied = await guard("finance.post");
+  if (denied) return denied;
   const parsed = packCreateSchema.safeParse(input);
   if (!parsed.success) {
     return { ok: false, error: parsed.error.errors.map((e) => e.message).join("; ") };
@@ -40,6 +43,8 @@ export async function createManagementPack(input: PackCreateInput): Promise<Acti
 }
 
 export async function saveNarrative(input: PackNarrativeInput): Promise<ActionResult> {
+  const denied = await guard("finance.post");
+  if (denied) return denied;
   const parsed = packNarrativeSchema.safeParse(input);
   if (!parsed.success) {
     return { ok: false, error: parsed.error.errors.map((e) => e.message).join("; ") };
@@ -51,6 +56,8 @@ export async function saveNarrative(input: PackNarrativeInput): Promise<ActionRe
 }
 
 export async function advancePack(id: string, to: ManagementPackStatus): Promise<ActionResult> {
+  const denied = await guard("finance.post");
+  if (denied) return denied;
   const r = await repoAdvance(id, to, CURRENT_USER_EMPLOYEE_ID);
   if ("error" in r) return { ok: false, error: r.error };
   await logAudit({ entityType: "management_pack", entityId: id, action: "status_change", diff: { status: { from: null, to } } });

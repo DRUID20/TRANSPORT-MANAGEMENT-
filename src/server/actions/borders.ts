@@ -10,6 +10,7 @@ import {
   listBorderCrossings as repoList,
 } from "@/server/repos/borders";
 import { logAudit } from "@/server/auth/audit";
+import { guard } from "@/server/auth/permissions";
 import {
   borderClearSchema,
   borderCreateSchema,
@@ -32,6 +33,8 @@ export async function getBorderCrossingById(id: string) {
 export type ActionResult = { ok: true; id: string } | { ok: false; error: string };
 
 export async function recordBorderArrival(input: BorderCreateInput): Promise<ActionResult> {
+  const denied = await guard("fleet.write");
+  if (denied) return denied;
   const parsed = borderCreateSchema.safeParse(input);
   if (!parsed.success) {
     return { ok: false, error: parsed.error.errors.map((e) => e.message).join("; ") };
@@ -45,6 +48,8 @@ export async function recordBorderArrival(input: BorderCreateInput): Promise<Act
 }
 
 export async function clearBorder(input: BorderClearInput): Promise<ActionResult> {
+  const denied = await guard("fleet.write");
+  if (denied) return denied;
   const parsed = borderClearSchema.safeParse(input);
   if (!parsed.success) {
     return { ok: false, error: parsed.error.errors.map((e) => e.message).join("; ") };
@@ -58,6 +63,8 @@ export async function clearBorder(input: BorderClearInput): Promise<ActionResult
 }
 
 export async function removeBorderCrossing(id: string): Promise<ActionResult> {
+  const denied = await guard("fleet.write");
+  if (denied) return denied;
   const existing = await getBorderCrossing(id);
   if (!existing) return { ok: false, error: "Border crossing not found" };
   await repoDelete(id);

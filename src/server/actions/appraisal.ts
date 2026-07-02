@@ -13,6 +13,7 @@ import {
   updateAppraisalReview as repoUpdate,
 } from "@/server/repos/appraisal";
 import { logAudit } from "@/server/auth/audit";
+import { guard } from "@/server/auth/permissions";
 import type { AppraisalCycleStatus, AppraisalReviewStatus } from "@/lib/types/appraisal";
 import {
   cycleCreateSchema,
@@ -40,6 +41,8 @@ export async function reviewsForEmployee(employeeId: string) {
 export type ActionResult = { ok: true; id: string } | { ok: false; error: string };
 
 export async function createAppraisalCycle(input: CycleCreateInput): Promise<ActionResult> {
+  const denied = await guard("hr.write");
+  if (denied) return denied;
   const parsed = cycleCreateSchema.safeParse(input);
   if (!parsed.success) {
     return { ok: false, error: parsed.error.errors.map((e) => e.message).join("; ") };
@@ -55,6 +58,8 @@ export async function setAppraisalCycleStatus(
   id: string,
   status: AppraisalCycleStatus,
 ): Promise<ActionResult> {
+  const denied = await guard("hr.write");
+  if (denied) return denied;
   const r = await repoSetCycleStatus(id, status);
   if (!r) return { ok: false, error: "Not found" };
   await logAudit({ entityType: "appraisal_cycle", entityId: id, action: "status_change", diff: { status: { from: null, to: status } } });
@@ -64,6 +69,8 @@ export async function setAppraisalCycleStatus(
 }
 
 export async function updateReview(input: ReviewUpdateInput): Promise<ActionResult> {
+  const denied = await guard("hr.write");
+  if (denied) return denied;
   const parsed = reviewUpdateSchema.safeParse(input);
   if (!parsed.success) {
     return { ok: false, error: parsed.error.errors.map((e) => e.message).join("; ") };
@@ -89,6 +96,8 @@ export async function advanceReview(
   employeeId: string,
   to: AppraisalReviewStatus,
 ): Promise<ActionResult> {
+  const denied = await guard("hr.write");
+  if (denied) return denied;
   const r = await repoAdvance(cycleId, employeeId, to);
   if ("error" in r) return { ok: false, error: r.error };
   await logAudit({ entityType: "appraisal_review", entityId: r.id, action: "status_change", diff: { status: { from: null, to } } });

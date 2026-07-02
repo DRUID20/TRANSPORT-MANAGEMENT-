@@ -9,6 +9,7 @@ import {
   reviewTripDocument as repoReview,
 } from "@/server/repos/documents";
 import { logAudit } from "@/server/auth/audit";
+import { guard, guardFleetOrDriver } from "@/server/auth/permissions";
 import {
   documentReviewSchema,
   documentUploadSchema,
@@ -27,6 +28,8 @@ export async function getDocument(id: string) {
 export type ActionResult = { ok: true; id: string } | { ok: false; error: string };
 
 export async function uploadDocument(input: DocumentUploadInput): Promise<ActionResult> {
+  const denied = await guardFleetOrDriver();
+  if (denied) return denied;
   const parsed = documentUploadSchema.safeParse(input);
   if (!parsed.success) {
     return { ok: false, error: parsed.error.errors.map((e) => e.message).join("; ") };
@@ -49,6 +52,8 @@ export async function uploadDocument(input: DocumentUploadInput): Promise<Action
 }
 
 export async function reviewDocument(input: DocumentReviewInput): Promise<ActionResult> {
+  const denied = await guard("fleet.write");
+  if (denied) return denied;
   const parsed = documentReviewSchema.safeParse(input);
   if (!parsed.success) {
     return { ok: false, error: parsed.error.errors.map((e) => e.message).join("; ") };
@@ -66,6 +71,8 @@ export async function reviewDocument(input: DocumentReviewInput): Promise<Action
 }
 
 export async function removeDocument(id: string): Promise<ActionResult> {
+  const denied = await guard("fleet.write");
+  if (denied) return denied;
   const doc = await getTripDocument(id);
   if (!doc) return { ok: false, error: "Document not found" };
   await repoDelete(id);

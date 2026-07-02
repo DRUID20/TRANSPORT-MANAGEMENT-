@@ -14,6 +14,7 @@ import {
 } from "@/server/repos/leave";
 import { getEmployee } from "@/server/repos/hr";
 import { logAudit } from "@/server/auth/audit";
+import { guard } from "@/server/auth/permissions";
 import type { LeaveStatus, LeaveType } from "@/lib/types/leave";
 import {
   attendanceCreateSchema,
@@ -57,6 +58,8 @@ export async function listAttendance(filter?: {
 export type ActionResult = { ok: true; id: string } | { ok: false; error: string };
 
 export async function createLeaveRequest(input: LeaveRequestCreateInput): Promise<ActionResult> {
+  const denied = await guard("hr.write");
+  if (denied) return denied;
   const parsed = leaveRequestCreateSchema.safeParse(input);
   if (!parsed.success) {
     return { ok: false, error: parsed.error.errors.map((e) => e.message).join("; ") };
@@ -70,6 +73,8 @@ export async function createLeaveRequest(input: LeaveRequestCreateInput): Promis
 }
 
 export async function approveLeaveRequest(id: string): Promise<ActionResult> {
+  const denied = await guard("hr.write");
+  if (denied) return denied;
   const r = await repoApprove(id, HR_MANAGER_ID);
   if ("error" in r) return { ok: false, error: r.error };
   await logAudit({ entityType: "leave_request", entityId: id, action: "approve" });
@@ -80,6 +85,8 @@ export async function approveLeaveRequest(id: string): Promise<ActionResult> {
 }
 
 export async function rejectLeaveRequest(id: string, reason: string): Promise<ActionResult> {
+  const denied = await guard("hr.write");
+  if (denied) return denied;
   if (!reason.trim()) return { ok: false, error: "Rejection reason required" };
   const r = await repoReject(id, reason, HR_MANAGER_ID);
   if ("error" in r) return { ok: false, error: r.error };
@@ -90,6 +97,8 @@ export async function rejectLeaveRequest(id: string, reason: string): Promise<Ac
 }
 
 export async function cancelLeaveRequest(id: string): Promise<ActionResult> {
+  const denied = await guard("hr.write");
+  if (denied) return denied;
   const r = await repoCancel(id);
   if ("error" in r) return { ok: false, error: r.error };
   await logAudit({ entityType: "leave_request", entityId: id, action: "cancel" });
@@ -99,6 +108,8 @@ export async function cancelLeaveRequest(id: string): Promise<ActionResult> {
 }
 
 export async function logAttendance(input: AttendanceCreateInput): Promise<ActionResult> {
+  const denied = await guard("hr.write");
+  if (denied) return denied;
   const parsed = attendanceCreateSchema.safeParse(input);
   if (!parsed.success) {
     return { ok: false, error: parsed.error.errors.map((e) => e.message).join("; ") };

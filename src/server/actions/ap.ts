@@ -37,6 +37,11 @@ export async function getBillById(id: string) {
 export type ActionResult = { ok: true; id: string } | { ok: false; error: string };
 
 export async function createBill(input: BillCreateInput): Promise<ActionResult> {
+  try {
+    await requireCapability("finance.post");
+  } catch (e) {
+    return { ok: false, error: e instanceof PermissionError ? e.message : "Forbidden" };
+  }
   const parsed = billCreateSchema.safeParse(input);
   if (!parsed.success) {
     return { ok: false, error: parsed.error.errors.map((e) => e.message).join("; ") };

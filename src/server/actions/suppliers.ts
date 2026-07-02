@@ -8,6 +8,7 @@ import {
   updateSupplier as repoUpdate,
 } from "@/server/repos/suppliers";
 import { logAudit, toDiff } from "@/server/auth/audit";
+import { guard, requireCapability } from "@/server/auth/permissions";
 import { supplierCreateSchema, type SupplierCreateInput } from "@/lib/validators/fleet";
 
 export async function listSuppliers() {
@@ -22,6 +23,8 @@ export type CreateSupplierResult =
   | { ok: false; error: string };
 
 export async function createSupplier(input: SupplierCreateInput): Promise<CreateSupplierResult> {
+  const denied = await guard("commercial.write");
+  if (denied) return denied;
   const parsed = supplierCreateSchema.safeParse(input);
   if (!parsed.success) {
     return { ok: false, error: parsed.error.errors.map((e) => e.message).join("; ") };
@@ -51,6 +54,7 @@ export async function createSupplier(input: SupplierCreateInput): Promise<Create
 }
 
 export async function updateSupplierAction(id: string, patch: Partial<SupplierCreateInput>) {
+  await requireCapability("commercial.write");
   await repoUpdate(id, patch);
   await logAudit({ entityType: "supplier", entityId: id, action: "update", diff: toDiff(patch) });
   revalidatePath("/suppliers");

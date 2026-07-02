@@ -8,6 +8,7 @@ import {
   updateDriver as repoUpdate,
 } from "@/server/repos/drivers";
 import { logAudit, toDiff } from "@/server/auth/audit";
+import { guard, requireCapability } from "@/server/auth/permissions";
 import { driverCreateSchema, type DriverCreateInput } from "@/lib/validators/fleet";
 
 export async function listDrivers() {
@@ -22,6 +23,8 @@ export type CreateDriverResult =
   | { ok: false; error: string };
 
 export async function createDriver(input: DriverCreateInput): Promise<CreateDriverResult> {
+  const denied = await guard("fleet.write");
+  if (denied) return denied;
   const parsed = driverCreateSchema.safeParse(input);
   if (!parsed.success) {
     return { ok: false, error: parsed.error.errors.map((e) => e.message).join("; ") };
@@ -53,6 +56,7 @@ export async function createDriver(input: DriverCreateInput): Promise<CreateDriv
 }
 
 export async function updateDriverAction(id: string, patch: Partial<DriverCreateInput>) {
+  await requireCapability("fleet.write");
   await repoUpdate(id, patch);
   await logAudit({ entityType: "driver", entityId: id, action: "update", diff: toDiff(patch) });
   revalidatePath("/drivers");

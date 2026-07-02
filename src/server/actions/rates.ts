@@ -7,6 +7,7 @@ import {
   lookupRate as repoLookup,
 } from "@/server/repos/rates";
 import { logAudit } from "@/server/auth/audit";
+import { guard } from "@/server/auth/permissions";
 import { rateCreateSchema, type RateCreateInput } from "@/lib/validators/trips";
 
 export async function listRates() {
@@ -25,6 +26,8 @@ export async function lookupRate(args: {
 export type ActionResult = { ok: true; id: string } | { ok: false; error: string };
 
 export async function createRate(input: RateCreateInput): Promise<ActionResult> {
+  const denied = await guard("commercial.write");
+  if (denied) return denied;
   const parsed = rateCreateSchema.safeParse(input);
   if (!parsed.success) {
     return { ok: false, error: parsed.error.errors.map((e) => e.message).join("; ") };

@@ -9,6 +9,7 @@ import {
 } from "@/server/repos/trailers";
 import { listTrucks } from "@/server/repos/trucks";
 import { logAudit, toDiff } from "@/server/auth/audit";
+import { guard, requireCapability } from "@/server/auth/permissions";
 import { trailerCreateSchema, type TrailerCreateInput } from "@/lib/validators/fleet";
 
 function normalizePlate(input: string): string {
@@ -31,6 +32,8 @@ export type CreateTrailerResult =
   | { ok: false; error: string };
 
 export async function createTrailer(input: TrailerCreateInput): Promise<CreateTrailerResult> {
+  const denied = await guard("fleet.write");
+  if (denied) return denied;
   const parsed = trailerCreateSchema.safeParse(input);
   if (!parsed.success) {
     return { ok: false, error: parsed.error.errors.map((e) => e.message).join("; ") };
@@ -60,6 +63,7 @@ export async function createTrailer(input: TrailerCreateInput): Promise<CreateTr
 }
 
 export async function updateTrailerAction(id: string, patch: Partial<TrailerCreateInput>) {
+  await requireCapability("fleet.write");
   await repoUpdate(id, patch);
   await logAudit({ entityType: "trailer", entityId: id, action: "update", diff: toDiff(patch) });
   revalidatePath("/trailers");

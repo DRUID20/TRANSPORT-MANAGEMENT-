@@ -8,6 +8,7 @@ import {
   listComplianceRecords as repoList,
 } from "@/server/repos/hr-compliance";
 import { logAudit } from "@/server/auth/audit";
+import { guard } from "@/server/auth/permissions";
 import type { ComplianceKind } from "@/lib/types/hr-compliance";
 import {
   complianceCreateSchema,
@@ -28,6 +29,8 @@ export async function getComplianceRecordById(id: string) {
 export type ActionResult = { ok: true; id: string } | { ok: false; error: string };
 
 export async function createComplianceRecord(input: ComplianceCreateInput): Promise<ActionResult> {
+  const denied = await guard("hr.write");
+  if (denied) return denied;
   const parsed = complianceCreateSchema.safeParse(input);
   if (!parsed.success) {
     return { ok: false, error: parsed.error.errors.map((e) => e.message).join("; ") };
@@ -43,6 +46,8 @@ export async function deleteComplianceRecord(
   id: string,
   employeeId: string,
 ): Promise<ActionResult> {
+  const denied = await guard("hr.write");
+  if (denied) return denied;
   const record = await getComplianceRecord(id);
   const ok = await repoDelete(id);
   if (!ok) return { ok: false, error: "Not found" };

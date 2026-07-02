@@ -20,6 +20,7 @@ import {
 } from "@/server/repos/hr";
 import { getDriver, listDrivers } from "@/server/repos/drivers";
 import { logAudit } from "@/server/auth/audit";
+import { guard } from "@/server/auth/permissions";
 import type { EmployeeStatus, ContractStatus } from "@/lib/types/hr";
 import {
   contractCreateSchema,
@@ -93,6 +94,8 @@ export async function listUnlinkedDrivers() {
 export type ActionResult = { ok: true; id: string } | { ok: false; error: string };
 
 export async function createEmployee(input: EmployeeCreateInput): Promise<ActionResult> {
+  const denied = await guard("hr.write");
+  if (denied) return denied;
   const parsed = employeeCreateSchema.safeParse(input);
   if (!parsed.success) {
     return { ok: false, error: parsed.error.errors.map((e) => e.message).join("; ") };
@@ -108,6 +111,8 @@ export async function createEmployee(input: EmployeeCreateInput): Promise<Action
 }
 
 export async function updateEmployeeStatus(id: string, status: EmployeeStatus): Promise<ActionResult> {
+  const denied = await guard("hr.write");
+  if (denied) return denied;
   const updated = await repoUpdateEmployee(id, { status });
   if (!updated) return { ok: false, error: "Not found" };
   await logAudit({ entityType: "employee", entityId: id, action: "status_change", diff: { status: { from: null, to: status } } });
@@ -117,6 +122,8 @@ export async function updateEmployeeStatus(id: string, status: EmployeeStatus): 
 }
 
 export async function createDepartment(input: DepartmentCreateInput): Promise<ActionResult> {
+  const denied = await guard("hr.write");
+  if (denied) return denied;
   const parsed = departmentCreateSchema.safeParse(input);
   if (!parsed.success) {
     return { ok: false, error: parsed.error.errors.map((e) => e.message).join("; ") };
@@ -135,6 +142,8 @@ export async function getContractById(id: string) {
 }
 
 export async function createContract(input: ContractCreateInput): Promise<ActionResult> {
+  const denied = await guard("hr.write");
+  if (denied) return denied;
   const parsed = contractCreateSchema.safeParse(input);
   if (!parsed.success) {
     return { ok: false, error: parsed.error.errors.map((e) => e.message).join("; ") };
@@ -146,6 +155,8 @@ export async function createContract(input: ContractCreateInput): Promise<Action
 }
 
 export async function terminateContract(id: string, employeeId: string): Promise<ActionResult> {
+  const denied = await guard("hr.write");
+  if (denied) return denied;
   const c = await repoTerminateContract(id);
   if (!c) return { ok: false, error: "Not found" };
   await logAudit({ entityType: "contract", entityId: id, action: "terminate" });

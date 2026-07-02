@@ -10,7 +10,7 @@ import {
   reviewExpense as repoReview,
 } from "@/server/repos/expenses";
 import type { ExpenseStatus } from "@/lib/types/expenses";
-import { requireCapability, PermissionError } from "@/server/auth/permissions";
+import { requireCapability, PermissionError, guard, guardFleetOrDriver } from "@/server/auth/permissions";
 import { logAudit } from "@/server/auth/audit";
 import {
   expenseCreateSchema,
@@ -39,6 +39,8 @@ export async function expensesForTrip(tripId: string) {
 export type ActionResult = { ok: true; id: string } | { ok: false; error: string };
 
 export async function createExpense(input: ExpenseCreateInput): Promise<ActionResult> {
+  const denied = await guardFleetOrDriver();
+  if (denied) return denied;
   const parsed = expenseCreateSchema.safeParse(input);
   if (!parsed.success) {
     return { ok: false, error: parsed.error.errors.map((e) => e.message).join("; ") };
@@ -73,6 +75,8 @@ export async function createExpense(input: ExpenseCreateInput): Promise<ActionRe
 }
 
 export async function reviewExpense(input: ExpenseReviewInput): Promise<ActionResult> {
+  const denied = await guard("fleet.write");
+  if (denied) return denied;
   const parsed = expenseReviewSchema.safeParse(input);
   if (!parsed.success) {
     return { ok: false, error: parsed.error.errors.map((e) => e.message).join("; ") };

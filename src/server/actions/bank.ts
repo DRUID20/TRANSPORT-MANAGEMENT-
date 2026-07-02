@@ -12,6 +12,7 @@ import {
   unmatchedGlLinesForAccount as repoUnmatchedGl,
 } from "@/server/repos/bank";
 import { logAudit } from "@/server/auth/audit";
+import { guard } from "@/server/auth/permissions";
 import {
   bankMatchSchema,
   bankTxCreateSchema,
@@ -38,6 +39,8 @@ export async function bankReconSummary(accountCode: string) {
 export type ActionResult = { ok: true; id: string } | { ok: false; error: string };
 
 export async function createBankStatementTx(input: BankTxCreateInput): Promise<ActionResult> {
+  const denied = await guard("finance.post");
+  if (denied) return denied;
   const parsed = bankTxCreateSchema.safeParse(input);
   if (!parsed.success) {
     return { ok: false, error: parsed.error.errors.map((e) => e.message).join("; ") };
@@ -50,6 +53,8 @@ export async function createBankStatementTx(input: BankTxCreateInput): Promise<A
 }
 
 export async function matchBankTx(input: BankMatchInput): Promise<ActionResult> {
+  const denied = await guard("finance.post");
+  if (denied) return denied;
   const parsed = bankMatchSchema.safeParse(input);
   if (!parsed.success) {
     return { ok: false, error: parsed.error.errors.map((e) => e.message).join("; ") };
@@ -62,6 +67,8 @@ export async function matchBankTx(input: BankMatchInput): Promise<ActionResult> 
 }
 
 export async function unmatchBankTx(bankTxId: string): Promise<ActionResult> {
+  const denied = await guard("finance.post");
+  if (denied) return denied;
   const result = await repoUnmatch(bankTxId);
   if ("error" in result) return { ok: false, error: result.error };
   await logAudit({ entityType: "bank_statement_tx", entityId: result.id, action: "unmatch" });
@@ -70,6 +77,8 @@ export async function unmatchBankTx(bankTxId: string): Promise<ActionResult> {
 }
 
 export async function deleteBankStatementTx(bankTxId: string): Promise<ActionResult> {
+  const denied = await guard("finance.post");
+  if (denied) return denied;
   const ok = await repoDelete(bankTxId);
   if (!ok) return { ok: false, error: "Not found" };
   await logAudit({ entityType: "bank_statement_tx", entityId: bankTxId, action: "delete" });

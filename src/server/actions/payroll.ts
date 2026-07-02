@@ -17,7 +17,7 @@ import {
 } from "@/server/repos/payroll";
 import { getEmployee } from "@/server/repos/hr";
 import { logAudit } from "@/server/auth/audit";
-import { PermissionError, requireCapability } from "@/server/auth/permissions";
+import { PermissionError, requireCapability, guard } from "@/server/auth/permissions";
 import type { LoanStatus, PayrollPeriodStatus } from "@/lib/types/payroll";
 import {
   loanCreateSchema,
@@ -47,6 +47,8 @@ export async function payrollTotals(periodId: string) {
 export type ActionResult = { ok: true; id: string } | { ok: false; error: string };
 
 export async function createPayrollPeriod(input: PayrollPeriodCreateInput): Promise<ActionResult> {
+  const denied = await guard("hr.write");
+  if (denied) return denied;
   const parsed = payrollPeriodCreateSchema.safeParse(input);
   if (!parsed.success) {
     return { ok: false, error: parsed.error.errors.map((e) => e.message).join("; ") };
@@ -61,6 +63,8 @@ export async function setPayrollPeriodStatus(
   id: string,
   status: PayrollPeriodStatus,
 ): Promise<ActionResult> {
+  const denied = await guard("hr.write");
+  if (denied) return denied;
   const r = await repoSetStatus(id, status);
   if (!r) return { ok: false, error: "Not found" };
   revalidatePath("/hr/payroll");
@@ -70,6 +74,8 @@ export async function setPayrollPeriodStatus(
 }
 
 export async function updatePayrollInput(input: PayrollInputUpdateInput): Promise<ActionResult> {
+  const denied = await guard("hr.write");
+  if (denied) return denied;
   const parsed = payrollInputUpdateSchema.safeParse(input);
   if (!parsed.success) {
     return { ok: false, error: parsed.error.errors.map((e) => e.message).join("; ") };

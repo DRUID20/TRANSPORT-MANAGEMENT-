@@ -9,6 +9,7 @@ import {
   updateCustomer as repoUpdate,
 } from "@/server/repos/customers";
 import { logAudit, toDiff } from "@/server/auth/audit";
+import { guard, requireCapability } from "@/server/auth/permissions";
 import { customerCreateSchema, type CustomerCreateInput } from "@/lib/validators/trips";
 
 export async function listCustomers() {
@@ -24,6 +25,8 @@ export async function getCustomerById(id: string) {
 export type ActionResult = { ok: true; id: string } | { ok: false; error: string };
 
 export async function createCustomer(input: CustomerCreateInput): Promise<ActionResult> {
+  const denied = await guard("commercial.write");
+  if (denied) return denied;
   const parsed = customerCreateSchema.safeParse(input);
   if (!parsed.success) {
     return { ok: false, error: parsed.error.errors.map((e) => e.message).join("; ") };
@@ -52,6 +55,7 @@ export async function createCustomer(input: CustomerCreateInput): Promise<Action
 }
 
 export async function updateCustomerAction(id: string, patch: Partial<CustomerCreateInput>) {
+  await requireCapability("commercial.write");
   await repoUpdate(id, patch);
   await logAudit({ entityType: "customer", entityId: id, action: "update", diff: toDiff(patch) });
   revalidatePath("/customers");

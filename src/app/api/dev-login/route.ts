@@ -20,7 +20,13 @@ import { getSession, IS_DEMO_MODE } from "@/server/auth/session";
  * Usage: visit /api/dev-login — it sets the cookie and redirects to /dashboard.
  */
 export async function GET(request: Request) {
-  const enabled = IS_DEMO_MODE || process.env.ALLOW_DEV_LOGIN === "true";
+  // Hard rule: NEVER available on a deployed build. On Vercel (production AND
+  // preview) NODE_ENV is "production", so this route always 404s there —
+  // closing the "DATABASE_URL unset → one-click admin" hole. It only works on
+  // a local dev box (NODE_ENV=development) with demo mode or ALLOW_DEV_LOGIN.
+  const isLocalDev = process.env.NODE_ENV === "development";
+  const enabled =
+    isLocalDev && (IS_DEMO_MODE || process.env.ALLOW_DEV_LOGIN === "true");
   if (!enabled) {
     return new NextResponse("Not found", { status: 404 });
   }

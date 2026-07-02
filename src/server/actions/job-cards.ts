@@ -16,6 +16,7 @@ import {
   updateJobCardAnalysis as repoUpdateAnalysis,
 } from "@/server/repos/workshop";
 import { logAudit } from "@/server/auth/audit";
+import { guard, requireCapability } from "@/server/auth/permissions";
 import type { JobCardStatus } from "@/lib/types/workshop";
 import {
   jobCardCloseSchema,
@@ -45,6 +46,8 @@ export type ActionResult =
   | { ok: false; error: string };
 
 export async function createJobCard(input: JobCardCreateInput): Promise<ActionResult> {
+  const denied = await guard("workshop.write");
+  if (denied) return denied;
   const parsed = jobCardCreateSchema.safeParse(input);
   if (!parsed.success) {
     return { ok: false, error: parsed.error.errors.map((e) => e.message).join("; ") };
@@ -58,6 +61,7 @@ export async function createJobCard(input: JobCardCreateInput): Promise<ActionRe
 }
 
 export async function setStatus(jobCardId: string, status: JobCardStatus) {
+  await requireCapability("workshop.write");
   await repoSetStatus(jobCardId, status);
   await logAudit({ entityType: "job_card", entityId: jobCardId, action: "status_change", diff: { status: { from: null, to: status } } });
   revalidatePath("/workshop");
@@ -65,6 +69,7 @@ export async function setStatus(jobCardId: string, status: JobCardStatus) {
 }
 
 export async function updateAnalysis(jobCardId: string, analysis: string) {
+  await requireCapability("workshop.write");
   await repoUpdateAnalysis(jobCardId, analysis);
   await logAudit({ entityType: "job_card", entityId: jobCardId, action: "update", diff: { analysis: { from: null, to: analysis } } });
   revalidatePath(`/workshop/${jobCardId}`);
@@ -74,6 +79,8 @@ export async function addService(
   jobCardId: string,
   input: JobCardServiceInput,
 ): Promise<ActionResult> {
+  const denied = await guard("workshop.write");
+  if (denied) return denied;
   const parsed = jobCardServiceSchema.safeParse(input);
   if (!parsed.success) {
     return { ok: false, error: parsed.error.errors.map((e) => e.message).join("; ") };
@@ -85,6 +92,7 @@ export async function addService(
 }
 
 export async function removeService(jobCardId: string, serviceId: string) {
+  await requireCapability("workshop.write");
   await repoRemoveSvc(serviceId);
   revalidatePath(`/workshop/${jobCardId}`);
 }
@@ -93,6 +101,8 @@ export async function addSpare(
   jobCardId: string,
   input: JobCardSpareInput,
 ): Promise<ActionResult> {
+  const denied = await guard("workshop.write");
+  if (denied) return denied;
   const parsed = jobCardSpareSchema.safeParse(input);
   if (!parsed.success) {
     return { ok: false, error: parsed.error.errors.map((e) => e.message).join("; ") };
@@ -104,6 +114,7 @@ export async function addSpare(
 }
 
 export async function removeSpare(jobCardId: string, spareId: string) {
+  await requireCapability("workshop.write");
   await repoRemoveSpare(spareId);
   revalidatePath(`/workshop/${jobCardId}`);
 }
@@ -112,6 +123,8 @@ export async function closeJobCard(
   jobCardId: string,
   input: JobCardCloseInput,
 ): Promise<ActionResult> {
+  const denied = await guard("workshop.write");
+  if (denied) return denied;
   const parsed = jobCardCloseSchema.safeParse(input);
   if (!parsed.success) {
     return { ok: false, error: parsed.error.errors.map((e) => e.message).join("; ") };
@@ -133,6 +146,8 @@ export async function completeAndBillJobCard(
   jobCardId: string,
   input: JobCardCloseInput,
 ): Promise<CompleteResult> {
+  const denied = await guard("workshop.complete");
+  if (denied) return denied;
   const parsed = jobCardCloseSchema.safeParse(input);
   if (!parsed.success) {
     return { ok: false, error: parsed.error.errors.map((e) => e.message).join("; ") };

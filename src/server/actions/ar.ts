@@ -50,6 +50,11 @@ export async function invoicesForTrip(tripId: string) {
 export type ActionResult = { ok: true; id: string } | { ok: false; error: string };
 
 export async function createInvoice(input: InvoiceCreateInput): Promise<ActionResult> {
+  try {
+    await requireCapability("finance.post");
+  } catch (e) {
+    return { ok: false, error: e instanceof PermissionError ? e.message : "Forbidden" };
+  }
   const parsed = invoiceCreateSchema.safeParse(input);
   if (!parsed.success) {
     return { ok: false, error: parsed.error.errors.map((e) => e.message).join("; ") };

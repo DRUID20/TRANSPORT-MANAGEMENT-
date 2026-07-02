@@ -25,7 +25,7 @@ import { listBorderCrossings as repoListBorderCrossings } from "@/server/repos/b
 import { invoicesForTrip, cancelInvoice } from "@/server/repos/ar";
 import { listLoans, cancelLoan } from "@/server/repos/payroll";
 import { getEmployeeByDriverId } from "@/server/repos/hr";
-import { requireCapability, PermissionError } from "@/server/auth/permissions";
+import { requireCapability, PermissionError, guard, guardFleetOrDriver } from "@/server/auth/permissions";
 import { logAudit } from "@/server/auth/audit";
 import {
   correctVolumeTo20C,
@@ -77,6 +77,8 @@ export type ActionResult = { ok: true; id: string } | { ok: false; error: string
 export async function reconcileAndCloseTrip(
   input: TripReconcileInput,
 ): Promise<{ ok: true; id: string } | { ok: false; error: string }> {
+  const denied = await guard("fleet.write");
+  if (denied) return denied;
   const parsed = tripReconcileSchema.safeParse(input);
   if (!parsed.success) {
     return { ok: false, error: parsed.error.errors.map((e) => e.message).join("; ") };
@@ -101,6 +103,8 @@ export async function transitionTrip(input: {
   note?: string;
   location?: string;
 }): Promise<TransitionResult> {
+  const denied = await guardFleetOrDriver();
+  if (denied) return denied;
   const result = await repoTransition(input);
   if ("error" in result) return { ok: false, error: result.error };
   await logAudit({
@@ -118,6 +122,8 @@ export async function transitionTrip(input: {
 }
 
 export async function planTrip(input: TripPlanInput): Promise<ActionResult> {
+  const denied = await guard("fleet.write");
+  if (denied) return denied;
   const parsed = tripPlanSchema.safeParse(input);
   if (!parsed.success) {
     return { ok: false, error: parsed.error.errors.map((e) => e.message).join("; ") };
@@ -160,6 +166,8 @@ export async function confirmTripDestination(input: {
   rateBasis?: RateBasis;
   rateCurrency?: Currency;
 }): Promise<ActionResult> {
+  const denied = await guard("fleet.write");
+  if (denied) return denied;
   if (!input.destination.trim()) return { ok: false, error: "Destination is required" };
   if (!input.actorName.trim()) return { ok: false, error: "Your name is required" };
   const r = await repoConfirmDestination(input);
@@ -198,6 +206,8 @@ export async function captureTripLoading(
   tripId: string,
   input: TripLoadingInput,
 ): Promise<ActionResult> {
+  const denied = await guard("fleet.write");
+  if (denied) return denied;
   const parsed = tripLoadingSchema.safeParse(input);
   if (!parsed.success) {
     return { ok: false, error: parsed.error.errors.map((e) => e.message).join("; ") };
@@ -262,6 +272,8 @@ export async function captureTripDischarge(
   tripId: string,
   input: TripDischargeInput,
 ): Promise<ActionResult> {
+  const denied = await guard("fleet.write");
+  if (denied) return denied;
   const parsed = tripDischargeSchema.safeParse(input);
   if (!parsed.success) {
     return { ok: false, error: parsed.error.errors.map((e) => e.message).join("; ") };
@@ -346,6 +358,8 @@ export async function advanceTripStage(input: {
   actorName?: string;
   location?: string;
 }): Promise<TransitionResult> {
+  const denied = await guardFleetOrDriver();
+  if (denied) return denied;
   const trip = await getTrip(input.tripId);
   if (!trip) return { ok: false, error: "Trip not found." };
   if (isTerminal(trip.status)) {

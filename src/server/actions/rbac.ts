@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { guard } from "@/server/auth/permissions";
 import {
   assignJobDescription as storeAssign,
   clearJobDescription as storeClear,
@@ -31,6 +32,8 @@ export async function assignJobDescription(
   employeeId: string,
   jdId: string,
 ): Promise<ActionResult> {
+  const denied = await guard("admin");
+  if (denied) return denied;
   const r = storeAssign(employeeId, jdId);
   if (!r.ok) return { ok: false, error: r.error };
   revalidatePath(`/hr/employees/${employeeId}`);
@@ -40,6 +43,8 @@ export async function assignJobDescription(
 }
 
 export async function clearJobDescription(employeeId: string): Promise<ActionResult> {
+  const denied = await guard("admin");
+  if (denied) return denied;
   const ok = storeClear(employeeId);
   if (!ok) return { ok: false, error: "Not found" };
   revalidatePath(`/hr/employees/${employeeId}`);

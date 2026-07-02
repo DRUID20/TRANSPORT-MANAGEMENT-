@@ -9,7 +9,7 @@ import {
   updateBookingStatus as repoUpdateStatus,
 } from "@/server/repos/bookings";
 import { getCustomer } from "@/server/repos/customers";
-import { requireCapability, PermissionError } from "@/server/auth/permissions";
+import { requireCapability, PermissionError, guard } from "@/server/auth/permissions";
 import { logAudit } from "@/server/auth/audit";
 import type { BookingStatus } from "@/lib/types/trips";
 import { FUEL_PRODUCT_LABELS } from "@/lib/types/trips";
@@ -29,6 +29,8 @@ export async function getBookingById(id: string) {
 export type ActionResult = { ok: true; id: string } | { ok: false; error: string };
 
 export async function createBooking(input: BookingCreateInput): Promise<ActionResult> {
+  const denied = await guard("fleet.write");
+  if (denied) return denied;
   const parsed = bookingCreateSchema.safeParse(input);
   if (!parsed.success) {
     return { ok: false, error: parsed.error.errors.map((e) => e.message).join("; ") };
@@ -56,6 +58,7 @@ export async function createBooking(input: BookingCreateInput): Promise<ActionRe
 }
 
 export async function setBookingStatus(id: string, status: BookingStatus) {
+  await requireCapability("fleet.write");
   const prev = await getBooking(id);
   await repoUpdateStatus(id, status);
   await logAudit({
