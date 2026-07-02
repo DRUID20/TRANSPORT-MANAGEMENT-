@@ -21,6 +21,7 @@ export type JournalReferenceType =
   | "depreciation"
   | "asset_acquisition"
   | "asset_disposal"
+  | "payroll"
   | "reversal";
 
 export interface JournalLine {

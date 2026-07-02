@@ -21,6 +21,8 @@ import {
 } from "@/server/db/schema";
 import { nextDocumentNumber } from "@/server/repos/counters";
 import { activeContractFor, getEmployee, listEmployees } from "@/server/repos/hr";
+import { getAccountByCode } from "@/server/repos/accounts";
+import { postJournalEntry, listJournalEntries } from "@/server/repos/ledger";
 import {
   cancelLoan as storeCancelLoan,
   createLoan as storeCreateLoan,
@@ -301,7 +303,7 @@ export async function setPayrollPeriodStatus(
   // mid-loop failure rolls the whole thing back.
   const inputs = status === "paid" ? await listPayrollInputs(id) : [];
 
-  const updated = await db.transaction(async (tx) => {
+  const result = await db.transaction(async (tx) => {
     const cur = (
       await tx
         .select({ status: periodsTable.status })
@@ -312,6 +314,7 @@ export async function setPayrollPeriodStatus(
     )[0];
     if (!cur) return undefined;
     const wasPaid = cur.status === "paid";
+    const didBecomePaid = status === "paid" && !wasPaid;
 
     const row = (
       await tx
@@ -322,7 +325,7 @@ export async function setPayrollPeriodStatus(
     )[0];
     if (!row) return undefined;
 
-    if (status === "paid" && !wasPaid) {
+    if (didBecomePaid) {
       for (const inp of inputs) {
         if (inp.loanRecovery <= 0) continue;
         let remaining = inp.loanRecovery;
@@ -354,10 +357,109 @@ export async function setPayrollPeriodStatus(
         }
       }
     }
-    return row;
+    return { row, didBecomePaid };
   });
 
-  return updated ? toPeriod(updated) : undefined;
+  if (!result) return undefined;
+  const period = toPeriod(result.row);
+
+  // Post the payroll journal AFTER the status/recovery transaction commits, and
+  // only on the genuine transition into paid. postPayrollJournal is itself
+  // idempotent (skips if a payroll JE already references this period).
+  if (result.didBecomePaid) {
+    try {
+      await postPayrollJournal(period, inputs, orgId);
+    } catch (err) {
+      console.error("[payroll] GL posting error:", err);
+    }
+  }
+  return period;
+}
+
+const r2 = (n: number) => Math.round(n * 100) / 100;
+
+/**
+ * Post the payroll journal entry for a paid period. One balanced entry per
+ * period covering gross pay, employer statutory contributions, all statutory
+ * payables, staff-loan recovery, other deductions and net pay out of the
+ * payroll bank. Idempotent by (referenceType=payroll, referenceId=periodId).
+ */
+async function postPayrollJournal(
+  period: PayrollPeriod,
+  inputs: PayrollInput[],
+  _orgId: string,
+): Promise<void> {
+  const existing = await listJournalEntries({ referenceType: "payroll", referenceId: period.id });
+  if (existing.length > 0) return; // already posted
+
+  const sum = (fn: (i: PayrollInput) => number) => r2(inputs.reduce((s, i) => s + fn(i), 0));
+  const gross = sum((i) => i.grossPay);
+  if (gross <= 0) return;
+  const paye = sum((i) => i.paye);
+  const nssfEe = sum((i) => i.nssfEmployee);
+  const nssfEr = sum((i) => i.nssfEmployer);
+  const shif = sum((i) => i.shaEmployee);
+  const ahlEe = sum((i) => i.ahlEmployee);
+  const ahlEr = sum((i) => i.ahlEmployer);
+  const nitaEr = sum((i) => i.nitaEmployer);
+  const loanRec = sum((i) => i.loanRecovery);
+  const otherDed = sum((i) => i.otherDeductions);
+  const net = sum((i) => i.netPay);
+
+  const codes: Record<string, string> = {
+    grossExp: "600100",
+    nssfErExp: "600400",
+    nitaErExp: "600600",
+    ahlErExp: "600700",
+    payePay: "220100",
+    nssfPay: "220200",
+    shifPay: "220300",
+    nitaPay: "220400",
+    ahlPay: "220500",
+    staffLoans: "111600",
+    payrollBank: "121200",
+    clearing: "211300",
+  };
+  const acc: Record<string, { id: string } | undefined> = {};
+  for (const [k, code] of Object.entries(codes)) acc[k] = await getAccountByCode(code);
+  const missing = Object.keys(codes).filter((k) => !acc[k]).map((k) => codes[k]);
+  if (missing.length) {
+    console.error("[payroll] missing CoA accounts, skipping GL post:", missing.join(", "));
+    return;
+  }
+
+  const L = (accountId: string, debit: number, credit: number, description: string) => ({
+    accountId,
+    debit,
+    credit,
+    currency: "KES" as Currency,
+    fxRate: 1,
+    description,
+  });
+  const lines = [
+    L(acc.grossExp!.id, gross, 0, "Gross salaries"),
+    ...(nssfEr > 0 ? [L(acc.nssfErExp!.id, nssfEr, 0, "NSSF — employer")] : []),
+    ...(nitaEr > 0 ? [L(acc.nitaErExp!.id, nitaEr, 0, "NITA — employer")] : []),
+    ...(ahlEr > 0 ? [L(acc.ahlErExp!.id, ahlEr, 0, "AHL — employer")] : []),
+    ...(paye > 0 ? [L(acc.payePay!.id, 0, paye, "PAYE payable")] : []),
+    ...(nssfEe + nssfEr > 0 ? [L(acc.nssfPay!.id, 0, r2(nssfEe + nssfEr), "NSSF payable")] : []),
+    ...(shif > 0 ? [L(acc.shifPay!.id, 0, shif, "SHIF payable")] : []),
+    ...(nitaEr > 0 ? [L(acc.nitaPay!.id, 0, nitaEr, "NITA payable")] : []),
+    ...(ahlEe + ahlEr > 0 ? [L(acc.ahlPay!.id, 0, r2(ahlEe + ahlEr), "AHL payable")] : []),
+    ...(loanRec > 0 ? [L(acc.staffLoans!.id, 0, loanRec, "Staff-loan recovery")] : []),
+    ...(otherDed > 0 ? [L(acc.clearing!.id, 0, otherDed, "Other deductions")] : []),
+    ...(net > 0 ? [L(acc.payrollBank!.id, 0, net, "Net pay")] : []),
+  ];
+
+  const je = await postJournalEntry({
+    date: period.endDate,
+    memo: `Payroll ${period.yearMonth} — ${inputs.length} employee${inputs.length === 1 ? "" : "s"}`,
+    referenceType: "payroll",
+    referenceId: period.id,
+    postedBy: "Payroll",
+    lines,
+  });
+  if ("error" in je) console.error("[payroll] GL post failed:", je.error);
 }
 
 export async function listPayrollInputs(periodId: string): Promise<PayrollInput[]> {
