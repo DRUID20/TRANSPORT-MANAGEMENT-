@@ -9,15 +9,15 @@ import {
   arAgingByCustomer,
   fleetUtilisation,
   fuelEfficiencyByTruck,
-  listComplianceRecords,
-  listDrivers,
-  listEmployees,
-  listLeaveRequests,
-  listTrailers,
-  listTrips,
-  listTrucks,
   profitAndLoss,
-} from "@/server/store/mock-store";
+} from "@/server/repos/reports";
+import { listComplianceRecords } from "@/server/repos/hr-compliance";
+import { listEmployees } from "@/server/repos/hr";
+import { listLeaveRequests } from "@/server/repos/leave";
+import { listDrivers } from "@/server/repos/drivers";
+import { listTrailers } from "@/server/repos/trailers";
+import { listTrips } from "@/server/repos/trips";
+import { listTrucks } from "@/server/repos/trucks";
 import {
   KIND_LABELS,
   complianceStatus,
@@ -27,10 +27,10 @@ import { HOWTO_KB, type HowToEntry } from "@/server/assistant/kb";
 
 const KES = (n: number) => `KSh ${Math.round(n).toLocaleString()}`;
 
-export function executeIntent(intent: Intent): Answer {
+export async function executeIntent(intent: Intent): Promise<Answer> {
   switch (intent.kind) {
     case "ar_outstanding": {
-      const rows = arAgingByCustomer();
+      const rows = await arAgingByCustomer();
       const total = rows.reduce((s, r) => s + r.total, 0);
       return {
         recognised: true,
@@ -55,7 +55,7 @@ export function executeIntent(intent: Intent): Answer {
       };
     }
     case "ap_outstanding": {
-      const rows = apAgingBySupplier();
+      const rows = await apAgingBySupplier();
       const total = rows.reduce((s, r) => s + r.total, 0);
       return {
         recognised: true,
@@ -80,7 +80,7 @@ export function executeIntent(intent: Intent): Answer {
       };
     }
     case "overdue_invoices": {
-      const rows = arAgingByCustomer();
+      const rows = await arAgingByCustomer();
       const overdue = rows
         .map((r) => ({
           customer: r.customerName,
@@ -114,7 +114,7 @@ export function executeIntent(intent: Intent): Answer {
         toDate: new Date().toISOString().slice(0, 10),
         label: "this year",
       };
-      const pnl = profitAndLoss({ fromDate: range.fromDate, toDate: range.toDate });
+      const pnl = await profitAndLoss({ fromDate: range.fromDate, toDate: range.toDate });
       const revenue = pnl.income.total;
       const directCost = pnl.directCost.total;
       const opex = pnl.expenses.total;
@@ -132,7 +132,7 @@ export function executeIntent(intent: Intent): Answer {
         toDate: new Date().toISOString().slice(0, 10),
         label: "this year",
       };
-      const pnl = profitAndLoss({ fromDate: range.fromDate, toDate: range.toDate });
+      const pnl = await profitAndLoss({ fromDate: range.fromDate, toDate: range.toDate });
       return {
         recognised: true,
         text: `Revenue for ${range.label} was ${KES(pnl.income.total)} across all customers and trips. Open the P&L for the full breakdown.`,
@@ -142,7 +142,7 @@ export function executeIntent(intent: Intent): Answer {
     }
     case "top_trucks_by_profit": {
       const range = intent.range;
-      const rows = fleetUtilisation(range).slice(0, intent.limit ?? 5);
+      const rows = (await fleetUtilisation(range)).slice(0, intent.limit ?? 5);
       return {
         recognised: true,
         text: `Top ${rows.length} truck${rows.length === 1 ? "" : "s"} by gross profit${range ? ` (${range.label})` : ""}: ${rows.map((r) => `${r.registration} — ${KES(r.grossProfitKes)}`).join("; ")}.`,
@@ -162,7 +162,7 @@ export function executeIntent(intent: Intent): Answer {
       };
     }
     case "best_fuel": {
-      const all = fuelEfficiencyByTruck(intent.range);
+      const all = await fuelEfficiencyByTruck(intent.range);
       const eligible = all.filter((r) => r.litresPer100km !== null);
       const top = eligible.slice(0, intent.limit ?? 3);
       return {
@@ -186,7 +186,7 @@ export function executeIntent(intent: Intent): Answer {
       };
     }
     case "worst_fuel": {
-      const all = fuelEfficiencyByTruck(intent.range);
+      const all = await fuelEfficiencyByTruck(intent.range);
       const eligible = all.filter((r) => r.litresPer100km !== null);
       const sorted = [...eligible].sort((a, b) => (b.litresPer100km ?? 0) - (a.litresPer100km ?? 0));
       const top = sorted.slice(0, intent.limit ?? 3);
@@ -211,8 +211,8 @@ export function executeIntent(intent: Intent): Answer {
       };
     }
     case "compliance_expiring": {
-      const recs = listComplianceRecords();
-      const employees = listEmployees();
+      const recs = await listComplianceRecords();
+      const employees = await listEmployees();
       const empById = new Map(employees.map((e) => [e.id, e]));
       const flagged = recs
         .map((r) => ({
@@ -246,8 +246,8 @@ export function executeIntent(intent: Intent): Answer {
       };
     }
     case "leave_pending": {
-      const requests = listLeaveRequests({ status: "pending" });
-      const employees = listEmployees();
+      const requests = await listLeaveRequests({ status: "pending" });
+      const employees = await listEmployees();
       const empById = new Map(employees.map((e) => [e.id, e]));
       return {
         recognised: true,
@@ -269,7 +269,7 @@ export function executeIntent(intent: Intent): Answer {
       };
     }
     case "open_trips": {
-      const trips = listTrips().filter(
+      const trips = (await listTrips()).filter(
         (t) => t.status !== "closed" && t.status !== "cancelled",
       );
       return {
@@ -291,9 +291,9 @@ export function executeIntent(intent: Intent): Answer {
       };
     }
     case "headcount": {
-      const emps = listEmployees({ status: "active" });
-      const probation = listEmployees({ status: "probation" }).length;
-      const onLeave = listEmployees({ status: "on_leave" }).length;
+      const emps = await listEmployees({ status: "active" });
+      const probation = (await listEmployees({ status: "probation" })).length;
+      const onLeave = (await listEmployees({ status: "on_leave" })).length;
       return {
         recognised: true,
         text: `Active headcount is ${emps.length}. Plus ${probation} on probation and ${onLeave} on leave.`,
@@ -302,9 +302,9 @@ export function executeIntent(intent: Intent): Answer {
       };
     }
     case "fleet_size": {
-      const trucks = listTrucks();
-      const trailers = listTrailers();
-      const drivers = listDrivers();
+      const trucks = await listTrucks();
+      const trailers = await listTrailers();
+      const drivers = await listDrivers();
       return {
         recognised: true,
         text: `Fleet: ${trucks.length} trucks · ${trailers.length} trailers · ${drivers.length} drivers.`,

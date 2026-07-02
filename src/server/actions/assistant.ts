@@ -10,6 +10,6 @@ export async function ask(question: string): Promise<{
   intentKind: string;
 }> {
   const intent = parseIntent(question);
-  const answer = executeIntent(intent);
+  const answer = await executeIntent(intent);
   return { question, answer, intentKind: intent.kind };
 }
