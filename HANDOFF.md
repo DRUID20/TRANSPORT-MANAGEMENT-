@@ -3,6 +3,25 @@
 > Single source of truth for continuing this session. Concise on purpose.
 > Deeper history: `docs/RUNBOOK.md`, `docs/GO-LIVE-AUDIT.md`, `docs/SECURITY-rls.md`.
 
+## ⭐ CHECKPOINT (2026-07-02) — read this first
+Full system audit done (4 parallel agents: security, financial integrity, performance, product/UX).
+Fixed **#1–#5 of the recommended order** (all blockers). **#6 remains (larger).**
+
+**DONE & pushed this checkpoint** (all tsc+lint+build clean, 38 tests pass, each deployed Ready):
+- `0a8cd73` **#1 RBAC lockdown** — every mutating action now capability-gated (was ~11/40 files; a `viewer` could mutate everything). New `commercial.write` cap (admin+dispatcher+accountant → customers/rates/suppliers). New helpers in `src/server/auth/permissions.ts`: `guard(cap)` (returns `{ok:false}` denial) + `guardFleetOrDriver()` (fleet.write OR authenticated driver kiosk cookie `tx_drv`, used by the 3 driver-shared actions: `transitionTrip`, `createExpense`, `uploadDocument`). Also gated the previously-missed `createInvoice`/`createBill`.
+- `0a8cd73` **#2 backdoors** — `/api/dev-login` now 404s unless `NODE_ENV==="development"` (dead on Vercel prod+preview). Driver login (`authenticateDriver` in `actions/driver-session.ts`) now requires phone + National ID matched vs active driver via real repo (was pick-any-name).
+- `a42c488` **#3 money bugs** — `cancelInvoice` refuses while `paidAmount>0` (was orphaning payments); shortage loan reversed on invoice-cancel too (`src/server/finance/shortage.ts` `reverseTripShortageLoan`, reused by `reopenTrip`); payroll `setPayrollPeriodStatus('paid')` now idempotent + transactional with row lock (was double-recovering loans).
+- `1d95c94` **#4 payroll → GL** — `setPayrollPeriodStatus` posts a balanced JE on not-paid→paid (gross 600100, employer 600400/600600/600700, payables 220100/200/300/400/500, staff-loans 111600, clearing 211300, net→bank 121200). Idempotent by `referenceType:"payroll"`+`referenceId:periodId`. New `"payroll"` JournalReferenceType.
+- `8207ea7` **#5 assistant real data** — `src/server/assistant/executor.ts` now imports async dual-mode repos (`repos/reports` + entity repos) instead of mock-store; `executeIntent` is async; `actions/assistant.ts` awaits it.
+
+**#6 — NOT STARTED (the "larger" work, do next):**
+- **Edit UIs (start here — contained, high value):** six entities have `update*Action` server actions but NO UI calling them — customers, suppliers, drivers, trucks, trailers, subcontractors. Detail pages at `src/app/(app)/{entity}/[id]/page.tsx` are read-only. Rates are create-only (no `[id]` page, no `updateRateAction`). Wire edit forms; the actions are already RBAC-gated.
+- **Scale refactor (bigger, needs care):** `/tracker/matrix` (`repos/tracker.ts truckLeaderboard`) + `/reports/profit-per-truck` (`repos/reports.ts fleetProfitAndLoss`) are quadratic (per-truck full-table scans + `refreshInvoiceStatuses` per truck). No DB-level pagination anywhere (Paginator slices in JS after fetching whole tables). Repos filter status/tripId/truckId in JS leaving indexes dead → push into SQL. Zero Suspense/streaming. `getTripById` fetched twice per wizard nav (layout+page, no request cache).
+
+**Other audit MEDIUM items (not yet done):** `runDepreciation` concurrency guard (read-then-write, `repos/assets.ts`); FX fallback `129.41` hardcoded in 4 files (`repos/fx.ts` + 3 forms) → consolidate; POD/delivery-note capture at Delivery stage (only Loading mounts `TripDocuments`); credit notes absent (reopen blocks sent invoices); **zero tests on money paths** (`billableFreight`, `monthlyDepreciation`, `allowedTransitions`, `refreshInvoiceStatuses`, `tripFuelDerivation`); stale "once Supabase connected" copy in settings; Sentry stubbed. Supabase RLS-info advisories = expected noise (server-only access).
+
+---
+
 ## Where things stand (2026-06-15)
 Nile Valley Logistics — cross-border fuel-haulage TMS. **Production-deployed, near go-live.**
 
