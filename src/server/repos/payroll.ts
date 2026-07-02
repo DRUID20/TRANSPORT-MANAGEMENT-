@@ -293,50 +293,71 @@ export async function setPayrollPeriodStatus(
   const set: Partial<typeof periodsTable.$inferInsert> = { status };
   if (status === "processing" || status === "paid") set.processedAt = new Date();
   if (status === "paid") set.paidAt = new Date();
-  const updated = (
-    await db
-      .update(periodsTable)
-      .set(set)
-      .where(and(eq(periodsTable.id, id), eq(periodsTable.organizationId, orgId)))
-      .returning()
-  )[0];
-  if (!updated) return undefined;
 
-  // On 'paid': recover each input's loan_recovery against active loans.
-  if (status === "paid") {
-    const inputs = await listPayrollInputs(id);
-    for (const inp of inputs) {
-      if (inp.loanRecovery <= 0) continue;
-      let remaining = inp.loanRecovery;
-      const empLoans = await db
-        .select()
-        .from(loansTable)
-        .where(
-          and(
-            eq(loansTable.organizationId, orgId),
-            eq(loansTable.employeeId, inp.employeeId),
-            eq(loansTable.status, "active"),
-          ),
-        )
-        .orderBy(asc(loansTable.disbursedDate));
-      for (const l of empLoans) {
-        if (remaining <= 0) break;
-        const bal = Number(l.balance);
-        const apply = Math.min(remaining, bal);
-        const newBal = bal - apply;
-        await db
-          .update(loansTable)
-          .set({
-            recovered: String(Number(l.recovered) + apply),
-            balance: String(newBal),
-            status: newBal <= 0 ? "paid_off" : "active",
-          })
-          .where(eq(loansTable.id, l.id));
-        remaining -= apply;
+  // Loan recovery must be applied EXACTLY ONCE, when the period first becomes
+  // paid. We lock the period row, read its prior status, flip it, and only run
+  // recovery when it genuinely transitions not-paid → paid — all in one
+  // transaction so a second click (or a retry) can't double-deduct, and a
+  // mid-loop failure rolls the whole thing back.
+  const inputs = status === "paid" ? await listPayrollInputs(id) : [];
+
+  const updated = await db.transaction(async (tx) => {
+    const cur = (
+      await tx
+        .select({ status: periodsTable.status })
+        .from(periodsTable)
+        .where(and(eq(periodsTable.id, id), eq(periodsTable.organizationId, orgId)))
+        .limit(1)
+        .for("update")
+    )[0];
+    if (!cur) return undefined;
+    const wasPaid = cur.status === "paid";
+
+    const row = (
+      await tx
+        .update(periodsTable)
+        .set(set)
+        .where(and(eq(periodsTable.id, id), eq(periodsTable.organizationId, orgId)))
+        .returning()
+    )[0];
+    if (!row) return undefined;
+
+    if (status === "paid" && !wasPaid) {
+      for (const inp of inputs) {
+        if (inp.loanRecovery <= 0) continue;
+        let remaining = inp.loanRecovery;
+        const empLoans = await tx
+          .select()
+          .from(loansTable)
+          .where(
+            and(
+              eq(loansTable.organizationId, orgId),
+              eq(loansTable.employeeId, inp.employeeId),
+              eq(loansTable.status, "active"),
+            ),
+          )
+          .orderBy(asc(loansTable.disbursedDate));
+        for (const l of empLoans) {
+          if (remaining <= 0) break;
+          const bal = Number(l.balance);
+          const apply = Math.min(remaining, bal);
+          const newBal = bal - apply;
+          await tx
+            .update(loansTable)
+            .set({
+              recovered: String(Number(l.recovered) + apply),
+              balance: String(newBal),
+              status: newBal <= 0 ? "paid_off" : "active",
+            })
+            .where(eq(loansTable.id, l.id));
+          remaining -= apply;
+        }
       }
     }
-  }
-  return toPeriod(updated);
+    return row;
+  });
+
+  return updated ? toPeriod(updated) : undefined;
 }
 
 export async function listPayrollInputs(periodId: string): Promise<PayrollInput[]> {

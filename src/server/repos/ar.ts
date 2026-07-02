@@ -381,8 +381,21 @@ export async function cancelInvoice(invoiceId: string): Promise<CustomerInvoice 
   if (IS_DEMO_MODE) return storeCancel(invoiceId);
   const inv = await getInvoice(invoiceId);
   if (!inv) return { error: "Invoice not found" };
-  if (inv.status === "paid") return { error: "Cannot cancel a paid invoice" };
-  if (inv.journalEntryId) await reverseJournalEntry({ entryId: inv.journalEntryId, postedBy: "Finance" });
+  if (inv.status === "cancelled") return { error: "Invoice is already cancelled" };
+  if (inv.status === "paid") return { error: "Cannot cancel a paid invoice — issue a credit note instead." };
+  // Refuse to cancel while ANY payment is recorded. Cancelling reverses only
+  // the invoice's own journal entry (Dr Revenue/VAT, Cr AR); the payment entry
+  // (Dr Bank, Cr AR) would be left posted, leaving AR negative and the bank
+  // still holding cash. The operator must reverse/refund the payment first.
+  if (inv.paidAmount > 0 || inv.status === "partially_paid") {
+    return {
+      error: `Invoice ${inv.number} has ${inv.currency} ${inv.paidAmount.toLocaleString()} in payments recorded. Reverse or refund the payment(s) before cancelling.`,
+    };
+  }
+  if (inv.journalEntryId) {
+    const rev = await reverseJournalEntry({ entryId: inv.journalEntryId, postedBy: "Finance" });
+    if (rev && typeof rev === "object" && "error" in rev) return { error: rev.error };
+  }
   const db = getDb();
   const orgId = await requireOrgId();
   const updated = (

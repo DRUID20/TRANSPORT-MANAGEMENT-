@@ -16,6 +16,7 @@ import { getTrip } from "@/server/repos/trips";
 import { getEmployeeByDriverId } from "@/server/repos/hr";
 import { createLoan, listLoans } from "@/server/repos/payroll";
 import { getRatesToKesMap } from "@/server/repos/fx";
+import { reverseTripShortageLoan } from "@/server/finance/shortage";
 import { logAudit } from "@/server/auth/audit";
 import { PermissionError, requireCapability } from "@/server/auth/permissions";
 import type { InvoiceStatus } from "@/lib/types/ar";
@@ -155,10 +156,14 @@ export async function cancelInvoice(id: string): Promise<ActionResult> {
   }
   const r = await repoCancel(id);
   if ("error" in r) return { ok: false, error: r.error };
+  // If this invoice raised a driver shortage loan for its trip, reverse it —
+  // the charge that justified the deduction no longer exists.
+  if (r.tripId) await reverseTripShortageLoan(r.tripId);
   await logAudit({ entityType: "invoice", entityId: id, action: "cancel" });
   revalidatePath("/invoices");
   revalidatePath(`/invoices/${id}`);
   revalidatePath("/ledger");
+  revalidatePath("/hr/loans");
   return { ok: true, id: r.id };
 }
 

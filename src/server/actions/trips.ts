@@ -23,8 +23,7 @@ import { lookupRate as repoLookupRate } from "@/server/repos/rates";
 import { listTripDocuments } from "@/server/repos/documents";
 import { listBorderCrossings as repoListBorderCrossings } from "@/server/repos/borders";
 import { invoicesForTrip, cancelInvoice } from "@/server/repos/ar";
-import { listLoans, cancelLoan } from "@/server/repos/payroll";
-import { getEmployeeByDriverId } from "@/server/repos/hr";
+import { reverseTripShortageLoan } from "@/server/finance/shortage";
 import { requireCapability, PermissionError, guard, guardFleetOrDriver } from "@/server/auth/permissions";
 import { logAudit } from "@/server/auth/audit";
 import {
@@ -467,16 +466,7 @@ export async function reopenTrip(input: {
   }
 
   // Reverse the auto-raised shortage loan (idempotent key: shortageTripId).
-  if (trip.driverId) {
-    const employee = await getEmployeeByDriverId(trip.driverId);
-    if (employee) {
-      const loans = await listLoans({ employeeId: employee.id });
-      const shortageLoan = loans.find(
-        (l) => l.shortageTripId === trip.id && l.status === "active",
-      );
-      if (shortageLoan) await cancelLoan(shortageLoan.id);
-    }
-  }
+  await reverseTripShortageLoan(input.tripId);
 
   // Drop back to 'delivered', unlocked. readyToInvoice cleared so the wizard
   // re-derives the Delivery/Invoice stage and the volume-lock lifts. (closedAt
