@@ -99,6 +99,7 @@ export async function signIn(formData: FormData): Promise<ActionResult> {
   session.fullName = user.fullName;
   session.roleKey = isValidRoleKey(user.roleKey) ? user.roleKey : "viewer";
   session.organizationId = user.organizationId;
+  session.profilePhotoKey = user.profilePhotoKey ?? "";
   session.lastActivityAt = Date.now();
   await session.save();
 

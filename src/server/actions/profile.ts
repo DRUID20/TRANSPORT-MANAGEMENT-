@@ -6,6 +6,7 @@ import bcrypt from "bcryptjs";
 import { getDb } from "@/server/db/client";
 import { users } from "@/server/db/schema";
 import { getCurrentUser } from "@/server/auth/current-user";
+import { getSession } from "@/server/auth/session";
 import { requireOrgId } from "@/server/auth/current-org";
 import { logAudit } from "@/server/auth/audit";
 import { IS_DEMO_MODE } from "@/server/auth/session-secret";
@@ -91,6 +92,7 @@ export async function setMyProfilePhoto(form: FormData): Promise<ActionResult> {
     await db.select({ key: users.profilePhotoKey }).from(users).where(eq(users.id, me.userId)).limit(1)
   )[0]?.key;
   await db.update(users).set({ profilePhotoKey: uploaded.storageKey }).where(eq(users.id, me.userId));
+  await syncSessionPhotoKey(uploaded.storageKey);
 
   if (previous && previous !== uploaded.storageKey && isKeyForOrg(previous, orgId)) {
     deleteFile(previous).catch(() => {});
@@ -111,6 +113,7 @@ export async function clearMyProfilePhoto(): Promise<ActionResult> {
     await db.select({ key: users.profilePhotoKey }).from(users).where(and(eq(users.id, me.userId))).limit(1)
   )[0]?.key;
   await db.update(users).set({ profilePhotoKey: null }).where(eq(users.id, me.userId));
+  await syncSessionPhotoKey(null);
   if (previous && isKeyForOrg(previous, orgId)) deleteFile(previous).catch(() => {});
   await logAudit({ entityType: "user", entityId: me.userId, action: "remove_profile_photo" });
   revalidatePath("/settings");
@@ -118,10 +121,21 @@ export async function clearMyProfilePhoto(): Promise<ActionResult> {
   return { ok: true };
 }
 
-/** Look up just the avatar key for the current user. */
+/** Keep the session's cached avatar key in step after a change. */
+async function syncSessionPhotoKey(key: string | null) {
+  const session = await getSession();
+  if (!session.userId) return;
+  session.profilePhotoKey = key ?? "";
+  await session.save();
+}
+
+/** Look up just the avatar key for the current user. Served from the
+ *  session cookie (no DB round-trip) for sessions started after this was
+ *  added; older sessions fall back to one DB lookup per page. */
 export async function getMyProfilePhotoKey(): Promise<string | null> {
   const me = await getCurrentUser();
   if (!me?.userId || IS_DEMO_MODE) return null;
+  if (me.profilePhotoKey !== undefined) return me.profilePhotoKey || null;
   const db = getDb();
   const row = (
     await db.select({ key: users.profilePhotoKey }).from(users).where(eq(users.id, me.userId)).limit(1)

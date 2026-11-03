@@ -12,14 +12,10 @@ import { Outfit, JetBrains_Mono, Source_Serif_4 } from "next/font/google";
  *
  * Variables are exposed under their own names; globals.css maps the semantic
  * `--font-sans` / `--font-mono` / `--font-display` onto them per scope.
+ * Kept lean for first-load speed: one Outfit instance (display headings reuse
+ * it), and the serif ships upright only (browsers slant it for the rare
+ * italic) without the optical-size axis.
  */
-export const fontDisplay = Outfit({
-  subsets: ["latin"],
-  weight: ["500", "600", "700"],
-  variable: "--font-display",
-  display: "swap",
-});
-
 export const fontSans = Outfit({
   subsets: ["latin"],
   weight: ["400", "500", "600", "700"],
@@ -36,9 +32,7 @@ export const fontMono = JetBrains_Mono({
 
 export const fontSerif = Source_Serif_4({
   subsets: ["latin"],
-  // Variable font: every weight 200–900 plus optical sizing, one file.
-  axes: ["opsz"],
-  style: ["normal", "italic"],
+  // Variable font: every weight 200–900 in one upright file.
   variable: "--font-serif",
   display: "swap",
 });

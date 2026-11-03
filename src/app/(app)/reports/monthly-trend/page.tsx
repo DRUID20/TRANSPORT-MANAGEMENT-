@@ -2,7 +2,7 @@ import { monthlyPerformance } from "@/server/actions/reports";
 import { Card, CardContent } from "@/components/ui/card";
 import { PageHeader } from "@/components/layout/page-header";
 import { ReportLetterhead } from "@/components/reports/report-letterhead";
-import { AreaChartCard } from "@/components/dashboard/area-chart-card";
+import { AreaChartCard } from "@/components/dashboard/area-chart-card-lazy";
 
 export default async function MonthlyTrendPage({
   searchParams,

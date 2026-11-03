@@ -2,7 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { sealData, unsealData } from "iron-session";
 import type { SessionData } from "@/server/auth/session";
 import { resolveSessionPassword } from "@/server/auth/session-secret";
-import { IDLE_TIMEOUT_MS } from "@/lib/auth/idle";
+import { IDLE_TIMEOUT_MS, SESSION_PING_PATH } from "@/lib/auth/idle";
 
 /**
  * Gate every page route behind a valid session. Unauthenticated requests
@@ -94,7 +94,15 @@ export async function middleware(req: NextRequest) {
     return redirectToLogin(req, { reason: "idle" });
   }
 
-  const res = NextResponse.next();
+  // Activity heartbeat from the client idle watcher (see idle-logout.tsx).
+  // Answered right here — no page render, no function invocation — purely to
+  // slide the server's idle window while someone works on one page (e.g. a
+  // long form) without navigating, now that revisited pages are served from
+  // the client router cache.
+  const res =
+    pathname === SESSION_PING_PATH
+      ? new NextResponse(null, { status: 204, headers: { "Cache-Control": "no-store" } })
+      : NextResponse.next();
   // Slide the window only on real GET navigations/data reads:
   //  - skip prefetches (background, not real activity)
   //  - skip non-GET (server actions set their own session cookie, e.g.

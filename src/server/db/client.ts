@@ -23,9 +23,10 @@ export function getDb() {
     ssl: "require",
     // The transaction pooler is incompatible with prepared statements.
     prepare: false,
-    // Serverless: cap connections so concurrent function instances don't
-    // exhaust the pooler.
-    max: 1,
+    // Small per-instance pool: a page's parallel queries (Promise.all) and
+    // concurrent requests on the same warm instance no longer queue behind a
+    // single connection, while staying far below the pooler's limit.
+    max: 3,
     idle_timeout: 20,
     connect_timeout: 10,
   });

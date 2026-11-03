@@ -7,6 +7,8 @@ import {
   IDLE_ACTIVITY_KEY,
   IDLE_TIMEOUT_MS,
   IDLE_WARN_MS,
+  SESSION_PING_INTERVAL_MS,
+  SESSION_PING_PATH,
 } from "@/lib/auth/idle";
 
 const ACTIVITY_EVENTS = [
@@ -38,6 +40,7 @@ export function IdleLogout() {
   const logoutTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const countdown = useRef<ReturnType<typeof setInterval> | null>(null);
   const lastBroadcast = useRef(0);
+  const lastPing = useRef(Date.now()); // the page load itself just slid the window
   const loggedOut = useRef(false);
 
   const doLogout = useCallback(() => {
@@ -85,6 +88,13 @@ export function IdleLogout() {
       } catch {
         /* private mode — cross-tab sync simply won't fire */
       }
+    }
+    // Tell the server we're still here (throttled). Without this, someone
+    // filling a long form without navigating could be bounced to /login on
+    // Save because the server only saw their last page load.
+    if (now - lastPing.current > SESSION_PING_INTERVAL_MS) {
+      lastPing.current = now;
+      fetch(SESSION_PING_PATH, { cache: "no-store", credentials: "same-origin" }).catch(() => {});
     }
     schedule();
   }, [schedule]);

@@ -103,6 +103,7 @@
      `.content-serif` re-points these to the serif for page content. */
   body {
     --font-sans: var(--font-outfit);
+    --font-display: var(--font-outfit);
     --font-mono: var(--font-jetbrains);
   }
 

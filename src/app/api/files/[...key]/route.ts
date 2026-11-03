@@ -43,7 +43,11 @@ export async function GET(
       // via the browser's "Save as…" — the caller can pass ?download=1 if they
       // need to force a Save dialog later.
       "Content-Disposition": "inline",
-      "Cache-Control": "private, max-age=60",
+      // Storage keys embed a fresh UUID per upload, so the bytes behind a key
+      // never change — let the browser keep them (private: per-user only).
+      // Saves a server + Storage round-trip for e.g. the sidebar avatar on
+      // every page load.
+      "Cache-Control": "private, max-age=86400, immutable",
     },
   });
 }

@@ -34,6 +34,7 @@ export const getCurrentUser = cache(async (): Promise<SessionData | null> => {
       fullName: session.fullName,
       roleKey: session.roleKey,
       organizationId: session.organizationId,
+      profilePhotoKey: session.profilePhotoKey,
     };
   } catch (err) {
     // Re-throw Next's control-flow signals (e.g. the dynamic-rendering

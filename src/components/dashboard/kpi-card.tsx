@@ -1,10 +1,17 @@
 "use client";
 
 import type { ReactNode } from "react";
+import dynamic from "next/dynamic";
 import { ArrowDownRight, ArrowUpRight } from "lucide-react";
 import { CountUp } from "@/components/dashboard/count-up";
-import { Sparkline } from "@/components/dashboard/sparkline";
 import { cn } from "@/lib/utils";
+
+// The chart library (recharts, ~100 kB) loads after the page is interactive
+// instead of blocking it; a same-height placeholder keeps the card still.
+const Sparkline = dynamic(
+  () => import("@/components/dashboard/sparkline").then((m) => m.Sparkline),
+  { ssr: false, loading: () => <div style={{ height: 30 }} aria-hidden="true" /> },
+);
 
 type Tone = "default" | "info" | "success" | "warning" | "danger";
 

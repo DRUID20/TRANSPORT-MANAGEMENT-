@@ -18,7 +18,7 @@ import { billableFreight } from "@/lib/types/trips";
 import { listTrucks } from "@/server/actions/trucks";
 import { listDrivers } from "@/server/actions/drivers";
 import { listInvoices } from "@/server/actions/ar";
-import { AreaChartCard } from "@/components/dashboard/area-chart-card";
+import { AreaChartCard } from "@/components/dashboard/area-chart-card-lazy";
 import { KpiCard } from "@/components/dashboard/kpi-card";
 import { CountUp } from "@/components/dashboard/count-up";
 import { TodaysDispatch } from "@/components/dashboard/todays-dispatch";

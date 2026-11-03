@@ -14,6 +14,10 @@ export interface SessionData {
   fullName?: string;
   roleKey?: string;
   organizationId?: string;
+  /** Avatar storage key, cached at sign-in so the app shell doesn't hit the
+   *  DB on every page. "" = no photo; undefined = unknown (older session —
+   *  falls back to a DB lookup). Kept in sync by the profile-photo actions. */
+  profilePhotoKey?: string;
   /** Epoch ms of the last activity — drives the idle-timeout sliding window
    *  (refreshed by middleware on each real request; checked against
    *  IDLE_TIMEOUT_MS). */
