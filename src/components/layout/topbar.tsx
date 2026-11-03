@@ -1,5 +1,4 @@
 import { ThemeToggle } from "@/components/layout/theme-toggle";
-import { TopbarClock } from "@/components/layout/topbar-clock";
 import { MobileSidebar } from "@/components/layout/mobile-sidebar";
 import { CommandPalette } from "@/components/layout/command-palette";
 import { Breadcrumb } from "@/components/layout/breadcrumb";
@@ -7,7 +6,7 @@ import type { SidebarUserInfo } from "@/components/layout/sidebar-user";
 
 /**
  * Topbar — sticky chrome above the page content (DESIGN.md §7).
- * Left: mobile menu trigger + breadcrumb. Right: ⌘K command palette, clock,
+ * Left: mobile menu trigger + breadcrumb. Right: ⌘K command palette and
  * theme toggle. The account menu lives in the sidebar's bottom user card.
  */
 export function Topbar({ user }: { user?: SidebarUserInfo }) {
@@ -20,7 +19,6 @@ export function Topbar({ user }: { user?: SidebarUserInfo }) {
         <div className="w-[min(42vw,360px)]">
           <CommandPalette />
         </div>
-        <TopbarClock />
         <ThemeToggle />
       </div>
     </header>

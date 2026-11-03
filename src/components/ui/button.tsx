@@ -18,7 +18,7 @@ import { cn } from "@/lib/utils";
  */
 const buttonVariants = cva(
   [
-    "inline-flex select-none items-center justify-center gap-1.5 whitespace-nowrap",
+    "font-ui inline-flex select-none items-center justify-center gap-1.5 whitespace-nowrap",
     "rounded-lg text-[14px] font-semibold leading-none tracking-[-0.005em]",
     "transition-[transform,box-shadow,background-color,border-color,color] duration-150 ease-out",
     "motion-reduce:transition-none motion-reduce:transform-none",

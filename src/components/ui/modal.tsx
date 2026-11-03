@@ -35,7 +35,7 @@ export function Modal({
         <Dialog.Overlay className="fixed inset-0 z-[150] bg-black/50 backdrop-blur-sm data-[state=open]:animate-in data-[state=open]:fade-in data-[state=closed]:animate-out data-[state=closed]:fade-out" />
         <Dialog.Content
           className={cn(
-            "fixed left-1/2 top-1/2 z-[151] w-[calc(100vw-2rem)] -translate-x-1/2 -translate-y-1/2 rounded-2xl border border-border-strong bg-bg-surface shadow-modal",
+            "content-serif fixed left-1/2 top-1/2 z-[151] w-[calc(100vw-2rem)] -translate-x-1/2 -translate-y-1/2 rounded-2xl border border-border-strong bg-bg-surface shadow-modal",
             "data-[state=open]:animate-in data-[state=open]:fade-in data-[state=open]:zoom-in-95 data-[state=closed]:animate-out data-[state=closed]:fade-out data-[state=closed]:zoom-out-95 duration-200",
             width,
           )}

@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import { fontDisplay, fontMono, fontSans } from "@/lib/fonts";
+import { fontDisplay, fontMono, fontSans, fontSerif } from "@/lib/fonts";
 import { ThemeProvider } from "@/components/theme-provider";
 import { cn } from "@/lib/utils";
 import "./globals.css";
@@ -39,6 +39,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           fontDisplay.variable,
           fontSans.variable,
           fontMono.variable,
+          fontSerif.variable,
           // 100dvh (not 100vh) so on mobile the body never grows past the
           // visible viewport — kills the "blank page below the content" gap.
           "min-h-[100dvh] bg-bg-base font-sans text-[15px] text-fg-primary",

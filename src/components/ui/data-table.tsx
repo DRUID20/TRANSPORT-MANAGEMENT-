@@ -9,10 +9,11 @@ import { cn } from "@/lib/utils";
  * URLs, filter chips, action menus) but delegate the visual frame to these
  * primitives so typography + density stay identical everywhere.
  *
- * Standard: 40px uppercase header on --bg-surface-2; 48px rows with a 1px
- * BOTTOM border only (no zebra, no vertical rules); hover → --bg-hover; text
- * left, numbers RIGHT in JetBrains Mono tabular-nums; status pills centered.
- * Loading uses skeleton rows, never a lone spinner.
+ * Standard (Claude-style reading table): sentence-case 14px semibold header
+ * on --bg-surface with a firm underline; 15px serif body rows with a 1px
+ * bottom rule only (no zebra, no vertical rules); hover → soft wash; text
+ * left, numbers RIGHT with tabular lining figures so columns align. Fonts
+ * come from `.content-serif` (globals.css). Loading uses skeleton rows.
  */
 export function DataTable({
   children,
@@ -27,13 +28,11 @@ export function DataTable({
   density?: "comfortable" | "compact";
 }) {
   return (
-    // border-2 outer + b-2 header underline + surface-3d for the thick,
-    // lifted look the user asked for (UNOC: "table borders bold").
-    <div className={cn("surface-card surface-3d overflow-hidden border-2 border-border-strong", className)}>
+    <div className={cn("surface-card overflow-hidden", className)}>
       <div className="overflow-x-auto">
         <table
           className={cn(
-            "w-full text-[13px]",
+            "w-full text-[15px] leading-[1.45]",
             density === "compact" && "[&_td]:py-2 [&_th]:py-2",
           )}
         >
@@ -41,7 +40,7 @@ export function DataTable({
         </table>
       </div>
       {caption && (
-        <div className="flex items-center justify-between gap-2 border-t border-border bg-bg-elevated/50 px-5 py-2.5 font-mono text-[11px] tabular-nums text-fg-tertiary">
+        <div className="flex items-center justify-between gap-2 border-t border-border bg-bg-surface/50 px-5 py-3 text-[13px] tabular-nums text-fg-tertiary">
           {caption}
         </div>
       )}
@@ -61,9 +60,9 @@ export function DataTableHead({
   return (
     <thead
       className={cn(
-        // Bold, high-contrast header with a 3px underline so columns
-        // read clearly. UNOC: "headings bold larger fonts".
-        "border-b-[3px] border-border-strong bg-bg-surface text-left text-[13px] font-extrabold uppercase tracking-[0.06em] text-fg-secondary",
+        // Sentence-case, semibold, full-contrast header — reads like a
+        // Claude table rather than tiny shouted capitals.
+        "border-b border-border-strong bg-bg-surface text-left text-[14px] font-semibold text-fg-primary",
         sticky && "sticky top-0 z-10",
         className,
       )}
@@ -92,7 +91,7 @@ export function DataTableHeaderCell({
   const alignCls =
     align === "right" ? "text-right" : align === "center" ? "text-center" : "text-left";
 
-  // 40px header row: px-5 py-2.5 with 11–12px caps ≈ 40px.
+  // ~44px header row: px-5 py-3 with 14px text.
   const inner = sortHref ? (
     <Link
       href={sortHref}
@@ -118,7 +117,7 @@ export function DataTableHeaderCell({
   );
 
   return (
-    <th className={cn("px-5 py-2.5 font-semibold", alignCls, className)} scope="col">
+    <th className={cn("px-5 py-3 font-semibold", alignCls, className)} scope="col">
       {inner}
     </th>
   );
@@ -132,7 +131,7 @@ export function DataTableBody({
   className?: string;
 }) {
   // Bottom borders only (no vertical rules, no zebra) — §8.
-  return <tbody className={cn("divide-y-2 divide-border", className)}>{children}</tbody>;
+  return <tbody className={cn("divide-y divide-border", className)}>{children}</tbody>;
 }
 
 /**
@@ -153,7 +152,7 @@ export function DataTableRow({
   return (
     <tr
       className={cn(
-        "group transition-colors duration-100 hover:bg-bg-elevated-2",
+        "group transition-colors duration-100 hover:bg-bg-surface/70",
         linkHref && "cursor-pointer",
         className,
       )}
@@ -178,11 +177,11 @@ export function DataTableCell({
   return (
     <td
       className={cn(
-        // 48px rows: px-5 py-3.5 with 13px text ≈ 48px.
+        // ~52px rows: px-5 py-3.5 with 15px text.
         "px-5 py-3.5 align-middle text-fg-primary",
         align === "right" && "text-right",
         align === "center" && "text-center",
-        mono && "font-mono font-medium tnum",
+        mono && "whitespace-nowrap font-mono tnum",
         className,
       )}
     >
@@ -203,7 +202,7 @@ export function DataTableRowAction({
   return (
     <Link
       href={href}
-      className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs font-medium text-fg-tertiary transition-colors hover:bg-bg-elevated hover:text-fg-primary group-hover:text-brand-blue"
+      className="font-ui inline-flex items-center gap-1 rounded-md px-2 py-1 text-[13px] font-medium text-fg-tertiary transition-colors hover:bg-bg-elevated hover:text-fg-primary group-hover:text-brand-blue"
     >
       {label}
       <ChevronRight className="size-3 transition-transform group-hover:translate-x-0.5" />

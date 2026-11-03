@@ -37,7 +37,7 @@ export function SlideOver({
         <Dialog.Content
           style={{ width }}
           className={cn(
-            "fixed right-0 top-0 z-[151] flex h-dvh max-w-[calc(100vw-2rem)] flex-col border-l border-border-strong bg-bg-surface shadow-modal",
+            "content-serif fixed right-0 top-0 z-[151] flex h-dvh max-w-[calc(100vw-2rem)] flex-col border-l border-border-strong bg-bg-surface shadow-modal",
             "data-[state=open]:animate-in data-[state=open]:slide-in-from-right data-[state=closed]:animate-out data-[state=closed]:slide-out-to-right duration-300",
           )}
         >

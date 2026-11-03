@@ -106,10 +106,16 @@ function getSnapshot() {
   return toasts;
 }
 const EMPTY: ToastRecord[] = [];
+const noopSubscribe = () => () => {};
 
 export function Toaster() {
   const items = useSyncExternalStore(subscribe, getSnapshot, () => EMPTY);
-  if (typeof document === "undefined") return null;
+  // Render nothing on the server AND during hydration (server snapshot =
+  // false), then portal in after mount. A bare `typeof document` check
+  // rendered differently on each side and forced React to re-render the
+  // whole app shell on every page load (hydration mismatch).
+  const mounted = useSyncExternalStore(noopSubscribe, () => true, () => false);
+  if (!mounted) return null;
 
   return createPortal(
     <div className="pointer-events-none fixed bottom-4 right-4 z-[200] flex w-[360px] max-w-[calc(100vw-2rem)] flex-col gap-2">

@@ -99,6 +99,13 @@
     @apply border-border;
   }
 
+  /* Semantic font slots → concrete next/font variables (set on <body>).
+     `.content-serif` re-points these to the serif for page content. */
+  body {
+    --font-sans: var(--font-outfit);
+    --font-mono: var(--font-jetbrains);
+  }
+
   html,
   body {
     @apply bg-bg-base text-fg-primary;
@@ -187,7 +194,8 @@
     border-color: rgb(var(--border));
   }
 
-  /* KPI number — DESIGN.md §3: 32px JetBrains Mono 600, tabular */
+  /* KPI number — 32px, tabular. Inside .content-serif `font-mono` resolves
+     to the serif, so KPI figures read like Claude's numbers. */
   .kpi-number {
     @apply font-mono tnum text-[32px] font-semibold leading-none tracking-[-0.02em];
   }
@@ -419,6 +427,88 @@
     background-size: 200% 100%;
     animation: shimmer 1.6s linear infinite;
   }
+}
+
+/* ============================================================
+   CONTENT TYPOGRAPHY — Claude-style reading serif.
+   Applied to <main> and modal / slide-over panels. The sidebar and
+   topbar sit outside it and keep Outfit untouched.
+   - Text, headings, tables and figures → Source Serif 4.
+   - Interactive chrome (buttons, inputs, labels, badges) and tiny
+     UPPERCASE captions stay in Outfit, like Claude's own UI.
+   ============================================================ */
+.content-serif {
+  --font-sans: var(--font-serif);
+  --font-mono: var(--font-serif);
+  --font-display: var(--font-serif);
+  font-family: var(--font-serif), Georgia, "Times New Roman", serif;
+  font-feature-settings: normal;
+  font-variant-numeric: lining-nums;
+  font-optical-sizing: auto;
+}
+
+.content-serif :where(button, label, kbd, .pill, [role="tab"], [role="menuitem"], [role="option"]),
+.content-serif input,
+.content-serif select,
+.content-serif textarea,
+.content-serif .uppercase:not(tr):not(thead):not(th),
+.content-serif .section-eyebrow,
+.font-ui {
+  font-family: var(--font-outfit), system-ui, -apple-system, sans-serif;
+  font-feature-settings: "rlig" 1, "calt" 1, "ss01" 1;
+}
+
+/* Small print was too small to read — lift the tiny sizes a notch. */
+.content-serif .text-\[10px\] { font-size: 11.5px; }
+.content-serif .text-\[11px\] { font-size: 12.5px; }
+.content-serif .text-xs { font-size: 13px; line-height: 1.15rem; }
+
+/* ---- Tables (covers DataTable and every hand-built <table>) ---- */
+.content-serif table {
+  font-size: 15px;
+  line-height: 1.45;
+  font-variant-numeric: tabular-nums lining-nums;
+}
+.content-serif thead tr,
+.content-serif thead th {
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: 0;
+  text-transform: none;
+  color: rgb(var(--text-primary));
+}
+.content-serif thead th {
+  background-color: rgb(var(--bg-surface));
+  border-bottom: 1.5px solid rgb(var(--border-strong));
+  vertical-align: bottom;
+}
+.content-serif td:not(.uppercase) {
+  font-size: 15px;
+}
+/* Group / section rows inside statements (e.g. "CURRENT ASSETS"). */
+.content-serif td.uppercase {
+  font-size: 12px;
+  letter-spacing: 0.08em;
+}
+/* Identifiers inside a cell (trip no., plate, codes) — full reading size;
+   secondary lines (sub-labels, hints) — readable, not tiny. */
+.content-serif td .text-xs:not(.rounded-full) {
+  font-size: 14px;
+}
+.content-serif td :is(.text-\[11px\], .text-\[10px\]):not(.rounded-full) {
+  font-size: 13px;
+}
+/* Never break a trip number, plate, amount or status pill across lines. */
+.content-serif td.font-mono,
+.content-serif td.tnum,
+.content-serif td :is(.font-mono, .tnum, .rounded-full) {
+  white-space: nowrap;
+}
+.content-serif tbody tr {
+  transition: background-color 120ms ease;
+}
+.content-serif tbody tr:hover {
+  background-color: rgb(var(--bg-surface) / 0.7);
 }
 
 /* ============================================================

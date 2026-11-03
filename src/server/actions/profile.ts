@@ -8,6 +8,7 @@ import { users } from "@/server/db/schema";
 import { getCurrentUser } from "@/server/auth/current-user";
 import { requireOrgId } from "@/server/auth/current-org";
 import { logAudit } from "@/server/auth/audit";
+import { IS_DEMO_MODE } from "@/server/auth/session-secret";
 import { deleteFile, isKeyForOrg, uploadFile } from "@/server/storage/files";
 
 export type ActionResult = { ok: true } | { ok: false; error: string };
@@ -120,7 +121,7 @@ export async function clearMyProfilePhoto(): Promise<ActionResult> {
 /** Look up just the avatar key for the current user. */
 export async function getMyProfilePhotoKey(): Promise<string | null> {
   const me = await getCurrentUser();
-  if (!me?.userId) return null;
+  if (!me?.userId || IS_DEMO_MODE) return null;
   const db = getDb();
   const row = (
     await db.select({ key: users.profilePhotoKey }).from(users).where(eq(users.id, me.userId)).limit(1)

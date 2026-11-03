@@ -110,7 +110,7 @@ export function CommandPalette() {
         aria-label="Open command menu"
       >
         <Search className="size-4 text-fg-tertiary group-hover:text-fg-secondary" />
-        <span className="flex-1 text-left">Search trips, trucks, customers…</span>
+        <span className="min-w-0 flex-1 truncate text-left">Search trips, trucks, customers…</span>
         <span className="hidden items-center gap-1 sm:inline-flex">
           <Kbd>⌘</Kbd>
           <Kbd>K</Kbd>
