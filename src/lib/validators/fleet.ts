@@ -1,16 +1,17 @@
 import { z } from "zod";
 
-// Loose-but-enforced Kenyan plate format. Examples: "KCB 421R", "KAA 100A".
-// We normalise on the server (uppercase + collapse spaces).
-const platePattern = /^[A-Z]{1,3}\s?\d{1,4}\s?[A-Z]?$/i;
-
 export const truckCreateSchema = z
   .object({
+    // Any plate format is accepted. The fleet runs across borders, so this
+    // must take Kenyan ("KCB 421R"), Ugandan ("UA87 1EM", "UBJ 691Q"), South
+    // Sudanese ("SSD 557H") and any other country's plates. The server trims,
+    // uppercases and collapses spaces; we enforce only "non-empty and fits
+    // the column" (trucks.registration is varchar(16)).
     registration: z
       .string()
-      .min(4)
-      .max(16)
-      .regex(platePattern, "Use the format KCB 421R"),
+      .trim()
+      .min(1, "Registration plate is required")
+      .max(16, "Keep the registration to 16 characters or fewer"),
     ownerType: z.enum(["company_owned", "subcontractor"]),
     subcontractorId: z.string().optional(),
     make: z.string().min(1, "Make is required"),

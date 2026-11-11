@@ -15,7 +15,8 @@ export type TruckStatus =
 export type FuelType = "diesel" | "petrol";
 
 /**
- * A truck. Identified by Kenyan registration plate (e.g. "KCB 421R").
+ * A truck. Identified by its registration plate, in any country's format
+ * (e.g. "KCB 421R", "UA87 1EM").
  * Fuel-only TMS: every truck is a tanker.
  * If owned by a subcontractor, `subcontractorId` is set.
  */

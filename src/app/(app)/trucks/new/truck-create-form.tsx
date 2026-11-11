@@ -82,10 +82,11 @@ export function TruckCreateForm({ subcontractors }: { subcontractors: Sub[] }) {
         description="Plate number and ownership. Subcontractor trucks point to the partner who owns them."
         columns={2}
       >
-        <FormField label="Registration plate" required hint="e.g. KCB 421R">
+        <FormField label="Registration plate" required hint="Any format, e.g. KCB 421R or UA87 1EM">
           <Input
             name="registration"
             required
+            maxLength={16}
             placeholder="KCB 421R"
             className="font-mono uppercase tracking-wider"
           />

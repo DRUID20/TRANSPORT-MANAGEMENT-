@@ -264,7 +264,7 @@ export const HOWTO_KB: HowToEntry[] = [
     question: "How do I add a truck?",
     keywords: ["add truck", "new truck", "register truck", "create truck"],
     answer:
-      "Sidebar → Trucks → New truck. Plate (KE format e.g. KCB 421R), make/model, year, tanker spec " +
+      "Sidebar → Trucks → New truck. Plate (any format, e.g. KCB 421R or UA87 1EM), make/model, year, tanker spec " +
       "(capacity, compartments, calibration dates), permitted products, compliance expiries. " +
       "Truck status is auto-managed by trips (Active ↔ In Service).",
     href: "/trucks/new",
